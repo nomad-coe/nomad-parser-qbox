@@ -16,6 +16,8 @@ libraryDependencies ++= {
   val re2j          = "com.google.re2j"     % "re2j"           % "1.0"
   val configLib     = "com.typesafe"        % "config"         % "1.2.1"
   val spec2         = "org.specs2"         %% "specs2-core"    % "2.3.11" % "test"
+  val h2 =   "com.h2database"      %   "h2"            % "1.4.187"
+
   Seq(
     "io.spray"            %%  "spray-can"     % sprayV,
     "io.spray"            %%  "spray-routing" % sprayV,
@@ -25,7 +27,8 @@ libraryDependencies ++= {
     spec2,
     re2j,
     configLib,
-    json4sNative
+    json4sNative,
+    h2
   )
 }
 
@@ -34,32 +37,54 @@ libraryDependencies ++= {
 // flyway db migration
 seq(flywaySettings: _*)
 
-
-flywayUrl := "jdbc:h2:file:target/localdb"
+val h2Url = "jdbc:h2:file:~/localdb.h2";
+flywayUrl := h2Url
 //flywayUrl := "jdbc:postgres://localhost:5432/nomad_lab"
 //flywayUser := "nomad_lab"
 //flywayPassword := "pippo"
-flywayLocations ++= Seq( "rdb/common")
+flywayLocations := Seq( "classpath:rdb/sql/common")
 // jooq db description generation
 
 seq(jooqSettings:_*)
 
 libraryDependencies ++= Seq(
-  "org.postgresql"      %   "postgresql"    % "9.4-1201-jdbc41" % "jooq",
-  "com.h2database"      %   "h2"            % "1.4.187"         % "jooq"
+ //"org.postgresql"      %   "postgresql"    % "9.4-1201-jdbc41" % "jooq",
+  "com.h2database"      %   "h2"            % "1.4.187"           % "jooq"
+ )
+
+(codegen in JOOQ) <<= (codegen in JOOQ).dependsOn(flywayMigrate)
+
+val rdbH2: Seq[(String,String)] = Seq(
+  "jdbc.driver" -> "org.h2.Driver",
+  "jdbc.url" -> h2Url,
+  //"jdbc.user" -> "sa",
+  //"jdbc.password" -> "sa",
+  "generator.database.name" -> "org.jooq.util.h2.H2Database"
 )
 
-(codegen in JOOQ) <<= flywayMigrate
+val rdbPostgres : Seq[(String,String)] = Seq(
+  "jdbc.driver" -> "org.postgres.Driver",
+  "jdbc.url" -> "jdbc:postgres://localhost:5432/nomad_lab",
+  "jdbc.user" -> "nomad_lab",
+  "jdbc.password" -> "pippo",
+  "generator.database.name" -> "org.jooq.util.postgres.PostgresDatabase"
+)
 
-jooqOptions := Seq("jdbc.driver" -> "org.postgresql.Driver",
-                    "jdbc.url" -> "jdbc:h2:file:target/localdb",
-//                    "jdbc.url" -> "jdbc:postgres://localhost:5432/nomad_lab",
-//                    "jdbc.user" -> "nomad_lab",
-//                    "jdbc.password" -> "pippo",
-//                    "generator.database.name" -> "org.jooq.util.mysql.MySQLDatabase",
-//                    "generator.database.inputSchema" -> "fnord",
-                    "generator.target.packageName" -> "eu.nomad-laboratory.rdb")
+val rdb : Seq[(String,String)] = rdbH2 ++ Seq(
+  "generator.database.includes" -> ".*",
+  //"generator.database.inputSchema" -> "public",
+  "generator.target.packageName" -> "eu.nomad_lab.rdb",
+  "generator.generate.pojos" -> "false",
+  "generator.generate.immutablePojos" -> "false"
+//  "generator.strategy.name" -> "qgame.jooq.DBGeneratorStrategy",
+//  "generator.name" -> "qgame.jooq.DBGenerator",
+//  "generator.database.outputSchemaToDefault" -> "true"
+)
 
-jooqVersion := "3.6.2"
+jooqForceGen := true;
+
+multiplyJooqOptions := Map("rdb" -> rdb)
+
+//jooqVersion := "3.6.2"
 
 Revolver.settings

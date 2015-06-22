@@ -5,7 +5,7 @@ case class MetaInfoRecord(
   val super_names : String,
   val units : Option[String],
   val dtype_str : Option[String],
-  val repeats : Option[Bool],
+  val repeats : Option[Boolean],
   val shape : Seq[Int]
 ) {
 

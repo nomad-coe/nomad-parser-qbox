@@ -12,27 +12,27 @@ CREATE TABLE nomad_meta_infos (
         public BOOLEAN,
         public_override_gid VARCHAR(39),
         PRIMARY KEY (gid),
-        FOREIGN KEY(kind_gid) REFERENCES nomad_meta_info (gid),
-        FOREIGN KEY(super_kind_gid) REFERENCES nomad_meta_info (gid),
-        FOREIGN KEY(public_override_gid) REFERENCES nomad_meta_info (gid)
-)
+        FOREIGN KEY(kind_gid) REFERENCES nomad_meta_infos (gid),
+        FOREIGN KEY(super_kind_gid) REFERENCES nomad_meta_infos (gid),
+        FOREIGN KEY(public_override_gid) REFERENCES nomad_meta_infos (gid)
+);
 
 
 CREATE TABLE nomad_meta_info_parents (
         info_kind_gid INTEGER NOT NULL,
         parent_gid INTEGER NOT NULL,
-        FOREIGN KEY(info_kind_gid) REFERENCES nomad_meta_info (gid),
-        FOREIGN KEY(parent_gid) REFERENCES nomad_meta_info (gid)
-)
+        FOREIGN KEY(info_kind_gid) REFERENCES nomad_meta_infos (gid),
+        FOREIGN KEY(parent_gid) REFERENCES nomad_meta_infos (gid)
+);
 
 
 CREATE TABLE nomad_meta_info_anchestors (
         info_kind_gid INTEGER NOT NULL,
         anchestor_gid INTEGER NOT NULL,
-        FOREIGN KEY(info_kind_gid) REFERENCES nomad_meta_info (gid),
-        FOREIGN KEY(anchestor_gid) REFERENCES nomad_meta_info (gid)
-)
+        FOREIGN KEY(info_kind_gid) REFERENCES nomad_meta_infos (gid),
+        FOREIGN KEY(anchestor_gid) REFERENCES nomad_meta_infos (gid)
+);
 
 CREATE TABLE meta_info_version(
        name VARCHAR(128) NOT NULL
-)
+);
