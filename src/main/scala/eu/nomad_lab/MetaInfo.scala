@@ -6,9 +6,20 @@ case class MetaInfoRecord(
   val units : Option[String],
   val dtype_str : Option[String],
   val repeats : Option[Boolean],
-  val shape : Seq[Int]
-) {
+  val shape : Seq[Int] ) {
+  def
+}
+
+class MetaInfoEnv(
+  val name: String,
+  var gids: Map[String, String],
+  var metaInfos: Map[String, MetaInfoRecord] ) {
 
 }
 
-class Env
+class MetaInfoDbEnv(
+  val name: String,
+  val dbConnection: AkkaRef,
+  val lazyLoad: Boolean) {
+
+}
