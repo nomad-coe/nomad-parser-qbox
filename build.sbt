@@ -1,14 +1,13 @@
-organization  := "eu.nomad-laboratory"
-
-version       := "0.1"
-
-scalaVersion  := "2.11.6"
-
-scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
+lazy val commonSettings = Seq(
+  organization  := "eu.nomad-laboratory",
+  version       := "0.1",
+  scalaVersion  := "2.11.6",
+  scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
+);
 
 // json4s 3.3 is being finalized
 
-libraryDependencies ++= {
+lazy val commonLibs = {
   val akkaV = "2.3.9"
   val sprayV = "1.3.3"
   val json4sNative  = "org.json4s"         %% "json4s-native"  % "3.2.11"
@@ -30,47 +29,15 @@ libraryDependencies ++= {
     json4sNative,
     h2
   )
-}
+};
 
+lazy val jooqCommon = seq(jooqSettings:_*) ++ Seq(
+  jooqVersion := "3.6.2"//,
+  //(codegen in JOOQ) <<= (codegen in JOOQ).dependsOn(flywayMigrate)
+    //  jooqForceGen := true
+);
 
-
-// flyway db migration
-seq(flywaySettings: _*)
-
-val h2Url = "jdbc:h2:file:~/localdb.h2";
-flywayUrl := h2Url
-//flywayUrl := "jdbc:postgres://localhost:5432/nomad_lab"
-//flywayUser := "nomad_lab"
-//flywayPassword := "pippo"
-flywayLocations := Seq( "classpath:rdb/sql/common")
-// jooq db description generation
-
-seq(jooqSettings:_*)
-
-libraryDependencies ++= Seq(
- //"org.postgresql"      %   "postgresql"    % "9.4-1201-jdbc41" % "jooq",
-  "com.h2database"      %   "h2"            % "1.4.187"           % "jooq"
- )
-
-(codegen in JOOQ) <<= (codegen in JOOQ).dependsOn(flywayMigrate)
-
-val rdbH2: Seq[(String,String)] = Seq(
-  "jdbc.driver" -> "org.h2.Driver",
-  "jdbc.url" -> h2Url,
-  //"jdbc.user" -> "sa",
-  //"jdbc.password" -> "sa",
-  "generator.database.name" -> "org.jooq.util.h2.H2Database"
-)
-
-val rdbPostgres : Seq[(String,String)] = Seq(
-  "jdbc.driver" -> "org.postgres.Driver",
-  "jdbc.url" -> "jdbc:postgres://localhost:5432/nomad_lab",
-  "jdbc.user" -> "nomad_lab",
-  "jdbc.password" -> "pippo",
-  "generator.database.name" -> "org.jooq.util.postgres.PostgresDatabase"
-)
-
-val rdb : Seq[(String,String)] = rdbH2 ++ Seq(
+val rdbBase : Seq[(String,String)] = Seq(
   "generator.database.includes" -> ".*",
   //"generator.database.inputSchema" -> "public",
   "generator.target.packageName" -> "eu.nomad_lab.rdb",
@@ -79,12 +46,68 @@ val rdb : Seq[(String,String)] = rdbH2 ++ Seq(
 //  "generator.strategy.name" -> "qgame.jooq.DBGeneratorStrategy",
 //  "generator.name" -> "qgame.jooq.DBGenerator",
 //  "generator.database.outputSchemaToDefault" -> "true"
-)
+);
 
-jooqForceGen := true;
+lazy val rdbUrl = settingKey[String]("url to the rdb used during building");
 
-multiplyJooqOptions := Map("rdb" -> rdb)
+lazy val flywayH2 = Seq(
+  flywayUrl := rdbUrl.value,
+  flywayLocations := Seq( "classpath:rdb/sql/common", "classpath:rdb/sql/h2")
+);
 
-//jooqVersion := "3.6.2"
+// jooq db description generation
+lazy val jooqH2 = Seq(
+  libraryDependencies +=  "com.h2database"      %   "h2"            % "1.4.187"           % "jooq",
+  jooqOptions := Seq(
+        "jdbc.driver" -> "org.h2.Driver",
+        "jdbc.url" -> rdbUrl.value,
+        //"jdbc.user" -> "sa",
+        //"jdbc.password" -> "sa",
+        "generator.database.name" -> "org.jooq.util.h2.H2Database"
+    ),
+  jooqOptions ++= rdbBase
+);
 
-Revolver.settings
+/*lazy val h2Settings = {
+  Seq( rdbUrl := {
+    "jdbc:h2:file:" + ((resourceManaged in Compile).value / "localdb_h2")
+  } ) ++ flywayH2 ++ jooqCommon ++ jooqH2
+};*/
+
+lazy val flywayPostgres = (
+  flywayUrl := rdbUrl.value,
+  flywayUser := "nomad_lab",
+  flywayPassword := "pippo",
+  flywayLocations := Seq(
+    "classpath:rdb/sql/common",
+    "classpath:rdb/sql/postgres" )
+);
+
+/*lazy val jooqPostgres = Seq(
+  libraryDependencies += "org.postgresql"      %   "postgresql"    % "9.4-1201-jdbc41" % "jooq",
+  multiplyJooqOptions := Map("rdb" -> Seq(
+    "jdbc.driver" -> "org.postgres.Driver",
+    "jdbc.url" -> rdbUrl.value,
+    "jdbc.user" -> "nomad_lab",
+    "jdbc.password" -> "pippo",
+    "generator.database.name" -> "org.jooq.util.postgres.PostgresDatabase"
+  ) ++ rdbBase ) );
+ */
+
+/*lazy val postgresSettings = { Seq( rdbUrl := "jdbc:postgres://localhost:5432/nomad_lab" )
+  ++ flywayPostgres ++ jooqCommon ++ jooqPostgres };*/
+
+lazy val root = (project in file(".")).
+  settings(commonSettings: _*).
+  settings(
+    libraryDependencies ++= commonLibs
+  ).
+  settings(flywaySettings: _*).
+  //settings(h2Settings: _*).
+  settings(rdbUrl := {
+    "jdbc:h2:file:" + ((resourceManaged in Compile).value / "localdb_h2")
+  } ).
+  settings(flywayH2: _*).
+  settings(jooqCommon: _*).
+  settings(jooqH2: _*).
+  settings(Revolver.settings: _*)
