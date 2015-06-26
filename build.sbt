@@ -32,8 +32,8 @@ lazy val commonLibs = {
 };
 
 lazy val jooqCommon = seq(jooqSettings:_*) ++ Seq(
-  jooqVersion := "3.6.2"//,
-  //(codegen in JOOQ) <<= (codegen in JOOQ).dependsOn(flywayMigrate)
+  jooqVersion := "3.6.2",
+  (codegen in JOOQ) <<= (codegen in JOOQ).dependsOn(flywayMigrate)
     //  jooqForceGen := true
 );
 
@@ -52,7 +52,7 @@ lazy val rdbUrl = settingKey[String]("url to the rdb used during building");
 
 lazy val flywayH2 = Seq(
   flywayUrl := rdbUrl.value,
-  flywayLocations := Seq( "classpath:rdb/sql/common", "classpath:rdb/sql/h2")
+  flywayLocations := Seq( "classpath:rdb/sql/common") //, "classpath:rdb/sql/h2")
 );
 
 // jooq db description generation
