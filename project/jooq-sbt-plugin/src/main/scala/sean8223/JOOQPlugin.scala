@@ -17,6 +17,7 @@ import sbt.Keys._
 import java.io.{File, FileWriter}
 import scala.xml.{XML, Elem, Null, TopScope, Text}
 import scala.xml.dtd.{DocType, SystemID}
+import scala.xml.{Elem, Null, Text, TopScope, XML}
 
 object JOOQPlugin extends Plugin {
 
@@ -26,17 +27,21 @@ object JOOQPlugin extends Plugin {
 
   val codegen = TaskKey[Unit]("codegen", "Generates code")
 
-  // setting keys
+  val cleanCodeGen = TaskKey[Unit]("clean","clean out the generated code")
 
   val jooqOptions = SettingKey[Seq[Tuple2[String, String]]]("jooq-options", "JOOQ options.")
 
   val jooqVersion = SettingKey[String]("jooq-version", "JOOQ version.")
+
+  val sl4jVersion = SettingKey[String]("slf4j-version", "slf4j version.")
 
   val jooqLogLevel = SettingKey[String]("jooq-log-level", "JOOQ log level.")
 
   val jooqOutputDirectory = SettingKey[File]("jooq-output-directory", "JOOQ output directory.")
 
   val jooqConfigFile = SettingKey[Option[File]]("jooq-config-file", "Specific config file to use in lieu of jooq-options")
+
+  val jooqCleanBeforeGen = SettingKey[Boolean]("jooq-clean-before-gen","clean the generated code before gen")
 
   // exported keys
   
@@ -48,21 +53,29 @@ object JOOQPlugin extends Plugin {
       Classpaths.managedJars(JOOQ, ct, u) ++ uj
     },
 
+    cleanCodeGen <<= (streams,jooqOutputDirectory,jooqOptions) map {
+      case (s,jod,jo)=>
+        cleanAllGeneratedCode(s.log,jod,jo)
+    },
+
     codegen <<= (streams,
 		 baseDirectory,
 		 managedClasspath in JOOQ,
 		 jooqOutputDirectory,
 		 jooqOptions,
 		 jooqLogLevel,
-		 jooqConfigFile) map {
-      (s, bd, mcp, od, o, ll, cf) => {
-	executeJooqCodegen(s.log, bd, mcp, od, o, ll, cf)
+		 jooqConfigFile,
+		 jooqCleanBeforeGen) map {
+      (s, bd, mcp, od, o, ll, cf, jcbg) => {
+	executeJooqCodegen(s.log, bd, mcp, od, o, ll, cf, jcbg)
       }
     }
 
   )) ++ Seq(
 
     jooqVersion := "3.3.1",
+
+	sl4jVersion := "1.7.10",
 
     jooqOptions := Seq(),
 
@@ -71,6 +84,8 @@ object JOOQPlugin extends Plugin {
     jooqOutputDirectory <<= (sourceManaged in Compile)( _ / "java"),
 
     jooqConfigFile := None,
+
+    jooqCleanBeforeGen := false,
     
     sourceGenerators in Compile <+= (streams, 
 				     baseDirectory, 
@@ -78,21 +93,22 @@ object JOOQPlugin extends Plugin {
 				     jooqOutputDirectory,
 				     jooqOptions,
 				     jooqLogLevel,
-				     jooqConfigFile) map { 
-      (s, bd, mcp, od, o, ll, cf) => {
-	executeJooqCodegenIfOutOfDate(s.log, bd, mcp, od, o, ll, cf) 
+				     jooqConfigFile,
+				     jooqCleanBeforeGen) map {
+      (s, bd, mcp, od, o, ll, cf, cleanPreGen) => {
+	executeJooqCodegenIfOutOfDate(s.log, bd, mcp, od, o, ll, cf, cleanPreGen) 
       }
     },
 
-    libraryDependencies <++= (scalaVersion, jooqVersion) apply {
-      (sv, jv) => { 
+    libraryDependencies <++= (scalaVersion, jooqVersion, sl4jVersion) apply {
+      (sv, jv, sl4jv) => {
 	Seq("org.jooq" % "jooq" % jv % JOOQ.name,
 	    "org.jooq" % "jooq" % jv, // also add this to the project's compile configuration
 	    "org.jooq" % "jooq-meta" % jv % JOOQ.name,
 	    "org.jooq" % "jooq-codegen" % jv % JOOQ.name,
-	    "org.slf4j" % "slf4j-api" % "1.7.2" % JOOQ.name,
-	    "org.slf4j" % "slf4j-log4j12" % "1.7.2" % JOOQ.name,
-	    "org.slf4j" % "jul-to-slf4j" % "1.7.2" % JOOQ.name,
+	    "org.slf4j" % "slf4j-api" % sl4jv % JOOQ.name,
+	    "org.slf4j" % "slf4j-log4j12" % sl4jv % JOOQ.name,
+	    "org.slf4j" % "jul-to-slf4j" % sl4jv % JOOQ.name,
 	    "log4j" % "log4j" % "1.2.17" % JOOQ.name)
       }
     },
@@ -101,23 +117,51 @@ object JOOQPlugin extends Plugin {
     
   )
   
+  private def cleanAllGeneratedCode(logger:Logger,outputDirectory: File,options:Seq[Tuple2[String,String]]):Unit={
+    logger.warn("clean before code gen wil delete all the code in the target location,please insure there is only generate code there.")
+
+
+        options.toMap.get("generator.target.packageName") match {
+          case Some(pkg)=>
+            logger.info(s"target clean package :[$pkg]")
+            val childPath = pkg.replace('.',File.separatorChar)
+            val targetFolder = outputDirectory.getAbsolutePath +"/"+ childPath
+            logger.info(s"clean all generated code here.\ndirectory :[${outputDirectory.getAbsolutePath}]\npackage:[$pkg]\ntargetFolder:[$targetFolder]")
+            //do the delete
+            def delete(file:File): Unit ={
+              if(file.isDirectory){
+                file.listFiles().foreach(delete)
+                file.delete()
+              }else{
+                file.delete()
+              }
+            }
+            val target = new File(targetFolder)
+            if (target.exists()){
+              delete(target)
+            }
+          case None =>
+            logger.warn("there is no key find for [generator.target.packageName],ignore for safety.")
+        }
+  }
+
   private def getOrGenerateJooqConfig(log:Logger, outputDirectory:File, options:Seq[Tuple2[String,String]], jooqConfigFile:Option[File]) = {
     jooqConfigFile.getOrElse(generateJooqConfig(log, outputDirectory, options))
   } 
 
   private def generateJooqConfig(log:Logger, outputDirectory:File, options:Seq[Tuple2[String,String]]) = {
     val tmp = File.createTempFile("jooq-config", ".xml")
-    tmp.deleteOnExit
+    tmp.deleteOnExit()
     val fw = new FileWriter(tmp)
     try {
       val replaced = Seq("generator.target.directory" -> outputDirectory.getAbsolutePath) ++ options.filter { kv => kv._1 != "generator.target.directory" } 
       val xml = replaced.foldLeft(<configuration/>) { 
 	(xml, kv) => xmlify(kv._1.split("\\."), kv._2, xml) 
       }
-      XML.save(tmp.getAbsolutePath, xml, "UTF-8", true)
+      XML.save(tmp.getAbsolutePath, xml, "UTF-8", xmlDecl = true)
     }
     finally {
-      fw.close
+      fw.close()
     }
     log.debug("Wrote JOOQ configuration to " + tmp.getAbsolutePath)
     tmp
@@ -129,12 +173,16 @@ object JOOQPlugin extends Plugin {
     // that already exist, e.g. "value" at Seq("foo", "bar", "baz") becomes 
     // <foo><bar><baz>value</baz></bar></foo>
     key match {
-      case Seq(first) => Elem(null, parent.label, Null, TopScope, parent.child ++ Elem(null, first, Null, TopScope, Text(value)):_*)
+      case Seq(first) => {
+		val child = parent.child ++ Elem(null, first, Null, TopScope, false, Text(value))
+
+		Elem(null, parent.label, Null, TopScope, child.isEmpty, child:_*)
+	}
       case Seq(first, rest @ _*) => {
 	val (pre, post) = parent.child.span { _.label != first }
 	post match {
-	  case Nil => xmlify(key, value, Elem(null, parent.label, Null, TopScope, parent.child ++ Elem(null, first, Null, TopScope):_*))
-	  case _   => Elem(null, parent.label, Null, TopScope, pre ++ xmlify(rest, value, Elem(null, post.head.label, Null, TopScope, post.head.child:_*)) ++ post.tail:_*)
+	  case Nil => xmlify(key, value, Elem(null, parent.label, Null, TopScope, false, parent.child ++ Elem(null, first, Null, TopScope,minimizeEmpty = true):_*))
+	  case _   => Elem(null, parent.label, Null, TopScope, false, pre ++ xmlify(rest, value, Elem(null, post.head.label, Null, TopScope, false, post.head.child:_*)) ++ post.tail:_*)
 	}
       }
     }
@@ -144,7 +192,7 @@ object JOOQPlugin extends Plugin {
     // shunt any messages at warn and higher to stderr, everything else to
     // stdout, thanks to http://stackoverflow.com/questions/8489551/logging-error-to-stderr-and-debug-info-to-stdout-with-log4j
     val tmp = File.createTempFile("log4j", ".xml")
-    tmp.deleteOnExit
+    tmp.deleteOnExit()
     val configuration =
       <log4j:configuration>
     <appender name="stderr" class="org.apache.log4j.ConsoleAppender">
@@ -171,7 +219,7 @@ object JOOQPlugin extends Plugin {
     <appender-ref ref="stdout" />
     </root>
     </log4j:configuration>
-    XML.save(tmp.getAbsolutePath, configuration, "UTF-8", true, DocType("log4j:configuration", SystemID("log4j.dtd"), Nil))
+    XML.save(tmp.getAbsolutePath, configuration, "UTF-8", xmlDecl = true, DocType("log4j:configuration", SystemID("log4j.dtd"), Nil))
     log.debug("Wrote log4j configuration to " + tmp.getAbsolutePath)
     tmp
   }
@@ -182,25 +230,26 @@ object JOOQPlugin extends Plugin {
     cp
   }
 
-  private def executeJooqCodegenIfOutOfDate(log:Logger, baseDirectory:File, managedClasspath:Seq[Attributed[File]], outputDirectory:File, options:Seq[Tuple2[String, String]], logLevel:String, jooqConfigFile:Option[File]) = {
+  private def executeJooqCodegenIfOutOfDate(log:Logger, baseDirectory:File, managedClasspath:Seq[Attributed[File]], outputDirectory:File, options:Seq[Tuple2[String, String]], logLevel:String, jooqConfigFile:Option[File], cleanBeforeGeneration:Boolean = false) = {
     // lame way of detecting whether or not code is out of date, user can always
     // run jooq:codegen manually to force regeneration
     val files = (outputDirectory ** "*.java").get
-    if (files.isEmpty) executeJooqCodegen(log, baseDirectory, managedClasspath, outputDirectory, options, logLevel, jooqConfigFile)
+    if (files.isEmpty) executeJooqCodegen(log, baseDirectory, managedClasspath, outputDirectory, options, logLevel, jooqConfigFile, cleanBeforeGeneration)
     else files
   }
 
-  private def executeJooqCodegen(log:Logger, baseDirectory:File, managedClasspath:Seq[Attributed[File]], outputDirectory:File, options:Seq[Tuple2[String, String]], logLevel:String, jooqConfigFile:Option[File]) = {
+  private def executeJooqCodegen(log:Logger, baseDirectory:File, managedClasspath:Seq[Attributed[File]], outputDirectory:File, options:Seq[Tuple2[String, String]], logLevel:String, jooqConfigFile:Option[File], cleanBeforeGeneration: Boolean = false):Seq[File] = {
+    if (cleanBeforeGeneration) cleanAllGeneratedCode(log,outputDirectory, options)
     val jcf = getOrGenerateJooqConfig(log, outputDirectory, options, jooqConfigFile)
-    log.debug("Using jooq config " + jcf)
+    log.info("Using jooq config " + jcf.getAbsolutePath)
     val log4jConfig = generateLog4jConfig(log, logLevel)
     val classpathArgument = generateClasspathArgument(log, managedClasspath, jcf)
-    val cmdLine = Seq("java", "-classpath", classpathArgument, "-Dlog4j.configuration=" + log4jConfig.toURL, "org.jooq.util.GenerationTool", "/" + jcf.getName())
+    val cmdLine = Seq("java", "-classpath", classpathArgument, "-Dlog4j.configuration=" + log4jConfig.toURI.toURL, "org.jooq.util.GenerationTool", "/" + jcf.getName())
     log.debug("Command line is " + cmdLine.mkString(" "))
     val rc = Process(cmdLine, baseDirectory) ! log
     rc match {
       case 0 => ;
-      case x => error("Failed with return code: " + x)
+      case x => sys.error("Failed with return code: " + x)
     }
     (outputDirectory ** "*.java").get
   }
