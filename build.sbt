@@ -39,10 +39,10 @@ lazy val jooqCommon = seq(jooqSettings:_*) ++ Seq(
 
 val rdbBase : Seq[(String,String)] = Seq(
   "generator.database.includes" -> ".*",
-  //"generator.database.inputSchema" -> "public",
   "generator.target.packageName" -> "eu.nomad_lab.rdb",
   "generator.generate.pojos" -> "false",
-  "generator.generate.immutablePojos" -> "false"
+  "generator.generate.immutablePojos" -> "false",
+  "generator.generate.deprecated" -> "false"
 //  "generator.strategy.name" -> "qgame.jooq.DBGeneratorStrategy",
 //  "generator.name" -> "qgame.jooq.DBGenerator",
 //  "generator.database.outputSchemaToDefault" -> "true"
@@ -63,8 +63,9 @@ lazy val jooqH2 = Seq(
         "jdbc.url" -> rdbUrl.value,
         //"jdbc.user" -> "sa",
         //"jdbc.password" -> "sa",
-        "generator.database.name" -> "org.jooq.util.h2.H2Database"
-    ),
+        "generator.database.name" -> "org.jooq.util.h2.H2Database",
+        "generator.database.inputSchema" -> "PUBLIC"
+  ),
   jooqOptions ++= rdbBase
 );
 
