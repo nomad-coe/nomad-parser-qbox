@@ -15,7 +15,8 @@ lazy val commonLibs = {
   val re2j          = "com.google.re2j"     % "re2j"           % "1.0"
   val configLib     = "com.typesafe"        % "config"         % "1.2.1"
   val spec2         = "org.specs2"         %% "specs2-core"    % "2.3.11" % "test"
-  val h2 =   "com.h2database"      %   "h2"            % "1.4.187"
+  val h2            = "com.h2database"      %   "h2"            % "1.4.187"
+  val scalacheck    = "org.scalacheck" %% "scalacheck" % "1.12.4" % "test"
 
   Seq(
     "io.spray"            %%  "spray-can"     % sprayV,
@@ -27,7 +28,8 @@ lazy val commonLibs = {
     re2j,
     configLib,
     json4sNative,
-    h2
+    h2,
+    scalacheck
   )
 };
 
