@@ -8,11 +8,11 @@ import org.json4s.DefaultFormats
   * Can be interpreted within a context [[eu.nomad_lab.MetaInfoEnv]], but matches the
   * preferred way one describes it in a json file.
   */
-class MetaInfoRecord(
+case class MetaInfoRecord(
   val name: String,
   val kindStr: String,
   val description: String,
-  val superNames: Seq[String],
+  val superNames: Seq[String] = Seq(),
   val units: Option[String] = None,
   val dtypeStr: Option[String] = None,
   val repeats: Option[Boolean] = None,
@@ -80,18 +80,21 @@ class MetaInfoRecordSerializer extends CustomSerializer[MetaInfoRecord](format =
          {
            case x: MetaInfoRecord => {
              import org.json4s.JsonDSL._;
-             ("name", x.name) ~
-             ("kindStr", (if (x.kindStr == "DocumentContentType") None else Some(x.kindStr)))~
-             ("description", x.description)~
-             ("superNames", x.superNames)~
-             ("units", x.units)~
-             ("dtypeStr", x.dtypeStr)~
-             ("repeats", x.repeats)~
-             ("shape", x.shape) ++
-             x.otherKeys
+             JObject(
+               (("name", x.name) ~
+                 ("kindStr", (if (x.kindStr == "DocumentContentType") None else Some(x.kindStr)))~
+                 ("description", x.description)~
+                 ("superNames", x.superNames)~
+                 ("units", x.units)~
+                 ("dtypeStr", x.dtypeStr)~
+                 ("repeats", x.repeats)~
+                 ("shape", x.shape)).obj ++
+               x.otherKeys
+             )
            }
          }
        ))
+
 
 class MetaInfoEnv(
   val name: String,
