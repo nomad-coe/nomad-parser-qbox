@@ -21,21 +21,39 @@ case class MetaInfoRecord(
 }
 
 object MetaInfoRecord {
-  final val dtypes = Seq("f32", "i32", "u32", "f64", "i64", "u64", "b", "c", "B", "C")
+  /** valid dtypes
+    * f: generic float (not specified, default dependent on settings)
+    * i: generic integer (not specified, default dependent on settings)
+    * f32: 32 bit floating point (single precision)
+    * i32: signed 32 bit integer
+    * f64: 64 bit floating point (double precision)
+    * i64: 64 bit signed integer
+    * b: byte
+    * c: unicode character
+    * B: byte array (blob)
+    * C: unicode string
+    */
+  final val dtypes = Seq("f", "i", "f32", "i32", "u32", "f64", "i64", "u64", "b", "c", "B", "C")
 }
 
+/** Error when reading from json and a required field is missing or empty
+  */
 case class MissingFieldError(val fieldName: String, val context: String) extends Throwable {
   override def toString(): String = {
-    "missing field " ++ fieldName ++ " in " ++ context
+    "missing or empty required field " ++ fieldName ++ " in " ++ context
   }
 }
 
+/** Error when reading from json and the value is unexpected
+  */
 case class InvalidValueError(val fieldName: String, val context: String, value: String, expected :String) extends Throwable {
   override def toString(): String = {
     "invalid value for field " ++ fieldName ++ " in " ++ context ++ " expected (" ++ expected ++ ") but got " ++ value
   }
 }
 
+/** Json serialization to and deserialization support for MetaInfoRecord
+  */
 class MetaInfoRecordSerializer extends CustomSerializer[MetaInfoRecord](format => (
          {
            case JObject(obj) => {
