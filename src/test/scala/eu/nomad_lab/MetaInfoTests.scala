@@ -56,6 +56,21 @@ object MetaInfoJsonTests extends Properties("MetaInfoRecord") {
         false :| "failed reading back json " + jsonStr + " triggered by " + e.toString()
     }
   }
+  /** Checks that two dumps are equal
+    */
+  property("dumpReadDump") = Prop.forAll(genMetaInfoRecord) { metaInfo =>
+    val jsonStr = write(metaInfo)
+    import org.scalacheck.Prop.BooleanOperators
+    try {
+      val obj2 = read[MetaInfoRecord](jsonStr)
+      val jsonStr2 = write(obj2)
+      (jsonStr == jsonStr2) :| ("redumping of '" + jsonStr + "' generates a different string: '" +
+        jsonStr2 + "'")
+    } catch {
+      case NonFatal(e) =>
+        false :| ("failed reading back json " + jsonStr + " triggered by " + e.toString())
+    }
+  }
 
   /** Generates a sequence of MetaInfos that inherit from each other
     *
