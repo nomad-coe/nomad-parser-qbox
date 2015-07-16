@@ -64,7 +64,7 @@ object Base64 {
   def b64EncodeAscii(str : Array[Byte]): Array[Byte] =
     b64EncodeCore[Byte](str, b64UrlMap)
 
-  def b64DecodeCore[U <% Int, T <% IndexedSeqOptimized[U, T]](
+  def b64DecodeCore[U <% Int, T <% IndexedSeq[U]](
     b64Str: T,
     b64BackMap: Array[Byte] = b64UrlBackMap,
     target : Array[Byte] = null,
@@ -75,11 +75,12 @@ object Base64 {
     val res: Array[Byte] = if (target == null) new Array[Byte](outLen) else target
     require(res.length >= outLen, "Invalid length of target array")
     var j = 0
+    val it = b64Str.iterator
     for (i <- 0 until(inLen - 3, 4)) {
-      val x0 = b64BackMap(b64Str(i)     & 0xff)
-      val x1 = b64BackMap(b64Str(i + 1) & 0xff)
-      val x2 = b64BackMap(b64Str(i + 2) & 0xff)
-      val x3 = b64BackMap(b64Str(i + 3) & 0xff)
+      val x0 = b64BackMap(it.next & 0xff)
+      val x1 = b64BackMap(it.next & 0xff)
+      val x2 = b64BackMap(it.next & 0xff)
+      val x3 = b64BackMap(it.next & 0xff)
       assert(x0 != -1 && x1 != -1 && x2 != -1 && x3 != -1, "invalid Base64 character found")
       res(j    ) = (((x0 << 2) & 0xfc) | ((x1 >> 4) & 0x03)).toByte
       res(j + 1) = (((x1 << 4) & 0xf0) | ((x2 >> 2) & 0x0f)).toByte
@@ -96,8 +97,8 @@ object Base64 {
           j += 1
         }
       case 2 =>
-        val x0 = b64BackMap(b64Str(inLen - 2) & 0xff)
-        val x1 = b64BackMap(b64Str(inLen - 1) & 0xff)
+        val x0 = b64BackMap(it.next & 0xff)
+        val x1 = b64BackMap(it.next & 0xff)
         res(j    ) = (((x0 << 2) & 0xfc) | ((x1 >> 4) & 0x03)).toByte
         j += 1
         if (keepPartial) {
@@ -105,9 +106,9 @@ object Base64 {
           j += 1
         }
       case 3 =>
-        val x0 = b64BackMap(b64Str(inLen - 3) & 0xff)
-        val x1 = b64BackMap(b64Str(inLen - 2) & 0xff)
-        val x2 = b64BackMap(b64Str(inLen - 1) & 0xff)
+        val x0 = b64BackMap(it.next & 0xff)
+        val x1 = b64BackMap(it.next & 0xff)
+        val x2 = b64BackMap(it.next & 0xff)
         res(j    ) = (((x0 << 2) & 0xfc) | ((x1 >> 4) & 0x03)).toByte
         res(j + 1) = (((x1 << 4) & 0xf0) | ((x2 >> 2) & 0x0f)).toByte
         j += 2
@@ -125,4 +126,7 @@ object Base64 {
 
   def b64DecodeStr(str: String, keepPartial: Boolean = false): Array[Byte] =
     b64DecodeCore[Char, String](str, b64UrlBackMap, keepPartial = keepPartial)
+
+  def b64Decode[U <% Int, T](seq: T, keepPartial: Boolean = false)(implicit ev: T <:< IndexedSeq[U]): Array[Byte] =
+    b64DecodeCore[U,T](seq, b64UrlBackMap, keepPartial = keepPartial)
 }

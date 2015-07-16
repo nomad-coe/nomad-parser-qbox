@@ -4,9 +4,9 @@ import org.scalacheck._
 import org.scalacheck.Prop.BooleanOperators
 
 
-/** Scalacheck (generated) tests for MetaInfo jsone serialization
+/** Scalacheck (generated) tests for Base64 encoding
   */
-object Base64Tests extends Properties("MetaInfoRecord") {
+object Base64Tests extends Properties("Base64") {
 
   val genB64 = Gen.listOf(Gen.oneOf(Base64.b64UrlMapStr))
 
