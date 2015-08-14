@@ -110,4 +110,26 @@ object JsonUtils {
     jsonCompactDump(sb.append(_), value)
     sb.result()
   }
+
+  /** calculates a measure of the complexity (size) of the json
+    */
+  def jsonComplexity(value: JValue): Int = value match {
+    case JNothing => 1
+    case JNull => 1
+    case JBool(_) => 1
+    case JDouble(_) => 1
+    case JDecimal(_) => 1
+    case JInt(_) => 1
+    //case JLong(_) => 1
+    case JString(_) => 1
+    case JArray(arr) =>
+      arr.foldLeft(1)(_ + jsonComplexity(_))
+    case JObject(obj) =>
+      obj.foldLeft(1){ (i : Int, value: JField) =>
+        value match {
+          case JField(k, v) => i + jsonComplexity(v)
+        }
+      }
+  }
+
 }

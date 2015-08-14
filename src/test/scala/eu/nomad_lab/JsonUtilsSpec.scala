@@ -11,33 +11,38 @@ import org.json4s.native.JsonMethods._
 class JsonUtilsSpec extends mutable.Specification {
 
   implicit val formats = DefaultFormats + new eu.nomad_lab.MetaInfoRecordSerializer
+  import org.json4s.JsonDSL._;
+  val jObj1 =
+    ("a" -> 45) ~
+  ("b" -> 1.0) ~
+  ("c" -> "z") ~
+  ("d" -> Seq(5,4,2,4)) ~
+  ("e" -> false) ~
+  ("f" -> true) ~
+  ("g" -> JNothing) ~
+  ("h" -> JNull) ~
+  ("i" -> math.Pi);
 
-  "jsonCompact 1" >> {
-    import org.json4s.JsonDSL._;
-    val jObj1 =
-      ("a" -> 45) ~
-        ("b" -> 1.0) ~
-        ("c" -> "z") ~
-        ("d" -> Seq(5,4,2,4)) ~
-        ("e" -> false) ~
-        ("f" -> true) ~
-        ("g" -> JNothing) ~
-        ("h" -> JNull) ~
-        ("i" -> math.Pi);
+  val jObj1Str = """{"a":45,"b":1.0,"c":"z","d":[5,4,2,4],"e":false,"f":true,"h":null,"i":3.141592653589793}"""
 
-    val jObj1Str = """{"a":45,"b":1.0,"c":"z","d":[5,4,2,4],"e":false,"f":true,"h":null,"i":3.141592653589793}"""
+  val jObj2 = JObject(jObj1.obj.reverse)
 
-    val jObj2 = JObject(jObj1.obj.reverse)
-
-    val jVal = parse("""
+  val jVal = parse("""
     {
         "name": "TestProperty1",
         "description": "a meta info property to test serialization to json",
         "superNames": []
     }""")
 
+
+  "jsonCompact 1" >> {
     JsonUtils.jsonCompactStr(jObj1) must_== jObj1Str
     JsonUtils.jsonCompactStr(jObj2) must_== jObj1Str
+  }
+
+  "jsonComplexity" >> {
+    JsonUtils.jsonComplexity(jObj1) must_== 14
+    JsonUtils.jsonComplexity(jVal) must_== 4
   }
 
 }
