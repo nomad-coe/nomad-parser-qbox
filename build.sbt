@@ -15,8 +15,13 @@ lazy val commonLibs = {
   val re2j          = "com.google.re2j"     % "re2j"           % "1.0"
   val configLib     = "com.typesafe"        % "config"         % "1.2.1"
   val spec2         = "org.specs2"         %% "specs2-core"    % "2.3.11" % "test"
-  val h2            = "com.h2database"      %   "h2"            % "1.4.187"
-  val scalacheck    = "org.scalacheck" %% "scalacheck" % "1.12.4" % "test"
+  val h2            = "com.h2database"      % "h2"             % "1.4.187"
+  val scalacheck    = "org.scalacheck"     %% "scalacheck"     % "1.12.4" % "test"
+  val scalalog      = "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0"
+  val log4j2        = Seq(
+    "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.3",
+    "org.apache.logging.log4j" % "log4j-api"        % "2.3",
+    "org.apache.logging.log4j" % "log4j-core"       % "2.3")
 
   Seq(
     "io.spray"            %%  "spray-can"     % sprayV,
@@ -29,8 +34,8 @@ lazy val commonLibs = {
     configLib,
     json4sNative,
     h2,
-    scalacheck
-  )
+    scalacheck,
+    scalalog) ++ log4j2
 };
 
 lazy val jooqCommon = seq(jooqSettings:_*) ++ Seq(
