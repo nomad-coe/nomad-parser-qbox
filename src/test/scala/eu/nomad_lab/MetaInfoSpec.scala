@@ -1,15 +1,14 @@
 package eu.nomad_lab
 
-import org.specs2._
+import org.specs2.mutable.Specification
 import org.json4s.DefaultFormats
-import org.json4s.native.Serialization
 import org.json4s.native.Serialization.{read, write}
-import org.json4s._
-import org.json4s.native.JsonMethods._
+import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JArray, JObject, JValue, JField}
+import org.json4s.native.JsonMethods.parse
 
 /** Specification (fixed tests) for MetaInfo serialization
   */
-class MetaInfoJsonSpec extends mutable.Specification {
+class MetaInfoJsonSpec extends Specification {
 
   implicit val formats = DefaultFormats + new eu.nomad_lab.MetaInfoRecordSerializer
 

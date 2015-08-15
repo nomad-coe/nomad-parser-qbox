@@ -1,7 +1,6 @@
 package eu.nomad_lab
-import org.json4s._
-import org.json4s.native.JsonMethods._
-import org.json4s.DefaultFormats
+import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JArray, JObject, JValue, JField}
+import org.json4s.{DefaultFormats, CustomSerializer}
 
 /** Represents a piece of nomad meta info referring to other meta info by name.
   *
@@ -66,7 +65,7 @@ class MetaInfoRecordSerializer extends CustomSerializer[MetaInfoRecord](format =
              var dtypeStr: Option[String] = None;
              var repeats: Option[Boolean] = None;
              var shape: Option[Seq[Int]] = None;
-             var otherKeys: Seq[JsonAST.JField] = Seq();
+             var otherKeys: Seq[JField] = Seq();
              obj foreach {
                case JField("name", value) =>
                  name = value.extract[String]
