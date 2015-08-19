@@ -94,18 +94,29 @@ object JsonSupport {
 
   /** Deserialize from a Reader
    */
-  def readReader[A](in: Reader)(implicit mf: Manifest[A]): A = {
+  def readReader[A](in: Reader)(implicit mf: Manifest[A]): Unit = {
     Serialization.read[A](in)
   }
 
   /** Deserialize from a InputReader
    */
-  def readInputStream[A](in: InputStream)(implicit mf: Manifest[A]): A = {
+  def readInputStream[A](in: InputStream)(implicit mf: Manifest[A]): Unit = {
     readReader[A](new InputStreamReader(in, StandardCharsets.UTF_8))
   }
 
-/*
+  /** Writes an indented json to a Writer
+    */
+  def writePrettyWriter[A <: AnyRef, W <: Writer](a: A, out: W): Unit =
+    Serialization.writePretty(a, out)
+
+  /** Writes an indented json to an OutputStream
+    */
+  def writePrettyOutputStream[A <: AnyRef, W <: OutputStream](a: A, out: W): Unit = {
+    val w = new OutputStreamWriter(out, StandardCharsets.UTF_8)
+    Serialization.writePretty(a, w)
+  }
+
+  /** Writes an indented json to a String
+    */
   def writePrettyStr[A <: AnyRef](a: A): String = Serialization.writePretty(a)
-  def writePrettyOutputStream[A <: AnyRef, W <: JWriter](a: A, out: W): W = Serialization.writePretty(a, out)
-  def writePrettyWriter[A <: AnyRef, W <: JWriter](a: A, out: W): W = Serialization.writePretty(a, out) */
 }
