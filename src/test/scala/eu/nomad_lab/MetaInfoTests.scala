@@ -1,18 +1,13 @@
 package eu.nomad_lab
 
-import org.json4s.DefaultFormats
-import org.json4s.native.Serialization
-import org.json4s.native.Serialization.{read, write}
-import org.json4s._
-import org.json4s.native.JsonMethods._
-import org.scalacheck._
+import eu.nomad_lab.JsonSupport.{readStr, writeStr}
+import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JArray, JObject, JValue, JField}
+import org.scalacheck.{Properties, Prop, Gen}
 import scala.util.control.NonFatal
 
 /** Scalacheck (generated) tests for MetaInfo jsone serialization
   */
 object MetaInfoJsonTests extends Properties("MetaInfoRecord") {
-  implicit val formats = DefaultFormats + new eu.nomad_lab.MetaInfoRecordSerializer
-
   /** Generates a random MetaInfo record
     *
     * no inheritance (superNames=Seq()), kindStr = "DocumentContentType"
@@ -47,10 +42,10 @@ object MetaInfoJsonTests extends Properties("MetaInfoRecord") {
   /** Checks that dumping and reading back is the identity
     */
   property("dumpRead") = Prop.forAll(genMetaInfoRecord) { metaInfo =>
-    val jsonStr = write(metaInfo)
+    val jsonStr = writeStr(metaInfo)
     import org.scalacheck.Prop.BooleanOperators
     try {
-      (metaInfo == read[MetaInfoRecord](jsonStr)) :| ("failed reading back json " + jsonStr)
+      (metaInfo == readStr[MetaInfoRecord](jsonStr)) :| ("failed reading back json " + jsonStr)
     } catch {
       case NonFatal(e) =>
         false :| "failed reading back json " + jsonStr + " triggered by " + e.toString()
@@ -59,11 +54,11 @@ object MetaInfoJsonTests extends Properties("MetaInfoRecord") {
   /** Checks that two dumps are equal
     */
   property("dumpReadDump") = Prop.forAll(genMetaInfoRecord) { metaInfo =>
-    val jsonStr = write(metaInfo)
+    val jsonStr = writeStr(metaInfo)
     import org.scalacheck.Prop.BooleanOperators
     try {
-      val obj2 = read[MetaInfoRecord](jsonStr)
-      val jsonStr2 = write(obj2)
+      val obj2 = readStr[MetaInfoRecord](jsonStr)
+      val jsonStr2 = writeStr(obj2)
       (jsonStr == jsonStr2) :| ("redumping of '" + jsonStr + "' generates a different string: '" +
         jsonStr2 + "'")
     } catch {

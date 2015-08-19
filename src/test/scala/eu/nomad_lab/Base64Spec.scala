@@ -1,11 +1,11 @@
 package eu.nomad_lab
 
-import org.specs2._
+import org.specs2.mutable.Specification
 import java.nio.charset.StandardCharsets
 
 /** Specification (fixed tests) for MetaInfo serialization
   */
-class Base64Spec extends mutable.Specification {
+class Base64Spec extends Specification {
   val b64Samples = Seq(
     Array[Byte](-1) -> "_w",
     Array[Byte](-8, -1) -> "-P8",

@@ -111,7 +111,7 @@ object JsonSupport {
 
   /** Deserialize from a String
    */
-  def readStr[A: Manifest](s: String): A = {
+  def readStr[A: Manifest ](s: String): A = {
     Serialization.read[A](s)
   }
 

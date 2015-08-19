@@ -1,16 +1,13 @@
 package eu.nomad_lab
 
-import org.specs2._
-import org.json4s.DefaultFormats
-import org.json4s.native.Serialization
-import org.json4s._
-import org.json4s.native.JsonMethods._
+import org.specs2.mutable.Specification
+import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JArray, JObject, JValue, JField}
 
 /** Specification (fixed tests) for MetaInfo serialization
   */
-class JsonUtilsSpec extends mutable.Specification {
+class JsonUtilsSpec extends Specification {
 
-  implicit val formats = DefaultFormats + new eu.nomad_lab.MetaInfoRecordSerializer
+  //implicit val formats = DefaultFormats + new eu.nomad_lab.MetaInfoRecordSerializer
   import org.json4s.JsonDSL._;
   val jObj1 =
     ("a" -> 45) ~
@@ -27,7 +24,7 @@ class JsonUtilsSpec extends mutable.Specification {
 
   val jObj2 = JObject(jObj1.obj.reverse)
 
-  val jVal = parse("""
+  val jVal = JsonUtils.parseStr("""
     {
         "name": "TestProperty1",
         "description": "a meta info property to test serialization to json",

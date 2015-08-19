@@ -1,6 +1,6 @@
 package eu.nomad_lab
 
-import org.scalacheck._
+import org.scalacheck.{Properties, Prop, Gen, Arbitrary}
 import org.scalacheck.Prop.BooleanOperators
 
 

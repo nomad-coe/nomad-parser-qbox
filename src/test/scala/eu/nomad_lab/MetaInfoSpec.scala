@@ -2,9 +2,7 @@ package eu.nomad_lab
 
 import org.specs2.mutable.Specification
 import org.json4s.DefaultFormats
-import org.json4s.native.Serialization.{read, write}
 import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JArray, JObject, JValue, JField}
-import org.json4s.native.JsonMethods.parse
 
 /** Specification (fixed tests) for MetaInfo serialization
   */
@@ -13,7 +11,7 @@ class MetaInfoJsonSpec extends Specification {
   implicit val formats = DefaultFormats + new eu.nomad_lab.MetaInfoRecordSerializer
 
   "jsonExtract basic" >> {
-    val jVal = parse("""
+    val jVal = JsonUtils.parseStr("""
     {
         "name": "TestProperty1",
         "description": "a meta info property to test serialization to json",
@@ -31,7 +29,7 @@ class MetaInfoJsonSpec extends Specification {
   }
 
   "jsonRead basic" >> {
-    val mRecord = read[MetaInfoRecord]("""
+    val mRecord = JsonSupport.readStr[MetaInfoRecord]("""
     {
         "name": "TestProperty1",
         "description": "a meta info property to test serialization to json",
@@ -49,7 +47,7 @@ class MetaInfoJsonSpec extends Specification {
   }
 
   "jsonRead extended" >> {
-    val mRecord = read[MetaInfoRecord]("""
+    val mRecord = JsonSupport.readStr[MetaInfoRecord]("""
     {
         "name": "TestProperty2",
         "kindStr": "DocumentContentType"
@@ -71,7 +69,7 @@ class MetaInfoJsonSpec extends Specification {
   }
 
   "jsonRead null" >> {
-    val mRecord = read[MetaInfoRecord]("""
+    val mRecord = JsonSupport.readStr[MetaInfoRecord]("""
     {
         "name": "TestProperty3",
         "kindStr": "DocumentContentType"
@@ -93,7 +91,7 @@ class MetaInfoJsonSpec extends Specification {
   }
 
   "jsonRead extra" >> {
-    val mRecord = read[MetaInfoRecord]("""
+    val mRecord = JsonSupport.readStr[MetaInfoRecord]("""
     {
         "name": "TestProperty4",
         "kindStr": "DocumentContentType"
