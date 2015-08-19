@@ -218,11 +218,17 @@ object JsonUtils {
     *
     * Object keys are output in generation order (not necessarily alphabetically).
     *
-    * Use Serialization.write?
+    * Currently inefficent, use Serialization.write?
     */
   def prettyWriter[W <: Writer](value: JValue, dumper: W): Unit =
     dumper.write(pretty(render(value)))
 
+  /** Dumps an indented json
+    *
+    * Object keys are output in generation order (not necessarily alphabetically).
+    *
+    * Currently inefficent, use Serialization.write?
+    */
   def prettyOutputStream[W <: OutputStream](value: JValue, dumper: W): Unit = {
     val out = new BufferedWriter(new OutputStreamWriter(dumper, StandardCharsets.UTF_8))
     prettyWriter(value, out)

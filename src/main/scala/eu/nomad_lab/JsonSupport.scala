@@ -8,38 +8,31 @@ import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JAr
 import java.io.{Reader, StringWriter, Writer, BufferedWriter, OutputStreamWriter, InputStreamReader}
 
 
-/** methods to handle serialization of objects to json
+/** Methods to handle (de-)serialization of custom objects to (from) json
   *
   * New serializers need to be registred here to add support for
   * new custom types.
   * having these implicit formats allows
   * extraction from and dumping to json of custom types:
-  * - AST (jsonExtract, jsonDecompose)
-  * - String (jsonReadString, writeString, writePrettyString)
-  * - Reader/Writer (jsonReadReader, jsonWriteWriter)
-  * - UTF_8 (jsonRead, jsonWrite, jsonReadInputStream, jsonWriteInputStream)
-  *
-  * For the
-  * - parse to AST (jsonParse*)
-  * - serialize it in a predictable compact way (jsonCompact*)
-  * - serialize in a nicer humar readable format (jsonPretty*)
-  * - merge and diff (
+  * - AST (extract, decompose)
+  * - String (jsonReadString, writeString, writeNormalizedString, writePrettyString)
+  * - Reader/Writer (readReader, writeWriter, writeNormalizedWriter, writePrettyWriter)
+  * - UTF_8 (readInputStream, writeInputStream, writeNormalizedInputStream, writePrettyInputStream)
   *
   * Aside these methods a user probably also wants to get AST
   *
   *     import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt,
   *                        JString, JArray, JObject, JValue, JField}
   *
-  * add support for custom object serialization (and json.extract[T])
+  * merging and diff of JValues can be done with
   *
-  *     import eu.nomad_lab.JsonSupport.{formats, read, write}
+  *     import eu.nomad_lab.JsonUtils.{mergeArray, mergeObject, mergeValue, diff}
+  *
+  * (parsing and serialization similar to here, but limited to JValues, is also exposed there)
   *
   * and possibly for the DSL to write AST literals
   *
   *     import org.json4s.JsonDSL._
-  *
-  * First implementation, could be improved, but excluding obvious things
-  * like the pretty print, that is worth doing only with real benchmarks.
   */
 object JsonSupport {
   /** list of default formats, all custom types need to be added here
@@ -55,18 +48,30 @@ object JsonSupport {
     Extraction.extract[T](json)
   }
 
-  /** transforms the given value in a json AST (JValue)
+  /** Transforms the given value in a json AST (JValue)
     */
   def decompose(a: Any): JValue = Extraction.decompose(a)
 
+  /** writes out a normalized json to an OutputStream
+    *
+    * Object keys are sorted
+    */
   def writeNormalizedOutputStream[A <: AnyRef, O <: OutputStream](a: A, out: O): Unit = {
     JsonUtils.normalizedOutputStream(Extraction.decompose(a), out)
   }
 
+  /** writes out a normalized json to a Writer
+    *
+    * Object keys are sorted
+    */
   def writeNormalizedWriter[A <: AnyRef, W <: Writer](a: A, out: W): Unit = {
     JsonUtils.normalizedWriter(Extraction.decompose(a), out)
   }
 
+  /** returns a normalized json string
+    *
+    * Object keys are sorted
+    */
   def writeNormalizedStr[A <: AnyRef](a: A): Unit = {
     val w = new StringWriter()
     writeNormalizedWriter(a, w)
