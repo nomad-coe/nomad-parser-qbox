@@ -99,14 +99,20 @@ object JsonSupport {
 
   /** Deserialize from a Reader
    */
-  def readReader[A](in: Reader)(implicit mf: Manifest[A]): Unit = {
+  def readReader[A](in: Reader)(implicit mf: Manifest[A]): A = {
     Serialization.read[A](in)
   }
 
   /** Deserialize from a InputReader
    */
-  def readInputStream[A](in: InputStream)(implicit mf: Manifest[A]): Unit = {
+  def readInputStream[A](in: InputStream)(implicit mf: Manifest[A]): A = {
     readReader[A](new InputStreamReader(in, StandardCharsets.UTF_8))
+  }
+
+  /** Deserialize from a String
+   */
+  def readStr[A: Manifest](s: String): A = {
+    Serialization.read[A](s)
   }
 
   /** Writes an indented json to a Writer
