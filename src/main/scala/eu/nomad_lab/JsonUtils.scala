@@ -51,53 +51,53 @@ object JsonUtils {
 
   /** Adds the given amount of extra indent at the beginning of each line
     */
-  class ExtraIndenter[W <: Writer](val extraIndent: Int, val dumper: W) extends Writer {
+  class ExtraIndenter[W <: Writer](val extraIndent: Int, val writer: W) extends Writer {
     val indent: String = "\n" + (" " * extraIndent)
 
-    override def close(): Unit = dumper.close()
+    override def close(): Unit = writer.close()
 
-    override def flush(): Unit = dumper.flush()
+    override def flush(): Unit = writer.flush()
 
     override def write(c: Int): Unit = {
       if (c == '\n'.toByte)
-        dumper.write(indent)
+        writer.write(indent)
       else
-        dumper.write(c)
+        writer.write(c)
     }
 
     override def write(s: Array[Char], offset: Int, len: Int): Unit = {
-      // dumper(s.replace("\n", indent))
+      // writer(s.replace("\n", indent))
       var i0 = offset
       var i1 = s.indexOf('\n', i0)
       var i2 = math.min(s.length, i0 + len)
       while (i1 >= 0 && i1 <= i2) {
-        dumper.write(s, i0, i1 - i0)
-        dumper.write(indent)
+        writer.write(s, i0, i1 - i0)
+        writer.write(indent)
         i0 = i1 + 1
         i1 = s.indexOf('\n', i0)
       }
-      dumper.write(s, i0, i2)
+      writer.write(s, i0, i2)
     }
   }
 
   /** Dumps the given string escaping \ and "
     */
-  private def dumpString[W <: Writer](s: String, dumper: W): Unit = {
-    dumper.write('"')
+  private def dumpString[W <: Writer](s: String, writer: W): Unit = {
+    writer.write('"')
     var i0 = 0
     var j = i0
     while (j < s.length) {
       val c = s(j)
       if (c == '\\' || c == '"') {
-        dumper.write(s, i0, j - i0)
-        dumper.write('\\')
-        dumper.write(c)
+        writer.write(s, i0, j - i0)
+        writer.write('\\')
+        writer.write(c)
         i0 = j + 1
       }
       j += 1
     }
-    dumper.write(s, i0, s.length - i0)
-    dumper.write('"')
+    writer.write(s, i0, s.length - i0)
+    writer.write('"')
   }
 
   /** Dumps an normalized ordered json
@@ -105,63 +105,63 @@ object JsonUtils {
     * Object keys are alphabetically ordered.
     * This is the main reason that we cannot use the default writers.
     */
-  def normalizedWriter[W <: Writer](obj: JValue, dumper: W): Unit = {
+  def normalizedWriter[W <: Writer](obj: JValue, writer: W): Unit = {
     obj match {
       case JString(s) =>
-        dumpString(s, dumper)
+        dumpString(s, writer)
       case JNothing =>
         ()
       case JDouble(num) =>
-        dumper.write(num.toString)
+        writer.write(num.toString)
       case JDecimal(num) =>
-        dumper.write(num.toString)
+        writer.write(num.toString)
       case JInt(num) =>
-        dumper.write(num.toString)
+        writer.write(num.toString)
       case JBool(value) =>
         if (value)
-          dumper.write("true")
+          writer.write("true")
         else
-          dumper.write("false")
+          writer.write("false")
       case JNull =>
-        dumper.write("null")
+        writer.write("null")
       case JObject(obj) =>
-        dumper.write('{')
+        writer.write('{')
         val iter = obj.toArray.sortBy(_._1).iterator
         while (iter.hasNext) {
           val (key, value) = iter.next
           if (value != JNothing) {
-            dumpString(key, dumper)
-            dumper.write(':')
-            normalizedWriter(value, dumper) // recursive call
+            dumpString(key, writer)
+            writer.write(':')
+            normalizedWriter(value, writer) // recursive call
             while (iter.hasNext) {
               val (key2, value2) = iter.next
               if (value2 != JNothing) {
-                dumper.write(',')
-                dumpString(key2, dumper)
-                dumper.write(':')
-                normalizedWriter(value2, dumper) // recursive call
+                writer.write(',')
+                dumpString(key2, writer)
+                writer.write(':')
+                normalizedWriter(value2, writer) // recursive call
               }
             }
           }
         }
-        dumper.write('}')
+        writer.write('}')
       case JArray(arr) =>
-        dumper.write('[');
+        writer.write('[');
         val iter = arr.iterator
         while (iter.hasNext) {
           val value = iter.next
           if (value != JNothing) {
-            normalizedWriter(value, dumper)
+            normalizedWriter(value, writer)
             while (iter.hasNext) {
               val value2 = iter.next
               if (value2 != JNothing) {
-                dumper.write(',')
-                normalizedWriter(value2, dumper) // recursive call
+                writer.write(',')
+                normalizedWriter(value2, writer) // recursive call
               }
             }
           }
         }
-        dumper.write(']')
+        writer.write(']')
     }
   }
 
@@ -171,16 +171,16 @@ object JsonUtils {
     * This is the main reason that we cannot use the default writers.
     */
   def normalizedOutputStream[W <: OutputStream](value: JValue, out: W): Unit = {
-    val w = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8))
-    normalizedWriter(value, w)
+    val writer = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8))
+    normalizedWriter(value, writer)
   }
 
   /** returns a normalized sorted json representation
     */
   def normalizedUtf8(value: JValue): Array[Byte] = {
-    val w = new ByteArrayOutputStream()
-    normalizedOutputStream(value, w)
-    w.toByteArray()
+    val writer = new ByteArrayOutputStream()
+    normalizedOutputStream(value, writer)
+    writer.toByteArray()
   }
 
   /** returns a string with a normalized sorted json representation
@@ -188,9 +188,9 @@ object JsonUtils {
     * this is just for convenience, try to avoid its use
     */
   def normalizedStr(value: JValue): String = {
-    val w = new StringWriter()
-    normalizedWriter(value, w)
-    w.toString()
+    val writer = new StringWriter()
+    normalizedWriter(value, writer)
+    writer.toString()
   }
 
   /** calculates a measure of the complexity (size) of the json
@@ -220,8 +220,8 @@ object JsonUtils {
     *
     * Currently inefficent, use Serialization.write?
     */
-  def prettyWriter[W <: Writer](value: JValue, dumper: W): Unit =
-    dumper.write(pretty(render(value)))
+  def prettyWriter[W <: Writer](value: JValue, writer: W): Unit =
+    writer.write(pretty(render(value)))
 
   /** Dumps an indented json
     *
@@ -229,8 +229,8 @@ object JsonUtils {
     *
     * Currently inefficent, use Serialization.write?
     */
-  def prettyOutputStream[W <: OutputStream](value: JValue, dumper: W): Unit = {
-    val out = new BufferedWriter(new OutputStreamWriter(dumper, StandardCharsets.UTF_8))
+  def prettyOutputStream[W <: OutputStream](value: JValue, writer: W): Unit = {
+    val out = new BufferedWriter(new OutputStreamWriter(writer, StandardCharsets.UTF_8))
     prettyWriter(value, out)
   }
 
