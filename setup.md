@@ -11,6 +11,7 @@
 
     if [ ! -e "/etc/apt/sources.list.d/sbt.list" ] ; then
        echo "deb http://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
+       sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
     fi
     sudo aptitude update
     sudo aptitude install sbt
