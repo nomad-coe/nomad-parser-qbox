@@ -35,9 +35,9 @@ class JsonUtilsSpec extends mutable.Specification {
     }""")
 
 
-  "jsonCompact 1" >> {
-    JsonUtils.jsonCompactStr(jObj1) must_== jObj1Str
-    JsonUtils.jsonCompactStr(jObj2) must_== jObj1Str
+  "jsonNormalized 1" >> {
+    JsonUtils.normalizedStr(jObj1) must_== jObj1Str
+    JsonUtils.normalizedStr(jObj2) must_== jObj1Str
   }
 
   "jsonComplexity" >> {

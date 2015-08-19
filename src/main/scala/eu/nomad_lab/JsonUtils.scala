@@ -1,146 +1,197 @@
 package eu.nomad_lab;
 
+import java.io.{Reader, StringWriter, Writer, InputStream, OutputStream, ByteArrayInputStream, BufferedWriter, OutputStreamWriter, ByteArrayOutputStream}
 import java.nio.charset.StandardCharsets
+import org.json4s.native.JsonMethods.{pretty, render, parse}
 import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JArray, JObject, JValue, JField}
+import org.json4s.{Diff, Merge, MergeDep, JsonInput}
 import scala.collection.mutable.ListBuffer
 
-/** methods to handle json, in particular serialize it in a predictable way directly to UTF_8
+/** methods to handle json (excluding custom serialization)
   *
-  * first implementation, could be improved, but worth doing only with real benchmarks
+  * In particular:
+  * - parse to AST (parse*)
+  * - serialize it in a predictable compact way (compact*)
+  * - serialize in a nicer humar readable format (pretty*)
+  * - diff two json (diff*)
+  * - merge two json (merge*)
+  *
+  * Aside these methods a user probably also wants to get AST
+  *
+  *     import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt,
+  *                        JString, JArray, JObject, JValue, JField}
+  *
+  * add support for custom object serialization
+  *
+  *     import eu.nomad_lab.JsonSupport.{formats, read, write}
+  *
+  * and possibly for the DSL to write literals
+  *
+  *     import org.json4s.JsonDSL._
+  *
+  * First implementation, could be improved, but excluding obvious things
+  * like the pretty print, that is worth doing only with real benchmarks.
   */
 object JsonUtils {
+  /** parse the given string to the json AST
+    */
+  def parseStr(s: String): JValue = parse(s)
+
+  /** parse the given UTF_8 string to the json AST
+    */
+  def parseUtf8(s: Array[Byte]): JValue = parse(new ByteArrayInputStream(s))
+
+  /** parse the given string to the json AST
+    */
+  def parseReader(s: Reader): JValue = parse(s)
+
+  /** parse the given string to the json AST
+    */
+  def parseInputStream(s: InputStream): JValue = parse(s)
 
   /** Adds the given amount of extra indent at the beginning of each line
     */
-  def extraIndenter(dumper: Array[Byte] => Unit, extraIndent: Int): Array[Byte] => Unit = {
-    val indent: Array[Byte] = ("\n" + (" " * extraIndent)).getBytes(StandardCharsets.UTF_8)
+  class ExtraIndenter[W <: Writer](val extraIndent: Int, val dumper: W) extends Writer {
+    val indent: String = "\n" + (" " * extraIndent)
 
-    { s: Array[Byte] =>
+    override def close(): Unit = dumper.close()
+
+    override def flush(): Unit = dumper.flush()
+
+    override def write(c: Int): Unit = {
+      if (c == '\n'.toByte)
+        dumper.write(indent)
+      else
+        dumper.write(c)
+    }
+
+    override def write(s: Array[Char], offset: Int, len: Int): Unit = {
       // dumper(s.replace("\n", indent))
-      var i0 = 0
-      var i1 = s.indexOf('\n'.toByte, i0)
-      while (i1 >= 0) {
-        dumper(s.slice(i0, i1))
-        dumper(indent)
+      var i0 = offset
+      var i1 = s.indexOf('\n', i0)
+      var i2 = math.min(s.length, i0 + len)
+      while (i1 >= 0 && i1 <= i2) {
+        dumper.write(s, i0, i1 - i0)
+        dumper.write(indent)
         i0 = i1 + 1
-        i1 = s.indexOf('\n'.toByte, i0)
+        i1 = s.indexOf('\n', i0)
       }
-      dumper(s.slice(i0, s.length))
+      dumper.write(s, i0, i2)
     }
-  }
-
-  /** Dumps the given UTF_8 encoded string escaping \ and "
-    */
-  def dumpStringArray(dumper: Array[Byte] => Unit, s: Array[Byte]): Unit = {
-    dumper(Array('"'.toByte))
-    var i0 = 0
-    var j = i0
-    while (j < s.length) {
-      val c = s(j)
-      if (c == '\\'.toByte || c == '"'.toByte) {
-        dumper(s.slice(i0, j))
-        dumper(Array('\\'.toByte, c))
-        i0 = j + 1
-      }
-      j += 1
-    }
-    dumper(s.slice(i0, s.length))
-    dumper(Array('"'.toByte))
   }
 
   /** Dumps the given string escaping \ and "
     */
-  def dumpString(dumper: Array[Byte] => Unit, s: String): Unit =
-    dumpStringArray(dumper, s.getBytes(StandardCharsets.UTF_8))
+  private def dumpString[W <: Writer](s: String, dumper: W): Unit = {
+    dumper.write('"')
+    var i0 = 0
+    var j = i0
+    while (j < s.length) {
+      val c = s(j)
+      if (c == '\\' || c == '"') {
+        dumper.write(s, i0, j - i0)
+        dumper.write('\\')
+        dumper.write(c)
+        i0 = j + 1
+      }
+      j += 1
+    }
+    dumper.write(s, i0, s.length - i0)
+    dumper.write('"')
+  }
 
-  /** Dumps an compact ordered json
-    * 
-    * Object keys are alphabetically ordered
+  /** Dumps an normalized ordered json
+    *
+    * Object keys are alphabetically ordered.
+    * This is the main reason that we cannot use the default writers.
     */
-  def jsonCompactDump(dumper: Array[Byte] => Unit, obj: JValue): Unit = {
+  def normalizedWriter[W <: Writer](obj: JValue, dumper: W): Unit = {
     obj match {
       case JString(s) =>
-        dumpString(dumper, s)
+        dumpString(s, dumper)
       case JNothing =>
         ()
       case JDouble(num) =>
-        dumper(num.toString.getBytes(StandardCharsets.UTF_8))
+        dumper.write(num.toString)
       case JDecimal(num) =>
-        dumper(num.toString.getBytes(StandardCharsets.UTF_8))
+        dumper.write(num.toString)
       case JInt(num) =>
-        dumper(num.toString.getBytes(StandardCharsets.UTF_8))
+        dumper.write(num.toString)
       case JBool(value) =>
         if (value)
-          dumper("true".getBytes(StandardCharsets.UTF_8))
+          dumper.write("true")
         else
-          dumper("false".getBytes(StandardCharsets.UTF_8))
+          dumper.write("false")
       case JNull =>
-        dumper("null".getBytes(StandardCharsets.UTF_8))
+        dumper.write("null")
       case JObject(obj) =>
-        dumper(Array('{'.toByte))
+        dumper.write('{')
         val iter = obj.toArray.sortBy(_._1).iterator
         while (iter.hasNext) {
           val (key, value) = iter.next
           if (value != JNothing) {
-            dumpString(dumper, key)
-            dumper(Array(':'.toByte))
-            jsonCompactDump(dumper, value) // recursive call
+            dumpString(key, dumper)
+            dumper.write(':')
+            normalizedWriter(value, dumper) // recursive call
             while (iter.hasNext) {
               val (key2, value2) = iter.next
               if (value2 != JNothing) {
-                dumper(Array(','.toByte))
-                dumpString(dumper, key2)
-                dumper(Array(':'.toByte))
-                jsonCompactDump(dumper, value2) // recursive call
+                dumper.write(',')
+                dumpString(key2, dumper)
+                dumper.write(':')
+                normalizedWriter(value2, dumper) // recursive call
               }
             }
           }
         }
-        dumper(Array('}'.toByte))
+        dumper.write('}')
       case JArray(arr) =>
-        dumper(Array('['.toByte));
+        dumper.write('[');
         val iter = arr.iterator
         while (iter.hasNext) {
           val value = iter.next
           if (value != JNothing) {
-            jsonCompactDump(dumper, value)
+            normalizedWriter(value, dumper)
             while (iter.hasNext) {
               val value2 = iter.next
               if (value2 != JNothing) {
-                dumper(Array(','.toByte))
-                jsonCompactDump(dumper, value2) // recursive call
+                dumper.write(',')
+                normalizedWriter(value2, dumper) // recursive call
               }
             }
           }
         }
-        dumper(Array(']'.toByte))
+        dumper.write(']')
     }
   }
 
-  /** returns a compact sorted json representation
-    */
-  def jsonCompact(value: JValue): Array[Byte] = {
-    val pieces = new ListBuffer[Array[Byte]]()
-    var totLen = 0
-    jsonCompactDump({s: Array[Byte] =>
-      pieces.append(s)
-      totLen += s.length
-    }, value)
-    val res = new Array[Byte](totLen)
-    var i0 = 0;
-    for (p <- pieces) {
-      p.copyToArray(res, i0, i0 + p.length)
-      i0 += p.length
-    }
-    res
-  }
-
-  /** returns a string with a compact sorted json representation
+  /** Dumps an normalized ordered json
     *
-    * this isjust for convenience, try to avoid its use
+    * Object keys are alphabetically ordered.
+    * This is the main reason that we cannot use the default writers.
     */
-  def jsonCompactStr(value: JValue): String =
-    new String(jsonCompact(value), StandardCharsets.UTF_8)
+  def normalizedOutputStream[W <: OutputStream](value: JValue, out: W): Unit = {
+    val w = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8))
+    normalizedWriter(value, w)
+  }
+
+  /** returns a normalized sorted json representation
+    */
+  def normalizedUtf8(value: JValue): Array[Byte] = {
+    val w = new ByteArrayOutputStream()
+    normalizedOutputStream(value, w)
+    w.toByteArray()
+  }
+
+  /** returns a string with a normalized sorted json representation
+    *
+    * this is just for convenience, try to avoid its use
+    */
+  def normalizedStr(value: JValue): String = {
+    val w = new StringWriter()
+    normalizedWriter(value, w)
+    w.toString()
+  }
 
   /** calculates a measure of the complexity (size) of the json
     */
@@ -162,5 +213,52 @@ object JsonUtils {
         }
       }
   }
+
+  /** Dumps an indented json
+    *
+    * Object keys are output in generation order (not necessarily alphabetically).
+    *
+    * Use Serialization.write?
+    */
+  def prettyWriter[W <: Writer](value: JValue, dumper: W): Unit =
+    dumper.write(pretty(render(value)))
+
+  def prettyOutputStream[W <: OutputStream](value: JValue, dumper: W): Unit = {
+    val out = new BufferedWriter(new OutputStreamWriter(dumper, StandardCharsets.UTF_8))
+    prettyWriter(value, out)
+  }
+
+  /** Returns an UTF_8 encoded indented json
+    *
+    * Object keys are output in generation order (not necessarily alphabetically)
+    */
+  def prettyUft8(value: JValue): Array[Byte] =
+    pretty(render(value)).getBytes(StandardCharsets.UTF_8)
+
+  /** Returns a string with indented json
+    *
+    * Object keys are output in generation order (not necessarily alphabetically)
+    */
+  def prettyStr(value: JValue): String =
+    pretty(render(value))
+
+  /** Returns a json array by merging the two arguments
+    */
+  def mergeArray(val1: JArray, val2: JArray): JArray =
+    Merge.merge(val1, val2)
+
+  /** Returns a json object by merging the two arguments
+    */
+  def mergeObject(val1: JObject, val2: JObject): JObject =
+    Merge.merge(val1, val2)
+
+  /** Returns a json value by merging the two arguments
+    */
+  def mergeValue(val1: JValue, val2: JValue): JValue =
+    Merge.merge(val1, val2)
+
+  /** Returns the differences between two json values
+    */
+  def diff(val1: JValue, val2: JValue): Diff = Diff.diff(val1, val2)
 
 }

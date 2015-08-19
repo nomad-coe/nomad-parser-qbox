@@ -1,7 +1,7 @@
 package eu.nomad_lab;
 
-import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets
+import java.security.MessageDigest;
 import scala.collection.mutable
 
 /** Exception thrown when a Compact sha is updated after having calculated the digest
@@ -18,7 +18,7 @@ class UpdateAfterDigestException(msg: String) extends Exception(msg) { }
   * (more than the limited range does).
   * 168 bits can be represent exactly with base 64, and are not overly long (28 characters)
   * Its collision characteristics are thus similar to the original SHA (which has 160 bits).
-  * The gid normally has a prefix that specifies how the digest was calculated.
+  * The gid normally has a prefix that specifies the kind of data used to build the digest.
   */
 class CompactSha(val mDigest: MessageDigest) {
   object State extends Enumeration {

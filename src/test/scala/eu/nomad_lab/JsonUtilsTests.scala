@@ -250,10 +250,10 @@ object JsonUtilsTests extends Properties("JsonUtils") with StrictLogging {
   // this property should fail and be shrinked, but somehow no shrinking takes place
   // shrink is called, but no shrinked values are tested
   property("failureShrink") = Prop.forAll{ (value: JValue) =>
-      val s1 = JsonUtils.jsonCompactStr(value)
+      val s1 = JsonUtils.normalizedStr(value)
       try {
         val value2 = parse(s1, useBigDecimalForDouble = false)
-        val s2 = JsonUtils.jsonCompactStr(value2)
+        val s2 = JsonUtils.normalizedStr(value2)
         val v1 = (s1 == s2)
         val v2 = (value2 match { case JArray(arr) => (arr.size < 1 || (arr(0) match {case JInt(_) => false; case _ => true})); case _ => true})
         if (!(v1 && v2))
@@ -272,10 +272,10 @@ object JsonUtilsTests extends Properties("JsonUtils") with StrictLogging {
     val jParams = JGenParams(useDecimal, true)
 
     property("stable serialization" + jParams.toString) = Prop.forAll(genJComposite(jParams)){ (value: JValue) =>
-      val s1 = JsonUtils.jsonCompactStr(value)
+      val s1 = JsonUtils.normalizedStr(value)
       try {
         val value2 = parse(s1, useBigDecimalForDouble = jParams.useDecimal)
-        val s2 = JsonUtils.jsonCompactStr(value2)
+        val s2 = JsonUtils.normalizedStr(value2)
         (s1 == s2) :| "'" + s1 + "' reserialization gives '" + s2 + "'"
       } catch { case NonFatal(e) =>
           false :| "parsing failure of string '" + s1 + "': " + e.toString
@@ -288,7 +288,7 @@ object JsonUtilsTests extends Properties("JsonUtils") with StrictLogging {
    for (useDecimal <- Seq(false)) {
     val jParams = JGenParams(useDecimal, false, false)
     property("lossless serialization" + jParams.toString) = Prop.forAll(genJComposite(jParams)){ (value: JValue) =>
-      val s1 = JsonUtils.jsonCompactStr(value)
+      val s1 = JsonUtils.normalizedStr(value)
       try {
         val value2 = parse(s1, useBigDecimalForDouble = jParams.useDecimal)
         (value == value2) :| "'" + s1 + "' did not capture all info (lossy serialization)"
