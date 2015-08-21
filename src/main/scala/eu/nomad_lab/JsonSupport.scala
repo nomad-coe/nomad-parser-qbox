@@ -72,7 +72,7 @@ object JsonSupport {
     *
     * Object keys are sorted
     */
-  def writeNormalizedStr[A <: AnyRef](a: A): Unit = {
+  def writeNormalizedStr[A <: AnyRef](a: A): String = {
     val w = new StringWriter()
     writeNormalizedWriter(a, w)
     w.toString()
