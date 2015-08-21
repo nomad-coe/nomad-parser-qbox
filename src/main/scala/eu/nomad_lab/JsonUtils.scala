@@ -173,6 +173,7 @@ object JsonUtils {
   def normalizedOutputStream[W <: OutputStream](value: JValue, out: W): Unit = {
     val writer = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8))
     normalizedWriter(value, writer)
+    writer.flush() // we do not want to propagate the close to out, so we just flush (correct behaviour or we need to reimplement?)
   }
 
   /** returns a normalized sorted json representation
