@@ -165,10 +165,12 @@ object JsonUtils {
     }
   }
 
-  /** Dumps an normalized ordered json
+  /** Dumps a normalized ordered json
     *
     * Object keys are alphabetically ordered.
     * This is the main reason that we cannot use the default writers.
+    * Probably this could be slighlty faster if *all* string would be UTF_8
+    * as this is not the case going thought a Writer looses little.
     */
   def normalizedOutputStream[W <: OutputStream](value: JValue, out: W): Unit = {
     val writer = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8))
