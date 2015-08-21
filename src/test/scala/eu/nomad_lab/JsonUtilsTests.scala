@@ -6,7 +6,7 @@ import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JAr
 import org.json4s.native.JsonMethods.parse
 import scala.collection.mutable.ArrayOps
 import scala.util.control.NonFatal
-import com.typesafe.scalalogging.{StrictLogging}
+import com.typesafe.scalalogging.StrictLogging
 
 /** Scalacheck (generated) tests for JsonUtils
   */
@@ -18,8 +18,14 @@ object JsonUtilsTests extends Properties("JsonUtils") with StrictLogging {
   val genJDecimal = for (d <- Arbitrary.arbitrary[Double]) yield JDecimal(BigDecimal(d))
   val genJBoolean = for (b <- Arbitrary.arbitrary[Boolean]) yield JBool(b)
   val genJString = for (s <- Gen.alphaStr) yield JString(s)
+  val genArbJString = for (s <- Arbitrary.arbitrary[String]) yield JString(s)
 
-  case class JGenParams(useDecimal: Boolean = false, useNothing: Boolean = true, useLong: Boolean = false) {
+  case class JGenParams(
+    useDecimal: Boolean = false,
+    useNothing: Boolean = true,
+    useLong: Boolean = false,
+    alphaStr: Boolean = true
+  ) {
     override def toString(): String = {
       "double=" + (if (useDecimal) "decimal" else "double") +
         (if (useNothing) " with JNothing" else "") +
@@ -35,7 +41,7 @@ object JsonUtilsTests extends Properties("JsonUtils") with StrictLogging {
       (if (jParams.useDecimal) 0 else 2) -> genJDouble,
       (if (jParams.useDecimal) 2 else 0) -> genJDecimal,
       2 -> genJBoolean,
-      2 -> genJString,
+      2 -> (if (jParams.alphaStr) genJString else genArbJString),
       (if (jParams.useNothing) 1 else 0) -> (JNothing: Gen[JValue]),
       1 -> (JNull: Gen[JValue]),
       (if (jParams.useLong) 2 else 0) -> genJLong
