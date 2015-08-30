@@ -6,11 +6,13 @@ import spray.can.Http
 import akka.pattern.ask
 import akka.util.Timeout
 import scala.concurrent.duration._
+import com.typesafe.config.{Config, ConfigFactory}
 
 object Boot extends App {
+  val conf: Config = ConfigFactory.load()
 
   // we need an ActorSystem to host our application in
-  implicit val system = ActorSystem("on-spray-can")
+  implicit val system = ActorSystem("on-spray-can", conf)
 
   // create and start our service actor
   val service = system.actorOf(Props[MyServiceActor], "demo-service")
