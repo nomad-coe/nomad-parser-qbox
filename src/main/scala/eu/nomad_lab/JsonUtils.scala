@@ -270,4 +270,33 @@ object JsonUtils {
     */
   def diff(val1: JValue, val2: JValue): Diff = Diff.diff(val1, val2)
 
+  /** Error when reading from json and a required field is missing or empty
+    */
+  case class MissingFieldError(
+    val fieldName: String,
+    val context: String) extends Exception(
+    "missing or empty required field " ++ fieldName ++ " in " ++ context) {
+  }
+
+  /** Error when reading a json field and the value is unexpected
+    */
+  case class InvalidValueError(
+    val fieldName: String,
+    val context: String,
+    val value: String,
+    val expected :String) extends Exception(
+    "invalid value for field " ++ fieldName ++ " in " ++ context ++ ", expected " ++ expected ++ " but got " ++ value) {
+  }
+
+  /** Error when reading from json and an unexpected extra value is found
+    *
+    * Often you want to ignore such errors, think carefully before using this.
+    */
+  case class UnexpectedValueError(
+    val context: String,
+    val value: String,
+    val expected :String) extends Exception(
+    "invalid value in " ++ context ++ " expected " ++ expected ++ " but got " ++ value) {
+  }
+
 }
