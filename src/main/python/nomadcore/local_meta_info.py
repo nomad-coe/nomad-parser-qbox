@@ -124,7 +124,7 @@ class InfoKindEl(object):
         self.prepare(env)
         sha = env.newSha()
         self.serialize(env,sha.update, precalculatedGid = True, selfGid = False)
-        return 'p' + sha.b64digest()
+        return 'p' + sha.b64digest()[:28]
 
     def serialize(self, env, writeOut, subGids = True, addExtraArgs = True, precalculatedGid = False, selfGid = True):
         d = self.toDict(env, subGids = subGids, addExtraArgs = addExtraArgs, precalculatedGid = precalculatedGid, selfGid = selfGid)
@@ -198,7 +198,7 @@ class RelativeDependencySolver:
 
 class InfoKindEnv(object):
     """An environment keeping locally unique InfoKinds and their gids"""
-    def __init__(self, infoKinds = None, newSha = compact_sha.sha224, gids = None,
+    def __init__(self, infoKinds = None, newSha = compact_sha.sha512, gids = None,
             dependencyLoader = None, path = None, uri = None, deps = None):
         self.newSha = newSha
         self.clear()
