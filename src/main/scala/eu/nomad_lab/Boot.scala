@@ -11,6 +11,8 @@ import com.typesafe.config.{Config, ConfigFactory}
 object Boot extends App {
   val conf: Config = ConfigFactory.load()
 
+  LocalEnv.setup(conf)
+
   // we need an ActorSystem to host our application in
   implicit val system = ActorSystem("on-spray-can", conf)
 
