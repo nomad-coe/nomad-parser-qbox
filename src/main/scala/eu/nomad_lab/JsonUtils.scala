@@ -11,7 +11,7 @@ import scala.collection.mutable.ListBuffer
   *
   * In particular:
   * - parse to AST (parse*)
-  * - serialize it in a predictable compact way (compact*)
+  * - serialize it in a predictable compact way (normalized*)
   * - serialize in a nicer humar readable format (pretty*)
   * - diff two json (diff*)
   * - merge two json (merge*)
