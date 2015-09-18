@@ -2,8 +2,8 @@ lazy val commonSettings = Seq(
   organization  := "eu.nomad-laboratory",
   version       := "0.1",
   scalaVersion  := "2.11.6",
-  scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
-  fork in Test  := true
+  scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")/*,
+  fork in Test  := true*/
 );
 
 // json4s 3.3 is being finalized
