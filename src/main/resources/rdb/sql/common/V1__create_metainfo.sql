@@ -1,4 +1,6 @@
+CREATE SEQUENCE nomad_meta_infos_metainfo_id_seq;
 CREATE TABLE nomad_meta_infos (
+        metainfo_id integer not null default nextval('nomad_meta_infos_metainfo_id_seq'),
         gid VARCHAR(39) NOT NULL,
         name VARCHAR(128),
         description TEXT,
@@ -11,7 +13,7 @@ CREATE TABLE nomad_meta_infos (
         extra_args_txt TEXT,
         public BOOLEAN,
         public_override_gid VARCHAR(39),
-        PRIMARY KEY (gid),
+        PRIMARY KEY (metainfo_id),
         FOREIGN KEY(kind_gid) REFERENCES nomad_meta_infos (gid),
         FOREIGN KEY(super_kind_gid) REFERENCES nomad_meta_infos (gid),
         FOREIGN KEY(public_override_gid) REFERENCES nomad_meta_infos (gid)
@@ -19,20 +21,26 @@ CREATE TABLE nomad_meta_infos (
 
 
 CREATE TABLE nomad_meta_info_parents (
-        info_kind_gid INTEGER NOT NULL,
-        parent_gid INTEGER NOT NULL,
-        FOREIGN KEY(info_kind_gid) REFERENCES nomad_meta_infos (gid),
-        FOREIGN KEY(parent_gid) REFERENCES nomad_meta_infos (gid)
+        metainfo_id INTEGER NOT NULL,
+        parent_metainfo_id INTEGER NOT NULL,
+        FOREIGN KEY(metainfo_id) REFERENCES nomad_meta_infos (metainfo_id),
+        FOREIGN KEY(parent_metainfo_id) REFERENCES nomad_meta_infos (metainfo_id)
 );
-
 
 CREATE TABLE nomad_meta_info_anchestors (
-        info_kind_gid INTEGER NOT NULL,
-        anchestor_gid INTEGER NOT NULL,
-        FOREIGN KEY(info_kind_gid) REFERENCES nomad_meta_infos (gid),
-        FOREIGN KEY(anchestor_gid) REFERENCES nomad_meta_infos (gid)
+        metainfo_id INTEGER NOT NULL,
+        anchestor_metainfo_id INTEGER NOT NULL,
+        FOREIGN KEY(metainfo_id) REFERENCES nomad_meta_infos (metainfo_id),
+        FOREIGN KEY(anchestor_metainfo_id) REFERENCES nomad_meta_infos (metainfo_id)
 );
 
-CREATE TABLE meta_info_version(
+CREATE SEQUENCE nomad_meta_info_versions;
+CREATE TABLE nomad_meta_info_versions (
+       version_id INTEGER NOT NULL,
        name VARCHAR(128) NOT NULL
+);
+
+CREATE TABLE nomad_meta_info_version (
+       version_id INTEGER NOT NULL,
+       metainfo_id INTEGER NOT NULL
 );

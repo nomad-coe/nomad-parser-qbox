@@ -50,8 +50,8 @@ object Rdb extends StrictLogging {
     */
   def defaultSettings_=(newValue: Settings): Unit = {
     Rdb.synchronized {
-      if (privatedefaultsettings != null)
-        logger.warning(s"eu.nomad_lab.Rdb overwriting old settings ${JsonUtils.prettyStr(privatedefaultsettings.toJson)} with ${JsonUtils.prettyStr(newStr.toJson)}")
+      if (privateDefaultSettings != null)
+        logger.warn(s"eu.nomad_lab.Rdb overwriting old settings ${JsonUtils.prettyStr(privateDefaultSettings.toJson)} with ${JsonUtils.prettyStr(newValue.toJson)}")
       privateDefaultSettings = newValue
     }
   }
