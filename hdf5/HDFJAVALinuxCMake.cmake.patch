@@ -1,0 +1,11 @@
+--- a/HDFJAVALinuxCMake.cmake	2014-12-15 19:03:43.000000000 +0100
++++ b/HDFJAVALinuxCMake.cmake	2015-09-22 21:35:11.182886434 +0200
+@@ -80,7 +80,7 @@
+ #set(ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DHDF_NO_PACKAGES:BOOL=ON")
+ 
+ ### change install prefix
+-#set(ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DCMAKE_INSTALL_PREFIX:PATH=install")
++set(ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DCMAKE_INSTALL_PREFIX:PATH=${CTEST_SCRIPT_DIRECTORY}/linux-native")
+ ###################################################################
+ 
+ set(ENV{JAVAHOME} "/usr/lib/jvm/java")

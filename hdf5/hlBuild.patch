@@ -1,0 +1,11 @@
+--- a/HDF5/CMakeLists.txt	2014-10-13 13:33:39.000000000 +0200
++++ b/HDF5/CMakeLists.txt	2015-09-22 13:22:22.000000000 +0200
+@@ -851,7 +851,7 @@
+ # Option to build High Level API's
+ #-----------------------------------------------------------------------------
+ if (EXISTS "${HDF5_SOURCE_DIR}/hl" AND IS_DIRECTORY "${HDF5_SOURCE_DIR}/hl")
+-  option (HDF5_BUILD_HL_LIB  "Build HIGH Level HDF5 Library" OFF)
++  option (HDF5_BUILD_HL_LIB  "Build HIGH Level HDF5 Library" ON)
+   if (HDF5_BUILD_HL_LIB)
+     set (H5_INCLUDE_HL 1)
+     add_subdirectory (${HDF5_SOURCE_DIR}/hl ${PROJECT_BINARY_DIR}/hl)
