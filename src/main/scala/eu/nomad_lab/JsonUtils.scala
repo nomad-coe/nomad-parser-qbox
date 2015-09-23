@@ -253,17 +253,17 @@ object JsonUtils {
 
   /** Returns a json array by merging the two arguments
     */
-  def mergeArray(val1: JArray, val2: JArray): JArray =
+  def mergeArrays(val1: JArray, val2: JArray): JArray =
     Merge.merge(val1, val2)
 
   /** Returns a json object by merging the two arguments
     */
-  def mergeObject(val1: JObject, val2: JObject): JObject =
+  def mergeObjects(val1: JObject, val2: JObject): JObject =
     Merge.merge(val1, val2)
 
   /** Returns a json value by merging the two arguments
     */
-  def mergeValue(val1: JValue, val2: JValue): JValue =
+  def mergeValues(val1: JValue, val2: JValue): JValue =
     Merge.merge(val1, val2)
 
   /** Returns the differences between two json values
