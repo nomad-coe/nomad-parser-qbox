@@ -133,19 +133,114 @@ class MetaInfoRecordSerializer extends CustomSerializer[MetaInfoRecord](format =
          }
        ))
 
-/** Interface to a version of NomadMetaInfos i.e. a set of MetaInfoRecords in which the MetaInfoRecord.name is unique
+/** Interface to a collection of nomad meta info records
   */
-trait MetaInfoEnv {
-  /** name of the environment (for debugging purposes)
+trait MetaInfoCollection {
+
+  /** returns all versions defined (might contain duplicates!)
     */
-  def envName: String;
+  def allVersions: Iterator[MetaInfoEnv]
 
+  /** returns all versions just once
+    */
+  def allUniqueVersions: Iterator[MetaInfoEnv] = {
+    val seen = mutable.Set[MetaInfoEnv]()
 
-  def source: JObject;
-  def gidForName(name: String, strict: Boolean = false): Option[String];
-  def nameForGid(gid: String, strict: Boolean = false): Option[String];
-  def metaInfoRecordForName(name: String, selfGid: Boolean = false, superGids: Boolean = false): Option[MetaInfoRecord];
+    allVersions.filter{ el =>
+      if (seen(el)) {
+        false
+      } else {
+        seen += el
+        true
+      }
+    }
+  }
+
+  /** returns the versions with the given name
+    */
+  def version(name:String): Seq[MetaInfoEnv];
+
+  /** returns the versions that contain that gid
+    *
+    * If recursive is true, inclusion through a dependency is also
+    * considered.
+    */
+  def versionsForGid(gid: String, recursive: Boolean = false): Iterator[String]
+
+  /** All gids of the meta infos in this collection
+    *
+    * might contain duplicates
+    */
+  def allGids: Iterator[String]
+
+  /** returns the MetaInfoRecord corresponding to the given gid
+    *
+    * gids and superGids are added only if requested
+    */
   def metaInfoRecordForGid(gid: String, selfGid: Boolean = false, superGids: Boolean = false): Option[MetaInfoRecord];
+}
+
+/** Interface to a set of MetaInfoRecords in which MetaInfoRecord.name is
+  * unique
+  *
+  * An environment in which names have a unique meaning is required to
+  * calculate gids if the dependencies are expressed only through superNames.
+  * This can also be seen as a "Version" of the meta infos.
+  */
+trait MetaInfoEnv extends MetaInfoCollection {
+  /** Name of the version
+    */
+  def name: String;
+
+  /** Info describing from where this version was created
+    *
+    * example: path of the file read
+    */
+  def source: JObject;
+
+  /** The names of the meta info contained directly in this environment,
+    * no dependencies
+    */
+  def names: Seq[String]
+
+  /** gids of the meta infos contained in this environment (no dependencies)
+    */
+  def gids: Seq[String]
+
+  /** All gids of the meta infos in this collection
+    *
+    * might contain duplicates
+    */
+  override def allGids: Iterator[String] = {
+    allUniqueVersions.foldLeft(gids.toIterator)( _ ++ _.gids.toIterator)
+  }
+
+  /** All names of the meta infos in this environment (including dependencies)
+    *
+    * Might contain duplicates
+    */
+  def allNames: Iterator[String] = {
+    allUniqueVersions.foldLeft(names.toIterator)( _ ++ _.names.toIterator)
+  }
+
+  /** Maps names to gids
+    *
+    * If recursive is false only direct descendents are mapped.
+    */
+  def gidForName(name: String, recursive: Boolean = true): Option[String]
+
+  /** Maps gids to names
+    *
+    * If recursive is false only direct descendents are mapped.
+    */
+  def nameForGid(gid: String, recursive: Boolean = true): Option[String]
+
+  /** returns the MetaInfoRecord corresponding to the given name
+    *
+    * gids and superGids are added only if requested
+    */
+  def metaInfoRecordForName(name: String, selfGid: Boolean = false, superGids: Boolean = false): Option[MetaInfoRecord]
+
 }
 
 object MetaInfoEnv {
@@ -190,10 +285,20 @@ object DependencyResolver {
   /** thrown when a circular dependency is detected
     */
   case class CircularDepException(
+    source: JObject,
     dep: JObject,
     inProgress: String
   ) extends Exception(
-    s"Circular dependency encountred while resolving ${JsonUtils.prettyStr(dep)}, inProgress:$inProgress") {
+    s"Circular dependency encountred while resolving ${JsonUtils.prettyStr(dep)} in ${JsonUtils.prettyStr(source)}, inProgress:$inProgress") {
+  }
+
+  /** thrown when the given dependency is found but not expected
+    */
+  case class UnexpectedDepException(
+    source: JObject,
+    dep: JObject
+  ) extends Exception(
+    s"Unexprected dependency ${JsonUtils.prettyStr(dep)} in ${JsonUtils.prettyStr(source)}") {
   }
 
 }
@@ -201,7 +306,7 @@ object DependencyResolver {
 /** a MetaInfoEnv that simply stores all MetaInfoRecords and its dependencies
   */
 class SimpleMetaInfoEnv(
-  val envName: String,
+  val name: String,
   val source:  JObject,
   val nameToGid: Map[String, String],
   val gidToName: Map[String, String],
@@ -221,24 +326,60 @@ class SimpleMetaInfoEnv(
     None
   }
 
+  /** The names of the meta info contained directly in this environment,
+    * no dependencies
+    */
+  def names: Seq[String] = metaInfos.keys.toSeq
+
+  /** gids of the meta infos contained in this environment (no dependencies)
+    */
+  def gids: Seq[String] = metaInfos.keys.flatMap{ nameToGid.get(_) }(breakOut)
+
+  /** returns all versions defined (might contain duplicates!)
+    */
+  def allVersions: Iterator[MetaInfoEnv] = {
+    dependencies.foldLeft[Iterator[MetaInfoEnv]](Iterator(this))( _ ++ _.allVersions )
+  }
+
+  /** returns the versions with the given name
+    */
+  def version(name:String): Seq[MetaInfoEnv] = {
+    if (name == this.name)
+      Seq(this)
+    else
+      Seq()
+  }
+
+  /** returns the versions that contain that gid
+    *
+    * If recursive is true, inclusion through a dependency is also
+    * considered.
+    */
+  def versionsForGid(gid: String, recursive: Boolean = false): Iterator[String] = {
+    if (!nameForGid(gid, recursive).isEmpty)
+      Iterator(this.name)
+    else
+      Iterator()
+  }
+
   /** Returns the gid of the MetaInfoRecord with the given name
     *
     * *Not* lazy, requires the gid to be already calculated.
-    * If strict is true only gids of MetaInfoRecords directly contained
+    * If recursive is false only gids of MetaInfoRecords directly contained
     * are returned, no dependencies
     */
-  def gidForName(name: String, strict: Boolean = false): Option[String] = {
+  def gidForName(name: String, recursive: Boolean = true): Option[String] = {
     nameToGid.get(name) match {
       case Some(gid) =>
-        if (strict && ! metaInfos.contains(name))
+        if (!recursive && ! metaInfos.contains(name))
           None
         else
           Some(gid)
       case None =>
-        if (strict) {
-          None
+        if (recursive) {
+          firstFromDeps(_.gidForName(name, recursive))
         } else {
-          firstFromDeps(_.gidForName(name, strict))
+          None
         }
     }
   }
@@ -246,20 +387,20 @@ class SimpleMetaInfoEnv(
   /** Returns the name of the MetaInfoRecord corresponding to the given gid
     *
     * *not* lazy, requires the gid to be already calculated
-    * if strict is true only names directly contained are returned, no dependencies
+    * if recursive is false only names directly contained are returned, no dependencies
     */
-  def nameForGid(gid: String, strict: Boolean): Option[String] = {
+  def nameForGid(gid: String, recursive: Boolean = true): Option[String] = {
     gidToName.get(gid) match {
       case Some(name) =>
-        if (strict && ! metaInfos.contains(name))
+        if (!recursive && ! metaInfos.contains(name))
           None
         else
           Some(name)
       case None =>
-        if (strict) {
-          None
+        if (recursive) {
+          firstFromDeps(_.nameForGid(gid, recursive))
         } else {
-          firstFromDeps(_.nameForGid(gid, strict))
+          None
         }
     }
   }
@@ -273,14 +414,14 @@ class SimpleMetaInfoEnv(
       case Some(baseVal) =>
         val gid = (
           if (selfGid)
-            gidForName(name, false).getOrElse("")
+            gidForName(name, recursive = true).getOrElse("")
           else
             ""
         )
         val sGids = (
           if (superGids) {
             if (!baseVal.superNames.isEmpty && baseVal.superGids.isEmpty)
-              baseVal.superNames.map(gidForName(_, false).getOrElse(""))
+              baseVal.superNames.map(gidForName(_, recursive = true).getOrElse(""))
             else
               baseVal.superGids
           } else {
@@ -302,7 +443,7 @@ class SimpleMetaInfoEnv(
     * definitions with the same name in the dependencies (something that should be avoided).
     */
   def metaInfoRecordForGid(gid: String, selfGid: Boolean = false, superGids: Boolean = false): Option[MetaInfoRecord] = {
-    nameForGid(gid, true) match {
+    nameForGid(gid, recursive = false) match {
       case Some(name) =>
         metaInfoRecordForName(name, selfGid, superGids)
       case None       => firstFromDeps(_.metaInfoRecordForGid(gid, selfGid, superGids))
@@ -416,7 +557,7 @@ object SimpleMetaInfoEnv {
       }
     }
     new SimpleMetaInfoEnv(
-      envName = name,
+      name = name,
       source = source,
       nameToGid = nameToGid.toMap,
       gidToName = nameToGid.map{ case (name, gid) => (gid, name)}(breakOut),
@@ -467,7 +608,8 @@ class RelativeDependencyResolver(
     if (deps.contains(dPath))
       return deps(dPath)
     if (inProgress.contains(dPath))
-      throw new DependencyResolver.CircularDepException(dep, inProgress.mkString("{",", ","}"))
+      throw DependencyResolver.CircularDepException(
+        source, dep, inProgress.mkString("{",", ","}"))
     inProgress += dPath
     val newEnv = SimpleMetaInfoEnv.fromFilePath(dPath, dependencyResolver = rootResolver)
     inProgress -= dPath
@@ -476,14 +618,28 @@ class RelativeDependencyResolver(
   }
 }
 
+/** dummy DependencyResolver that resolves no dependency
+  */
+class NoDependencyResolver(
+  val parentResolver: Option[DependencyResolver] = None,
+  val throwOnDep: Boolean = true
+) extends DependencyResolver {
+  /** throws or returns a dummy env depending on throwOnDep
+    */
+  def resolveDependency(source: JObject, dep: JObject): MetaInfoEnv = {
+    if (throwOnDep)
+      throw DependencyResolver.UnexpectedDepException(source, dep)
+    return new SimpleMetaInfoEnv("dummyEnv",
+      source =  JsonUtils.mergeObjects(source,dep),
+      nameToGid = Map[String, String](),
+      gidToName = Map[String, String](),
+      metaInfos = Map[String, MetaInfoRecord](),
+      dependencies = Seq())
+  }
+}
+
 /*class MetaInfoDbEnv(
   val name: String,
   val dbContext: () => jooq.DSLContext,
   val lazyLoad: Boolean) {
 }*/
-
-trait MultiEnv {
-  def version(name:String): MetaInfoEnv;
-  def metaInfoRecordForGid(gid: String, selfGid: Boolean = false, superGids: Boolean = false): Option[MetaInfoRecord];
-  def versionsForGid(gid: String): Seq[String]
-}

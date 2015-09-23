@@ -110,4 +110,78 @@ class MetaInfoJsonSpec extends Specification {
     mRecord.otherKeys must_==  JField("tt", JInt(4)) :: JField("extra", JString("nr1")) :: Nil
   }
 
+  "simpleEnv test" >> {
+    val jsonList = JsonUtils.parseStr("""
+    [{
+        "name": "TestProperty1",
+        "kindStr": "DocumentContentType"
+        "description": "a meta info property to test gids",
+        "superNames": []
+    },{
+        "name": "TestProperty2",
+        "kindStr": "DocumentContentType"
+        "description": "a second meta info property to test gids",
+        "superNames": ["TestProperty1"]
+    },{
+        "name": "TestProperty3",
+        "gid": "dummyGid",
+        "kindStr": "DocumentContentType"
+        "description": "a third meta info property to test gids",
+        "superNames": []
+    },{
+        "name": "TestProperty4",
+        "kindStr": "DocumentContentType"
+        "description": "a fourth meta info property to test gids",
+        "superNames": ["TestProperty2","TestProperty3"]
+    }]""").children
+    val simpleEnv1 = SimpleMetaInfoEnv.fromJsonList(
+      name = "test_env_1",
+      source = JObject(JField("path",JString("<pseudo1>"))::Nil),
+      jsonList =  jsonList,
+      dependencyResolver = new NoDependencyResolver(),
+      keepExistingGidsValues = true,
+      ensureGids = true)
+
+    JsonUtils.normalizedStr(jsonList(0)) must_== {
+      JsonUtils.normalizedStr(simpleEnv1.metaInfoRecordForName("TestProperty1") match {
+        case Some(r) => r.toJValue()
+        case None => JNothing
+      })
+    }
+
+    simpleEnv1.gidForName("TestProperty3").getOrElse("") must_== "dummyGid"
+
+    val expectedGid: String = {
+      val sha = CompactSha()
+      JsonUtils.normalizedOutputStream(jsonList(0), sha.outputStream)
+      sha.gidStr("p")
+    }
+    val storedGid: String = simpleEnv1.gidForName("TestProperty1").getOrElse("")
+
+    expectedGid must_== storedGid
+
+    val simpleEnv2 = SimpleMetaInfoEnv.fromJsonList(
+      name = "test_env_2",
+      source = JObject(JField("path",JString("<pseudo2>"))::Nil),
+      jsonList =  jsonList,
+      dependencyResolver = new NoDependencyResolver(),
+      keepExistingGidsValues = false,
+      ensureGids = true)
+    val simpleEnv3 = SimpleMetaInfoEnv.fromJsonList(
+      name = "test_env_3",
+      source = JObject(JField("path",JString("<pseudo3>"))::Nil),
+      jsonList =  (JArray(jsonList) \ "name").children.map {
+        case JString(name) =>
+          simpleEnv2.metaInfoRecordForName(name) match {
+            case Some(r) => r.toJValue()
+            case None => JNothing
+          }
+        case _ =>
+          JNothing
+      },
+      dependencyResolver = new NoDependencyResolver(),
+      keepExistingGidsValues = false,
+      ensureGids = true)
+  }
+
 }
