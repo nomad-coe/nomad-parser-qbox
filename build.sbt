@@ -2,7 +2,8 @@ lazy val commonSettings = Seq(
   organization  := "eu.nomad-laboratory",
   version       := "0.1",
   scalaVersion  := "2.11.6",
-  scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")/*,
+  scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
+  resolvers += "netcdf releases" at "http://artifacts.unidata.ucar.edu/content/repositories/unidata-releases"/*,
   fork in Test  := true*/
 );
 
@@ -19,6 +20,10 @@ lazy val commonLibs = {
   val h2            = "com.h2database"      % "h2"             % "1.4.187"
   val scalacheck    = "org.scalacheck"     %% "scalacheck"     % "1.12.4" % "test"
   val scalalog      = "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0"
+  val tika          = "org.apache.tika"     % "tika-core"       % "1.10"
+  val commonsCompress = "org.apache.commons"  % "commons-compress" % "1.10"
+  val xzForJava     = "org.tukaani"         % "xz"              % "1.5"
+  val netcdf        = "edu.ucar"            % "netcdf4"         % "4.6.3"
   val log4j2        = Seq(
     "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.3",
     "org.apache.logging.log4j" % "log4j-api"        % "2.3",
@@ -36,6 +41,10 @@ lazy val commonLibs = {
     json4sNative,
     h2,
     scalacheck,
+    tika,
+    commonsCompress,
+    xzForJava,
+    netcdf,
     scalalog) ++ log4j2
 };
 
@@ -119,4 +128,7 @@ lazy val root = (project in file(".")).
   settings(flywayH2: _*).
   settings(jooqCommon: _*).
   settings(jooqH2: _*).
-  settings(Revolver.settings: _*)
+  settings(Revolver.settings: _*)/*.
+  settings(
+    resolvers += "netcdf releases" at "http://artifacts.unidata.ucar.edu/content/repositories/unidata-releases"
+  )*/
