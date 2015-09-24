@@ -93,27 +93,54 @@ class MetaInfoRecordSerializer extends CustomSerializer[MetaInfoRecord](format =
              var otherKeys: List[JField] = Nil;
              obj foreach {
                case JField("name", value) =>
-                 name = value.extract[String]
+                 value match {
+                   case JString(s)       => name = s
+                   case JNothing | JNull => ()
+                   case _                => throw new JsonUtils.InvalidValueError(
+                     "name", "NomadMetaInfo", JsonUtils.prettyStr(value), "a string")
+                 }
                case JField("gid", value) =>
-                 gid = value.extract[String]
+                 value match {
+                   case JString(s)       => gid = s
+                   case JNothing | JNull => ()
+                   case _                => throw new JsonUtils.InvalidValueError(
+                     "gid", "NomadMetaInfo", JsonUtils.prettyStr(value), "a string")
+                 }
                case JField("kindStr", value) =>
-                 kindStr = value.extract[String]
+                 value match {
+                   case JString(s)       => kindStr = s
+                   case JNothing | JNull => ()
+                   case _                => throw new JsonUtils.InvalidValueError(
+                     "kindString", "NomadMetaInfo", JsonUtils.prettyStr(value), MetaInfoRecord.dtypes.foldLeft("one of the following strings:"){ _ + " " + _ } )
+                 }
                case JField("description", value) =>
-                 description = value.extract[String]
+                 value match {
+                   case JString(s)       => description = s
+                   case JNothing | JNull => ()
+                   case _                => throw new JsonUtils.InvalidValueError(
+                     "kindString", "NomadMetaInfo", JsonUtils.prettyStr(value), "a string")
+                 }
                case JField("superNames", value) =>
-                 superNames = value.extract[Seq[String]]
+                 if (!value.toOption.isEmpty)
+                   superNames = value.extract[Seq[String]]
                case JField("superGids", value) =>
-                 superGids = value.extract[Seq[String]]
+                 if (!value.toOption.isEmpty)
+                   superGids = value.extract[Seq[String]]
                case JField("units", value) =>
-                 units = value.extract[Option[String]]
+                 if (!value.toSome.isEmpty)
+                   units = value.extract[Option[String]]
                case JField("dtypeStr", value) =>
-                 dtypeStr = value.extract[Option[String]]
+                 if (!value.toSome.isEmpty)
+                   dtypeStr = value.extract[Option[String]]
                case JField("repeats", value) =>
-                 repeats = value.extract[Option[Boolean]]
+                 if (!value.toSome.isEmpty)
+                   repeats = value.extract[Option[Boolean]]
                case JField("shape", value) =>
-                 shape = value.extract[Option[Seq[Int]]]
+                 if (!value.toSome.isEmpty)
+                   shape = value.extract[Option[Seq[Int]]]
                case JField(key, value) =>
-                 otherKeys = JField(key, value) +: otherKeys
+                 if (!value.toSome.isEmpty)
+                   otherKeys = JField(key, value) +: otherKeys
              }
              if (name.isEmpty) throw new JsonUtils.MissingFieldError("name", "NomadMetaInfo")
              if (description.isEmpty) throw new JsonUtils.MissingFieldError("description", "NomadMetaInfo")
