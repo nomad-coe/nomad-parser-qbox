@@ -114,23 +114,21 @@ class MetaInfoJsonSpec extends Specification {
     val jsonList = JsonUtils.parseStr("""
     [{
         "name": "TestProperty1",
-        "kindStr": "DocumentContentType"
         "description": "a meta info property to test gids",
         "superNames": []
     },{
         "name": "TestProperty2",
-        "kindStr": "DocumentContentType"
         "description": "a second meta info property to test gids",
         "superNames": ["TestProperty1"]
     },{
         "name": "TestProperty3",
+        "kindStr": "DocumentContentType",
         "gid": "dummyGid",
-        "kindStr": "DocumentContentType"
         "description": "a third meta info property to test gids",
         "superNames": []
     },{
         "name": "TestProperty4",
-        "kindStr": "DocumentContentType"
+        "kindStr": "AbstractDocumentContentType",
         "description": "a fourth meta info property to test gids",
         "superNames": ["TestProperty2","TestProperty3"]
     }]""").children
@@ -167,6 +165,12 @@ class MetaInfoJsonSpec extends Specification {
       dependencyResolver = new NoDependencyResolver(),
       keepExistingGidsValues = false,
       ensureGids = true)
+
+    simpleEnv2.gidForName("TestProperty1").getOrElse("") must_== simpleEnv1.gidForName("TestProperty1").getOrElse("")
+    simpleEnv2.gidForName("TestProperty2").getOrElse("") must_== simpleEnv1.gidForName("TestProperty2").getOrElse("")
+    simpleEnv2.gidForName("TestProperty3").getOrElse("dummyGid") must_!= "dummyGid"
+    simpleEnv2.gidForName("TestProperty4").getOrElse("") must_!= simpleEnv1.gidForName("TestProperty4").getOrElse("")
+
     val simpleEnv3 = SimpleMetaInfoEnv.fromJsonList(
       name = "test_env_3",
       source = JObject(JField("path",JString("<pseudo3>"))::Nil),
@@ -182,6 +186,12 @@ class MetaInfoJsonSpec extends Specification {
       dependencyResolver = new NoDependencyResolver(),
       keepExistingGidsValues = false,
       ensureGids = true)
+
+    simpleEnv2.gidForName("TestProperty1").getOrElse("") must_== simpleEnv3.gidForName("TestProperty1").getOrElse("")
+    simpleEnv2.gidForName("TestProperty2").getOrElse("") must_== simpleEnv3.gidForName("TestProperty2").getOrElse("")
+    simpleEnv2.gidForName("TestProperty3").getOrElse("") must_== simpleEnv3.gidForName("TestProperty3").getOrElse("")
+    simpleEnv2.gidForName("TestProperty4").getOrElse("") must_== simpleEnv3.gidForName("TestProperty4").getOrElse("")
+
   }
 
 }

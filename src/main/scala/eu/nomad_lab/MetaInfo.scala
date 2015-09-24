@@ -273,7 +273,7 @@ trait MetaInfoEnv extends MetaInfoCollection {
 object MetaInfoEnv {
   /** two meta infos with the same name detected
     */
-  class DuplicateNameException(name: String,
+  case class DuplicateNameException(name: String,
     metaInfo1: MetaInfoRecord,
     metaInfo2: MetaInfoRecord
   ) extends Exception(s"DuplicateNameException, found two meta infos with the same name ($name): $metaInfo1 vs $metaInfo2") { }
@@ -283,6 +283,25 @@ object MetaInfoEnv {
   class ParseException(
     msg: String, what: Throwable = null
   ) extends Exception(msg, what) {}
+
+  /** a meta info depends on an unknown name
+    */
+  case class DependsOnUnknownNameException(
+    envName: String,
+    name: String,
+    unknownName: String
+  ) extends Exception(
+    s"Meta info '$name' depends on unknown meta info '$unknownName' in '$envName'") {}
+
+  /** a meta info has a circular dependency
+    */
+  case class MetaInfoCircularDepException(
+    envName: String,
+    name: String,
+    nameInCicle: String,
+    inProgress: Iterable[String]
+  ) extends Exception(
+    s"found loop to '$nameInCicle' evaluating '$name' in '$envName', currently in progress: ${inProgress.mkString("[",", ","]")}") { }
 
 }
 
@@ -481,6 +500,17 @@ class SimpleMetaInfoEnv(
 object SimpleMetaInfoEnv {
   implicit val formats = DefaultFormats + new MetaInfoRecordSerializer;
 
+  def evalGid(
+    metaInfo: MetaInfoRecord,
+    nameToGid: scala.collection.Map[String,String]): String = {
+    val sha = CompactSha()
+    JsonUtils.normalizedOutputStream(metaInfo.copy(
+      gid="",
+      superGids=metaInfo.superNames.map(nameToGid(_))).toJValue(),
+      sha.outputStream)
+    sha.gidStr("p") // use gidAscii?
+  }
+
   /** Calculates a Gid
     */
   def calculateGid(
@@ -490,6 +520,16 @@ object SimpleMetaInfoEnv {
     dependencies: Seq[MetaInfoEnv],
     context: String,
     precalculated: Boolean = false): String = {
+
+    def firstMetaFromDeps(n: String): Option[MetaInfoRecord] = {
+      for (d <- dependencies) {
+        val value = d.metaInfoRecordForName(n)
+        if (!value.isEmpty)
+          return value
+      }
+      None
+    }
+
     nameToGidCache.get(name) match {
       case Some(v) =>
         v
@@ -497,7 +537,58 @@ object SimpleMetaInfoEnv {
         if (precalculated) {
           throw new GidNotPrecalculatedError(name, context)
         } else {
-          throw new Exception("to do")
+          val inProgress = mutable.ListBuffer[String]()
+          var hasPending: Boolean = false
+          val toDo = mutable.ListBuffer[String](name)
+
+          for (i <- 1 to 2 ) {
+            while (!toDo.isEmpty) {
+              var now: String = ""
+              if (!hasPending && !inProgress.isEmpty) {
+                now = inProgress.last
+                inProgress.trimEnd(1)
+              } else {
+                now = toDo.last
+                toDo.trimEnd(1)
+              }
+              hasPending = false
+              val nowMeta = metaInfos.get(now) match {
+                case Some(meta) => meta
+                case None => {
+                  firstMetaFromDeps(now) match {
+                    case Some(meta) => meta
+                    case None => throw new MetaInfoEnv.DependsOnUnknownNameException(
+                      context, name, now)
+                  }
+                }
+              }
+              for (superName <- nowMeta.superNames) {
+                if (!nameToGidCache.contains(superName)) {
+                  hasPending = true
+                  if (toDo.contains(superName))
+                    toDo -= superName
+                  if (inProgress.contains(superName))
+                    throw new MetaInfoEnv.MetaInfoCircularDepException(
+                      context, name, superName, inProgress)
+                  toDo += superName
+                }
+              }
+              if (!hasPending) {
+                val gidNow = evalGid(nowMeta, nameToGidCache)
+                nameToGidCache += (now -> gidNow)
+                if (inProgress.contains(now))
+                  inProgress -= now
+              } else {
+                if (inProgress.contains(now))
+                  throw new MetaInfoEnv.MetaInfoCircularDepException(
+                    context, name, now, inProgress)
+                inProgress += now
+              }
+            }
+            toDo ++= inProgress
+            inProgress.clear()
+          }
+          nameToGidCache(name)
         }
     }
   }
