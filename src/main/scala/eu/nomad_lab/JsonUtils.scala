@@ -224,7 +224,7 @@ object JsonUtils {
     * Currently inefficent, use Serialization.write?
     */
   def prettyWriter[W <: Writer](value: JValue, writer: W): Unit =
-    writer.write(pretty(render(value)))
+    writer.write(prettyStr(value))
 
   /** Dumps an indented json
     *
@@ -242,14 +242,18 @@ object JsonUtils {
     * Object keys are output in generation order (not necessarily alphabetically)
     */
   def prettyUft8(value: JValue): Array[Byte] =
-    pretty(render(value)).getBytes(StandardCharsets.UTF_8)
+    prettyStr(value).getBytes(StandardCharsets.UTF_8)
 
   /** Returns a string with indented json
     *
     * Object keys are output in generation order (not necessarily alphabetically)
     */
-  def prettyStr(value: JValue): String =
-    pretty(render(value))
+  def prettyStr(value: JValue): String = {
+    value match {
+      case JNothing => ""
+      case _        => pretty(render(value))
+    }
+  }
 
   /** Returns a json array by merging the two arguments
     */
