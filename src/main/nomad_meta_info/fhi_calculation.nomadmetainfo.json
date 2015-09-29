@@ -1,7 +1,0 @@
-[ {
-    "dependencies": [ {
-        "relativePath": "meta_types.nomadmetainfo.json"
-      }, {
-        "relativePath": "common.nomadmetainfo.json"
-      }]
-  }]
