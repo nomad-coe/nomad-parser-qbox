@@ -4,12 +4,17 @@ import org.specs2.mutable.Specification
 import spray.testkit.Specs2RouteTest
 import spray.http._
 import StatusCodes._
-//import eu.nomad_lab.{JsonUtils}
-import eu.nomad_lab.JsonSupport.{formats}
 
 class NomadMetaInfoServiceSpec extends Specification with Specs2RouteTest with NomadMetaInfoService {
   def actorRefFactory = system
   
+  lazy val metaInfoCollection: MetaInfoCollection = {
+    val classLoader: ClassLoader = getClass().getClassLoader();
+    val filePath = classLoader.getResource("nomad_meta_info/main.nomadmetainfo.json").getFile()
+    val resolver = new RelativeDependencyResolver
+    SimpleMetaInfoEnv.fromFilePath(filePath, resolver)
+  }
+
   "NomadMetaInfoService" should {
 
     "meta info version v0.1 info.json is valid" in {
