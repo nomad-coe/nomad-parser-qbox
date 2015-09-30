@@ -15,3 +15,27 @@
     fi
     sudo aptitude update
     sudo aptitude install sbt
+
+# hdf5 / netCDF installation
+
+read & execute (line by line if you have problems/worry about security)
+
+    hdf5/getAndBuild.sh
+
+# compilation
+
+IMPORTANT, before the first compilation you need
+
+    sbt jooq:codegen
+
+as this compiles the classes for the db connection (jooq), it will automatically execute flaywayMigrate to bring the DB schema up to date
+
+then just use sbt normally:
+
+    $ sbt
+    > compile
+    > test
+    > testOnly *MyTests*
+    ...
+
+this interactive use keeps things cached and gives faster compilation/test, console will start an interactive scala environment where you can import and play with all the infrastructure (i.e. scala REPL + all dependencies and compiled code).
