@@ -1,10 +1,15 @@
+/** to build the first time you need to execute
+  * jooq:codegen which depends on flywayMigrate to generate the jooq db code
+  */
+
 lazy val commonSettings = Seq(
   organization  := "eu.nomad-laboratory",
   version       := "0.1",
   scalaVersion  := "2.11.6",
   scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
-  resolvers += "netcdf releases" at "http://artifacts.unidata.ucar.edu/content/repositories/unidata-releases"/*,
-  fork in Test  := true*/
+  resolvers     += "netcdf releases" at "http://artifacts.unidata.ucar.edu/content/repositories/unidata-releases",
+  fork in run   := true /*,
+  fork in Test  := true // breaks test summary report */
 );
 
 // json4s 3.3 is being finalized
@@ -130,7 +135,4 @@ lazy val root = (project in file(".")).
   settings(flywayH2: _*).
   settings(jooqCommon: _*).
   settings(jooqH2: _*).
-  settings(Revolver.settings: _*)/*.
-  settings(
-    resolvers += "netcdf releases" at "http://artifacts.unidata.ucar.edu/content/repositories/unidata-releases"
-  )*/
+  settings(Revolver.settings: _*)
