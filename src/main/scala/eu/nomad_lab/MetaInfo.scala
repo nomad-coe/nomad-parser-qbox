@@ -7,7 +7,7 @@ import java.nio.file.{Path, Paths}
 import scala.collection.mutable
 import scala.collection.breakOut
 import scala.util.control.NonFatal
-
+import com.typesafe.scalalogging.StrictLogging
 /** Represents a piece of nomad meta info referring to other meta info by name.
   *
   * Can be interpreted within a context [[eu.nomad_lab.MetaInfoEnv]], but matches the
@@ -70,8 +70,11 @@ object MetaInfoRecord {
     * c: unicode character
     * B: byte array (blob)
     * C: unicode string
+    * D: a json dictionary (currently not very efficient)
+    *
+    * Should probably be migrated to an Enumaration.
     */
-  final val dtypes = Seq("f", "i", "f32", "i32", "u32", "f64", "i64", "u64", "b", "c", "B", "C")
+  final val dtypes = Seq("f", "i", "f32", "i32", "u32", "f64", "i64", "u64", "b", "c", "B", "C", "D")
 }
 
 /** Json serialization to and deserialization support for MetaInfoRecord
@@ -79,7 +82,7 @@ object MetaInfoRecord {
 class MetaInfoRecordSerializer extends CustomSerializer[MetaInfoRecord](format => (
          {
            case JObject(obj) => {
-             implicit val formats = DefaultFormats;
+             implicit val formats = format;
              var name: String = "";
              var gid: String = "";
              var kindStr: String = "DocumentContentType";
@@ -116,9 +119,18 @@ class MetaInfoRecordSerializer extends CustomSerializer[MetaInfoRecord](format =
                case JField("description", value) =>
                  value match {
                    case JString(s)       => description = s
+                   case JArray(arr)      =>
+                     val sb = new StringBuilder()
+                     arr.foreach{
+                       case JString(s) => sb ++= (s)
+                       case JNothing   => ()
+                       case _          => throw new JsonUtils.InvalidValueError(
+                     "description", "NomadMetaInfo", JsonUtils.prettyStr(value), "either a string or an array of strings")
+                     }
+                     description = sb.toString
                    case JNothing | JNull => ()
                    case _                => throw new JsonUtils.InvalidValueError(
-                     "kindString", "NomadMetaInfo", JsonUtils.prettyStr(value), "a string")
+                     "description", "NomadMetaInfo", JsonUtils.prettyStr(value), "either a string or an array of strings")
                  }
                case JField("superNames", value) =>
                  if (!value.toOption.isEmpty)
@@ -166,15 +178,15 @@ trait MetaInfoCollection {
 
   /** returns all versions defined (might contain duplicates!)
     */
-  def allVersions: Iterator[MetaInfoEnv]
+  def allEnvs: Iterator[MetaInfoEnv]
 
   /** returns all versions just once
     */
-  def allUniqueVersions: Iterator[MetaInfoEnv] = {
+  def allUniqueEnvs(filter: MetaInfoEnv => Boolean): Iterator[MetaInfoEnv] = {
     val seen = mutable.Set[MetaInfoEnv]()
 
-    allVersions.filter{ el =>
-      if (seen(el)) {
+    allEnvs.filter{ el =>
+      if (!filter(el) || seen(el)) {
         false
       } else {
         seen += el
@@ -185,7 +197,9 @@ trait MetaInfoCollection {
 
   /** returns the versions with the given name
     */
-  def version(name:String): Seq[MetaInfoEnv];
+  def versionsWithName(name:String): Iterator[MetaInfoEnv] = {
+    allUniqueEnvs{ env: MetaInfoEnv => env.kind == MetaInfoEnv.Kind.Version && env.name == name }
+  }
 
   /** returns the versions that contain that gid
     *
@@ -219,11 +233,17 @@ trait MetaInfoEnv extends MetaInfoCollection {
     */
   def name: String;
 
+  /** A description of this environment
+    */
+  def description: String;
+
   /** Info describing from where this version was created
     *
     * example: path of the file read
     */
   def source: JObject;
+
+  def kind: MetaInfoEnv.Kind.Kind;
 
   /** The names of the meta info contained directly in this environment,
     * no dependencies
@@ -239,7 +259,18 @@ trait MetaInfoEnv extends MetaInfoCollection {
     * might contain duplicates
     */
   override def allGids: Iterator[String] = {
-    allUniqueVersions.foldLeft(gids.toIterator)( _ ++ _.gids.toIterator)
+    allUniqueEnvs(_ => true).foldLeft(gids.toIterator)( _ ++ _.gids.toIterator)
+  }
+
+
+  /** returns the versions with the given name
+    */
+  override def versionsWithName(name:String): Iterator[MetaInfoEnv] = {
+    val subVers = allUniqueEnvs{ env: MetaInfoEnv => env.kind == MetaInfoEnv.Kind.Version && env.name == name }
+    if (kind == MetaInfoEnv.Kind.Version && this.name == name)
+      Iterator(this) ++ subVers
+    else
+      subVers
   }
 
   /** All names of the meta infos in this environment (including dependencies)
@@ -247,7 +278,7 @@ trait MetaInfoEnv extends MetaInfoCollection {
     * Might contain duplicates
     */
   def allNames: Iterator[String] = {
-    allUniqueVersions.foldLeft(names.toIterator)( _ ++ _.names.toIterator)
+    allUniqueEnvs(_ => true).foldLeft(names.toIterator)( _ ++ _.names.toIterator)
   }
 
   /** Maps names to gids
@@ -268,9 +299,99 @@ trait MetaInfoEnv extends MetaInfoCollection {
     */
   def metaInfoRecordForName(name: String, selfGid: Boolean = false, superGids: Boolean = false): Option[MetaInfoRecord]
 
+  /** Converts the environment to json
+    *
+    * metaInfoWriter should write out the MetaInfo it receives (if necessary), and return a
+    * JObject that can be written out as dependency to load that MetaInfoEnv.
+    */
+  def toJValue(metaInfoWriter: MetaInfoEnv => JValue, selfGid: Boolean = false,
+    superGids: Boolean = false, flat: Boolean = true): JObject = {
+    val deps = JArray(if (!flat) {
+      allEnvs.map(metaInfoWriter).toList
+    } else  {
+      Nil
+    })
+
+    val mInfos = JArray(if (!flat) {
+      names.toSeq.sorted.flatMap{ name: String =>
+        metaInfoRecordForName(name, selfGid = selfGid, superGids = superGids) match {
+          case Some(r) => Some(r.toJValue())
+          case None => None
+        }
+      }(breakOut): List[JValue]
+    } else {
+      allNames.toSet.toSeq.sorted.flatMap{ name: String =>
+        metaInfoRecordForName(name, selfGid = selfGid, superGids = superGids) match {
+          case Some(r) => Some(r.toJValue())
+          case None => None
+        }
+      }(breakOut): List[JValue]
+    })
+
+    JObject(JField("type",  JString("nomad_meta_info_1_0")) ::
+      JField("name", JString(name)) ::
+      JField("description", JString(description)) ::
+      JField("dependencies", deps) ::
+      JField("metaInfos", mInfos) :: Nil)
+  }
+
+  /** Iterator that starting with base iterates on all its ancestors
+    *
+    * call next once if you want to skip base itself.
+    *
+    * nest in method and use context implicitly?
+    */
+  class SubIter(context: MetaInfoEnv, base: MetaInfoRecord, selfGid: Boolean, superGids: Boolean) extends Iterator[MetaInfoRecord] {
+    val known = mutable.Set[String]()
+    val toDo = mutable.ListBuffer(base.name)
+
+    override def hasNext: Boolean = !toDo.isEmpty
+
+    override def next(): MetaInfoRecord = {
+      val now = toDo.head
+      toDo.trimStart(1)
+      val nowR = context.metaInfoRecordForName(name, selfGid = selfGid, superGids = superGids)
+      if (nowR.isEmpty)
+        throw new MetaInfoEnv.DependsOnUnknownNameException(context.name, known.toString, now)
+      nowR.get.superNames.foreach { superName: String =>
+        if (!known(superName)) {
+          toDo.append(superName)
+          known += superName
+        }
+      }
+      nowR.get
+    }
+  }
+
+  /** Iterates on the given name and all its ancestors
+    */
+  def metaInfoRecordForNameWithAllSuper(name: String, selfGid: Boolean = false, superGids: Boolean = false): Iterator[MetaInfoRecord] = {
+    this.metaInfoRecordForName(name, selfGid = selfGid, superGids = superGids) match {
+      case Some(r) => new SubIter(this, r, selfGid, superGids)
+      case None    => Iterator()
+    }
+  }
+
 }
 
 object MetaInfoEnv {
+  /** Enum for various kinds of environment
+    */
+  object Kind extends Enumeration {
+    type Kind = Value
+    /** The environment represents a file
+      */
+    val File = Value
+
+    /** The environment represents a version (spanning possibly multiple files)
+      */
+    val Version = Value
+
+    /** A pseudo environment (for example one corresponding to a gid)
+      */
+    val Pseudo = Value
+  }
+
   /** two meta infos with the same name detected
     */
   case class DuplicateNameException(name: String,
@@ -353,11 +474,13 @@ object DependencyResolver {
   */
 class SimpleMetaInfoEnv(
   val name: String,
+  val description: String,
   val source:  JObject,
   val nameToGid: Map[String, String],
   val gidToName: Map[String, String],
   val metaInfos: Map[String, MetaInfoRecord],
-  val dependencies: Seq[MetaInfoEnv]) extends MetaInfoEnv {
+  val dependencies: Seq[MetaInfoEnv],
+  val kind: MetaInfoEnv.Kind.Kind) extends MetaInfoEnv {
 
   /** Tries to get value from dependencies
     *
@@ -383,17 +506,8 @@ class SimpleMetaInfoEnv(
 
   /** returns all versions defined (might contain duplicates!)
     */
-  def allVersions: Iterator[MetaInfoEnv] = {
-    dependencies.foldLeft[Iterator[MetaInfoEnv]](Iterator(this))( _ ++ _.allVersions )
-  }
-
-  /** returns the versions with the given name
-    */
-  def version(name:String): Seq[MetaInfoEnv] = {
-    if (name == this.name)
-      Seq(this)
-    else
-      Seq()
+  def allEnvs: Iterator[MetaInfoEnv] = {
+    dependencies.foldLeft[Iterator[MetaInfoEnv]](Iterator(this))( _ ++ _.allEnvs )
   }
 
   /** returns the versions that contain that gid
@@ -497,9 +611,13 @@ class SimpleMetaInfoEnv(
   }
 }
 
-object SimpleMetaInfoEnv {
+object SimpleMetaInfoEnv extends StrictLogging {
   implicit val formats = DefaultFormats + new MetaInfoRecordSerializer;
 
+  /** Evaluates the gid of the given meta info
+    *
+    * Requires that all superNames have gids calculated in nameToGid.
+    */
   def evalGid(
     metaInfo: MetaInfoRecord,
     nameToGid: scala.collection.Map[String,String]): String = {
@@ -511,7 +629,10 @@ object SimpleMetaInfoEnv {
     sha.gidStr("p") // use gidAscii?
   }
 
-  /** Calculates a Gid
+  /** Calculates the Gid of name, resolving all dependencies and calculating their gid
+    * if required.
+    *
+    * nameToGidsCache will be updated with all the gids calculated.
     */
   def calculateGid(
     name: String,
@@ -614,14 +735,65 @@ object SimpleMetaInfoEnv {
     keepExistingGidsValues: Boolean = true,
     ensureGids:Boolean = true
   ): SimpleMetaInfoEnv = {
-    val jsonList: List[JValue] = JsonUtils.parseInputStream(stream).children // should do a more complete parsing (to dep or MetaInfoRecord) to have a better error reporting
+    val metaInfoJson = JsonUtils.parseInputStream(stream)
+    metaInfoJson \ "type" match {
+      case JString(s) =>
+        val typeRe = "^nomad_meta_info_([0-9]+)_([0-9])$".r
+        typeRe.findFirstMatchIn(s) match {
+          case Some(m) =>
+            val major = m.group(1).toInt
+            val minor = m.group(2).toInt
+            if (major != 1)
+              throw new MetaInfoEnv.ParseException(s"cannot load $name because it uses a different major version of the format ($s, expected nomad_meta_info_1_0)")
+            else if (minor != 0)
+              logger.warn("found newer minor revision while loading $name ($s vs nomad_meta_info_1_0), loading.")
+          case None =>
+            throw new MetaInfoEnv.ParseException(s"unexpected type '$s' while loading '$name'")
+        }
+      case JNothing =>
+        logger.warn(s"missing type while loading $name (expected nomad_meta_info_1_0), loading.")
+      case invalidJson =>
+        throw new MetaInfoEnv.ParseException(s"unexpected type '${JsonUtils.prettyStr(invalidJson)}' while loading '$name'")
+    }
+    val description = metaInfoJson \ "description" match {
+      case JString(s)   => s
+      case JArray(arr)  =>
+        val sb = new StringBuilder()
+        arr.foreach{
+          case JString(s)  => sb ++= (s)
+          case JNothing    => ()
+          case invalidJson => throw new MetaInfoEnv.ParseException(
+            s"unexpected value for description while loading '$name', expected either a string or an array of strings, got '${JsonUtils.prettyStr(invalidJson)}'")
+        }
+        sb.toString
+      case JNothing     => ""
+      case invalidJson  => throw new MetaInfoEnv.ParseException(
+          s"unexpected value for description while loading '$name', expected an array, got '${JsonUtils.prettyStr(invalidJson)}'")
+    }
+    val jsonList = metaInfoJson \ "metaInfos" match {
+      case JArray(arr)  => JArray(arr)
+      case JObject(obj) => JArray(JObject(obj) :: Nil) // disallow?
+      case JNothing     => JArray(Nil)
+      case invalidJson  => throw new MetaInfoEnv.ParseException(
+          s"unexpected value for metaInfos while loading '$name', expected an array, got '${JsonUtils.prettyStr(invalidJson)}'")
+    }
+    val dependencies = metaInfoJson \ "dependencies" match {
+      case JArray(arr)  => JArray(arr)
+      case JObject(obj) => JArray(JObject(obj) :: Nil) // disallow?
+      case JNothing     => JArray(Nil)
+      case invalidJson  => throw new MetaInfoEnv.ParseException(
+        s"unexpected value for dependencies while loading '$name', expected an array, got '${JsonUtils.prettyStr(invalidJson)}'")
+    }
     fromJsonList(
       name = name,
-      jsonList = jsonList,
+      description = description,
+      metaInfos = jsonList,
+      dependencies = dependencies,
       source = source,
       dependencyResolver = dependencyResolver,
       keepExistingGidsValues = keepExistingGidsValues,
-      ensureGids = ensureGids
+      ensureGids = ensureGids,
+      kind = MetaInfoEnv.Kind.File
     )
   }
 
@@ -630,57 +802,58 @@ object SimpleMetaInfoEnv {
     * Should probabply be rewritten using strong types, not JValues, would give better error messages.
     * Use apply instead?
     */
-  def fromJsonList(name: String, source: JObject, jsonList: List[JValue], dependencyResolver: DependencyResolver,
-    keepExistingGidsValues: Boolean = true, ensureGids: Boolean = true): SimpleMetaInfoEnv = {
+  def fromJsonList(name: String, description: String, source: JObject, metaInfos: JArray, dependencies: JArray, dependencyResolver: DependencyResolver,
+    keepExistingGidsValues: Boolean = true, ensureGids: Boolean = true, kind: MetaInfoEnv.Kind.Value
+  ): SimpleMetaInfoEnv = {
     var deps: List[MetaInfoEnv] = Nil
-    val metaInfos = new mutable.HashMap[String, MetaInfoRecord]
+    val metaInfoCache = new mutable.HashMap[String, MetaInfoRecord]
     val nameToGid = new mutable.HashMap[String, String]
     implicit val formats = DefaultFormats + new MetaInfoRecordSerializer
 
-    for (jsonObj <- jsonList) {
-      try {
-        (jsonObj \ "dependencies")  match {
-          case JArray(nDeps) =>
-            for (nDep <- nDeps) {
-              nDep match {
-                case JObject(obj) =>
-                  deps = dependencyResolver.resolveDependency(source, JObject(obj)) :: deps
-                case _ =>
-                  throw new MetaInfoEnv.ParseException(s"expected an object as dependency, not ${JsonUtils.prettyStr(nDep)}")
-              }
-            }
-          case JObject(obj) =>
+    for (nDep <- dependencies.arr) {
+      nDep match {
+        case JObject(obj) =>
+          try {
             deps = dependencyResolver.resolveDependency(source, JObject(obj)) :: deps
-          case JNothing =>
-            val metaInfo = jsonObj.extract[MetaInfoRecord]
-            if (metaInfos.contains(metaInfo.name))
-              throw new MetaInfoEnv.DuplicateNameException(metaInfo.name, metaInfo, metaInfos(metaInfo.name))
-            metaInfos += (metaInfo.name -> metaInfo)
-            if (keepExistingGidsValues && !metaInfo.gid.isEmpty)
-              nameToGid += (metaInfo.name -> metaInfo.gid)
-          case _ =>
-            throw new MetaInfoEnv.ParseException(s"unexpected value in dependencies: ${JsonUtils.prettyStr(jsonObj)}")
-        }
-      } catch {
-        case NonFatal(e) =>
-          throw new MetaInfoEnv.ParseException(s"Error processing metaInfo ${JsonUtils.prettyStr(jsonObj)}: $e", e)
+          } catch {
+            case NonFatal(e) =>
+              throw new MetaInfoEnv.ParseException(s"Error loading $name processing dependency ${JsonUtils.prettyStr(nDep)}", e)
+          }
+        case _ =>
+          throw new MetaInfoEnv.ParseException(s"expected an object as dependency, not ${JsonUtils.prettyStr(nDep)}")
       }
     }
-    val metaInfosMap = metaInfos.toMap
+
+    for (jsonObj <- metaInfos.arr) {
+      try {
+        val metaInfo = jsonObj.extract[MetaInfoRecord]
+        if (metaInfoCache.contains(metaInfo.name))
+          throw new MetaInfoEnv.DuplicateNameException(metaInfo.name, metaInfo, metaInfoCache(metaInfo.name))
+        metaInfoCache += (metaInfo.name -> metaInfo)
+        if (keepExistingGidsValues && !metaInfo.gid.isEmpty)
+          nameToGid += (metaInfo.name -> metaInfo.gid)
+      } catch {
+        case NonFatal(e) =>
+          throw new MetaInfoEnv.ParseException(s"Error loading $name processing metaInfo ${JsonUtils.prettyStr(jsonObj)}", e)
+      }
+    }
+  val metaInfosMap = metaInfoCache.toMap
     val dependenciesSeq = deps.toSeq
     if (ensureGids) {
-      for ((name, metaInfo) <- metaInfos) {
+      for ((name, metaInfo) <- metaInfoCache) {
         if (!nameToGid.contains(name))
           calculateGid(name, nameToGid, metaInfosMap, dependenciesSeq, name)
       }
     }
     new SimpleMetaInfoEnv(
       name = name,
+      description = description,
       source = source,
       nameToGid = nameToGid.toMap,
       gidToName = nameToGid.map{ case (name, gid) => (gid, name)}(breakOut),
       metaInfos = metaInfosMap,
-      dependencies = dependenciesSeq)
+      dependencies = dependenciesSeq,
+      kind = kind)
   }
 
   /** a value that was expected to have a precalculated Gid did not have it
@@ -723,6 +896,7 @@ class RelativeDependencyResolver(
     val basePath = Paths.get((source \ "path").extract[String]).toAbsolutePath().getParent()
     val relPath = (dep \ "relativePath").extract[String]
     val dPath = basePath.resolve(relPath).toString
+
     if (deps.contains(dPath))
       return deps(dPath)
     if (inProgress.contains(dPath))
@@ -748,11 +922,13 @@ class NoDependencyResolver(
     if (throwOnDep)
       throw DependencyResolver.UnexpectedDepException(source, dep)
     return new SimpleMetaInfoEnv("dummyEnv",
+      description = "dummy environment replacing a dependency",
       source =  JsonUtils.mergeObjects(source,dep),
       nameToGid = Map[String, String](),
       gidToName = Map[String, String](),
       metaInfos = Map[String, MetaInfoRecord](),
-      dependencies = Seq())
+      dependencies = Seq(),
+      kind = MetaInfoEnv.Kind.Pseudo)
   }
 }
 
