@@ -5,8 +5,6 @@
       {
         "relativePath": "meta_types.nomadmetainfo.json"
       }, {
-        "relativePath": "nomad_base.nomadmetainfo.json"
-      }, {
         "relativePath": "common.nomadmetainfo.json"
       }, {
         "relativePath": "fhi_calculation.nomadmetainfo.json"
