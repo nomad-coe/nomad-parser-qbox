@@ -3,10 +3,25 @@
   "description": "common meta info, not specific to any code",
   "metaInfos": [
     {
-      "description": "Property connected with a configuration, i.e. a given atomic configuration and if periodic cell.",
+      "name": "Run",
       "kindStr": "SectionType",
-      "name": "ConfigurationProperty",
+      "description": "Every run represents a single call of a program. What exactly is contained in a run depends on the run type and the program.",
       "superNames": []
+    }, {
+      "name": "Method",
+      "kindStr": "SectionType",
+      "description": "Every Method section contains the various parameters that define the theory used and he approximationsdone (convergence thresholds,...)",
+      "superNames": ["Run"]
+    }, {
+      "description": "Every SystemDescription section contains the properties required to describe the Physical system simulated: the given atomic configuration, if relevant the periodic cell, extenal potentials,...",
+      "kindStr": "SectionType",
+      "name": "SystemDescription",
+      "superNames": ["Run"]
+    }, {
+      "description": "Every SinglePointEvaluation section contains the values computated or evaluated during a single point evaluation.",
+      "kindStr": "SectionType",
+      "name": "SinglePointEvaluation",
+      "superNames": ["Method", "SystemDescription"]
     }, {
       "description": "Some energy value",
       "kindStr": "AbstractDocumentContentType",
@@ -20,25 +35,25 @@
       "shape": [],
       "superNames": [
         "Energy",
-        "ConfigurationProperty"
+        "SinglePointEvaluation"
       ]
     }, {
       "description": "Information on the scf procedure",
-      "kindStr": "SectionType",
+      "kindStr": "AbstractDocumentContentType",
       "name": "ScfInfo",
       "repeats": true,
       "shape": [],
       "superNames": [
-        "ConfigurationProperty"
+        "SinglePointEvaluation"
       ]
     }, {
-      "description": "represents an scf iteration",
-      "kindStr": "AbstractDocumentContentType",
+      "description": "Every ScfIteration section represents an scf iteration",
+      "kindStr": "SectionType",
       "name": "ScfIteration",
       "repeats": true,
       "shape": [],
       "superNames": [
-        "ScfInfo"
+        "ScfInfo", "SinglePointEvaluation"
       ]
     }, {
       "description": "xc potential energy during the SCF cycle (not converged)",
@@ -125,7 +140,7 @@
       "repeats": false,
       "shape": [],
       "superNames": [
-        "ConfigurationProperty",
+        "SinglePointEvaluation",
         "EnergyComponent"
       ],
       "units": "J"
@@ -137,7 +152,7 @@
       "repeats": false,
       "shape": [],
       "superNames": [
-        "ConfigurationProperty",
+        "SinglePointEvaluation",
         "EnergyComponent"
       ],
       "units": "J"
@@ -149,7 +164,7 @@
       "repeats": false,
       "shape": [],
       "superNames": [
-        "ConfigurationProperty",
+        "SinglePointEvaluation",
         "PartialEnergyComponent"
       ]
     }, {
@@ -269,7 +284,7 @@
       "repeats": false,
       "shape": [],
       "superNames": [
-        "ConfigurationProperty",
+        "SinglePointEvaluation",
         "DftEnergy"
       ],
       "units": "J"
@@ -303,7 +318,7 @@
       "repeats": false,
       "shape": [],
       "superNames": [
-        "ConfigurationProperty",
+        "SinglePointEvaluation",
         "DftEnergy"
       ],
       "units": "J"
@@ -569,7 +584,7 @@
       "repeats": false,
       "shape": [],
       "superNames": [
-        "ConfigurationProperty"
+        "SystemDescription"
       ]
     }, {
       "description": "Which of the basis vectors use periodic boundary conditions.\n    A value is valid from the definition point for all subsequent values until redefined\n    (i.e. if not changing it can be defined just once at the beginning).",
@@ -1095,7 +1110,7 @@
       "repeats": false,
       "shape": [],
       "superNames": [
-        "ConfigurationProperty",
+        "SinglePointEvaluation",
         "EnergyComponent"
       ],
       "units": "J"
@@ -1107,7 +1122,7 @@
       "repeats": false,
       "shape": [],
       "superNames": [
-        "ConfigurationProperty",
+        "SinglePointEvaluation",
         "TotalEnergy"
       ],
       "units": "J"
@@ -1119,7 +1134,7 @@
       "repeats": false,
       "shape": [],
       "superNames": [
-        "ConfigurationProperty",
+        "SinglePointEvaluation",
         "DftEnergy"
       ],
       "units": "J"
@@ -1302,7 +1317,7 @@
       "repeats": false,
       "shape": [],
       "superNames": [
-        "ConfigurationProperty",
+        "SinglePointEvaluation",
         "EnergyComponent"
       ],
       "units": "J"
@@ -1476,7 +1491,7 @@
       "repeats": false,
       "shape": [],
       "superNames": [
-        "ConfigurationProperty",
+        "SinglePointEvaluation",
         "DftEnergy"
       ],
       "units": "J"
@@ -1925,7 +1940,7 @@
       "repeats": false,
       "shape": [],
       "superNames": [
-        "ConfigurationProperty",
+        "SinglePointEvaluation",
         "EnergyComponent"
       ],
       "units": "J"
@@ -1937,7 +1952,7 @@
       "repeats": false,
       "shape": [],
       "superNames": [
-        "ConfigurationProperty",
+        "SinglePointEvaluation",
         "EnergyComponent"
       ],
       "units": "J"
@@ -1947,7 +1962,7 @@
       "repeats": true,
       "shape": [],
       "superNames": [
-        "ConfigurationProperty"
+        "SinglePointEvaluation"
       ]
     }, {
       "description": "labels for each segment of the band",
@@ -1956,7 +1971,7 @@
       "repeats": true,
       "shape": [],
       "superNames": [
-        "ConfigurationProperty"
+        "SinglePointEvaluation"
       ]
     }, {
       "description": "occupations of the band",
@@ -1964,7 +1979,7 @@
       "repeats": true,
       "shape": [],
       "superNames": [
-        "ConfigurationProperty"
+        "SinglePointEvaluation"
       ]
     }, {
       "description": "k-Points of the band",
@@ -1972,7 +1987,7 @@
       "repeats": true,
       "shape": [],
       "superNames": [
-        "ConfigurationProperty"
+        "SinglePointEvaluation"
       ]
     }, {
       "description": "energies of the band",
@@ -1980,7 +1995,7 @@
       "repeats": true,
       "shape": [],
       "superNames": [
-        "ConfigurationProperty"
+        "SinglePointEvaluation"
       ]
     }, {
       "description": "geometry.in keys that were unknown to the normalization script",
@@ -2006,12 +2021,12 @@
       "name": "SimpleProperty",
       "superNames": []
     }, {
-      "description": "A property connected with an ScfIteration",
+      "description": "A property connected with the scf cycle",
       "kindStr": "AbstractDocumentContentType",
       "name": "ScfProperty",
       "shape": [],
       "superNames": [
-        "ConfigurationProperty"
+        "SinglePointEvaluation"
       ]
     }, {
       "description": "a particle information",
