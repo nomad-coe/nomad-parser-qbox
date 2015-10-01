@@ -248,7 +248,11 @@ trait MetaInfoEnv extends MetaInfoCollection {
   /** The names of the meta info contained directly in this environment,
     * no dependencies
     */
-  def names: Seq[String]
+  def names: Iterator[String]
+
+  /** The meta infos contained in this environment
+    */
+  def metaInfos(selfGid: Boolean, superGids: Boolean): Iterator[MetaInfoRecord]
 
   /** gids of the meta infos contained in this environment (no dependencies)
     */
@@ -421,6 +425,29 @@ trait MetaInfoEnv extends MetaInfoCollection {
       kindStr -> (rootNames -> childNames)
     }(breakOut): Map[String,Tuple2[Set[String],Set[String]]]
   }
+
+  /** Returns the names of the direct children of the metaInfo with the given name
+    *
+    * Direct children are those that have name in superNames.
+    * Only meta info in the environment are returned (no dependencies)
+    */
+  def directChildrenOf(name: String): Iterator[String] = {
+    metaInfos(false,false).flatMap{ metaInfo: MetaInfoRecord =>
+      if (metaInfo.superNames.contains(name))
+        Some(metaInfo.name)
+      else
+        None
+    }.toIterator
+  }
+
+  /** Returns all the names of the direct childrens of the metaInfo with the given name
+    * (with dependencies)
+    *
+    * Direct children are those that have name in superNames.
+    */
+  def allDirectChildrenOf(name: String): Iterator[String] = {
+    allUniqueEnvs(_ => true).foldLeft(directChildrenOf(name))( _ ++ _.directChildrenOf(name))
+  }
 }
 
 object MetaInfoEnv {
@@ -527,7 +554,7 @@ class SimpleMetaInfoEnv(
   val source:  JObject,
   val nameToGid: Map[String, String],
   val gidToName: Map[String, String],
-  val metaInfos: Map[String, MetaInfoRecord],
+  val metaInfosMap: Map[String, MetaInfoRecord],
   val dependencies: Seq[MetaInfoEnv],
   val kind: MetaInfoEnv.Kind.Kind) extends MetaInfoEnv {
 
@@ -547,11 +574,19 @@ class SimpleMetaInfoEnv(
   /** The names of the meta info contained directly in this environment,
     * no dependencies
     */
-  def names: Seq[String] = metaInfos.keys.toSeq
+  def names: Iterator[String] = metaInfosMap.keysIterator
+
+  /** The meta infos stored (no dependencies)
+    */
+  def metaInfos(selfGid: Boolean, superGids: Boolean): Iterator[MetaInfoRecord] = {
+    metaInfosMap.valuesIterator.map{ metaInfo: MetaInfoRecord =>
+      fixMetaInfo(metaInfo, selfGid, superGids)
+    }
+  }
 
   /** gids of the meta infos contained in this environment (no dependencies)
     */
-  def gids: Seq[String] = metaInfos.keys.flatMap{ nameToGid.get(_) }(breakOut)
+  def gids: Seq[String] = metaInfosMap.keys.flatMap{ nameToGid.get(_) }(breakOut)
 
   /** returns all versions defined (might contain duplicates!)
     */
@@ -580,7 +615,7 @@ class SimpleMetaInfoEnv(
   def gidForName(name: String, recursive: Boolean = true): Option[String] = {
     nameToGid.get(name) match {
       case Some(gid) =>
-        if (!recursive && ! metaInfos.contains(name))
+        if (!recursive && ! metaInfosMap.contains(name))
           None
         else
           Some(gid)
@@ -601,7 +636,7 @@ class SimpleMetaInfoEnv(
   def nameForGid(gid: String, recursive: Boolean = true): Option[String] = {
     gidToName.get(gid) match {
       case Some(name) =>
-        if (!recursive && ! metaInfos.contains(name))
+        if (!recursive && ! metaInfosMap.contains(name))
           None
         else
           Some(name)
@@ -614,30 +649,33 @@ class SimpleMetaInfoEnv(
     }
   }
 
+  /** Completes the meta info with gid and superGids as requested
+    *
+    * Does not trust the values in the metaInfo
+    */
+  def fixMetaInfo(metaInfo: MetaInfoRecord, selfGid: Boolean, superGids: Boolean): MetaInfoRecord = {
+    val gid = (
+      if (selfGid)
+        gidForName(metaInfo.name, recursive = true).getOrElse("")
+      else
+        ""
+    )
+    val sGids = (
+      if (superGids && !metaInfo.superNames.isEmpty)
+        metaInfo.superNames.map(gidForName(_, recursive = true).getOrElse(""))
+      else
+        Seq()
+    )
+    metaInfo.copy(gid = gid, superGids = sGids)
+  }
+
   /** Returns the metaInfoRecord for the given name
     *
     * gid and super gids are set in the returned record only if requested.
     */
   def metaInfoRecordForName(name: String, selfGid: Boolean = false, superGids: Boolean = false): Option[MetaInfoRecord] = {
-    metaInfos.get(name) match {
-      case Some(baseVal) =>
-        val gid = (
-          if (selfGid)
-            gidForName(name, recursive = true).getOrElse("")
-          else
-            ""
-        )
-        val sGids = (
-          if (superGids) {
-            if (!baseVal.superNames.isEmpty && baseVal.superGids.isEmpty)
-              baseVal.superNames.map(gidForName(_, recursive = true).getOrElse(""))
-            else
-              baseVal.superGids
-          } else {
-            Seq()
-          }
-        )
-        Some(baseVal.copy(gid = gid, superGids = sGids))
+    metaInfosMap.get(name) match {
+      case Some(baseVal) => Some(fixMetaInfo(baseVal, selfGid, superGids))
       case None =>
         firstFromDeps(_.metaInfoRecordForName(name, selfGid, superGids))
     }
@@ -900,7 +938,7 @@ object SimpleMetaInfoEnv extends StrictLogging {
       source = source,
       nameToGid = nameToGid.toMap,
       gidToName = nameToGid.map{ case (name, gid) => (gid, name)}(breakOut),
-      metaInfos = metaInfosMap,
+      metaInfosMap = metaInfosMap,
       dependencies = dependenciesSeq,
       kind = kind)
   }
@@ -975,7 +1013,7 @@ class NoDependencyResolver(
       source =  JsonUtils.mergeObjects(source,dep),
       nameToGid = Map[String, String](),
       gidToName = Map[String, String](),
-      metaInfos = Map[String, MetaInfoRecord](),
+      metaInfosMap = Map[String, MetaInfoRecord](),
       dependencies = Seq(),
       kind = MetaInfoEnv.Kind.Pseudo)
   }

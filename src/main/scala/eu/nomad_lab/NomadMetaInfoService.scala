@@ -31,7 +31,7 @@ class NomadMetaInfoActor extends Actor with NomadMetaInfoService {
       source = jn.JObject( jn.JField("path", jn.JString(Paths.get(filePath).getParent().toString())) ),
       nameToGid = Map[String, String](),
       gidToName = Map[String, String](),
-      metaInfos = Map[String, MetaInfoRecord](),
+      metaInfosMap = Map[String, MetaInfoRecord](),
       dependencies = Seq(mainEnv),
       kind = MetaInfoEnv.Kind.Version)
   }
@@ -166,61 +166,86 @@ trait NomadMetaInfoService extends HttpService {
   <div class="rightBanner"><span class="kindStr"><a href="../${r.kindStr}/info.html">${r.kindStr}</a></span> <span class="gid">${r.gid}</span></div>
   <h1><a href="../../info.html">$version</a>/$name</h1>
   <p class="description">${r.description}</p>
-  <h2>Keys</h2>"""
+  <h2>Keys</h2>
+  <div class="indent">"""
           data.append(start)
           if (!r.units.isEmpty)
             data.append(s"""
-  <p><span class="key">units:</span> <span class="value">${r.units.get}</span></p>""")
+   <p><span class="key">units:</span> <span class="value">${r.units.get}</span></p>""")
           if (!r.repeats.isEmpty && r.repeats.get)
             data.append(s"""
-  <p><span class="key">repeats:</span> <span class="value">true</span></p>""")
+   <p><span class="key">repeats:</span> <span class="value">true</span></p>""")
           if (!r.dtypeStr.isEmpty)
             data.append(s"""
-  <p><span class="key">dtypeStr:</span> <span class="value">${r.dtypeStr.get}</span></p>""")
+   <p><span class="key">dtypeStr:</span> <span class="value">${r.dtypeStr.get}</span></p>""")
           if (!r.shape.isEmpty)
             data.append(s"""
-  <p><span class="key">shape:</span> <span class="value">${r.shape.mkString("[",", ","]")}</span></p>""")
+   <p><span class="key">shape:</span> <span class="value">${r.shape.get.mkString("[",", ","]")}</span></p>""")
           if (!r.otherKeys.isEmpty)
             r.otherKeys.foreach { case jn.JField(key, value) =>
               data.append(s"""
-  <p><span class="key">$key:</span> <span class="value">${JsonSupport.writePrettyStr(value)}</span></p>""")
+   <p><span class="key">$key:</span> <span class="value">${JsonSupport.writePrettyStr(value)}</span></p>""")
             }
+          data.append("""
+  </div>""")
           if (!r.superNames.isEmpty) {
             data.append("""
   <h2>Ancestors</h2>
-  <h3>Explicit parents</h3>""")
+  <div class="indent">
+   <h3>Explicit parents</h3>
+   <div class="indent">""")
 
             if (r.superGids.length == r.superNames.length) {
               r.superNames.zipWithIndex.foreach{ case (sName, i) =>
                 data.append(s"""
-  <span title="${r.superGids(i)}"><a href="../$sName/info.html">$sName</a></span>""")
+    <span title="${r.superGids(i)}"><a href="../$sName/info.html">$sName</a></span>""")
               }
             } else {
               r.superNames.foreach{ sName: String =>
                 data.append(s"""
-  <a href="../$sName/info.html">$sName</a>""")
+    <a href="../$sName/info.html">$sName</a>""")
               }
             }
+            data.append("""
+   </div>
+  </div>""")
             val rootsByKind = v.firstAncestorsByType(name)
             if (!rootsByKind.isEmpty)
               data.append("""
-  <h2>All Parents by type</h2>""")
+  <h2>All parents by type</h2>
+  <div class="indent">""")
 
             rootsByKind.foreach { case (kind, (roots, rest)) =>
               data.append(s"""
-   <h4><a href="../$kind/info.html">$kind</a></h4>
-   <p>""")
+   <div class="indent"><h4><a href="../$kind/info.html">$kind</a></h4>
+    <div class="indent">""")
               for (root <- roots)
-                data.append(s"""\n    <a href="../$root/info.html">$root</a>""")
+                data.append(s"""\n     <a href="../$root/info.html">$root</a>""")
               if (!rest.isEmpty){
                 data.append("(")
                 for (child <- rest)
-                  data.append(s"""\n    <a href="../$child/info.html">$child</a>""")
+                  data.append(s"""\n     <a href="../$child/info.html">$child</a>""")
                 data.append(")")
               }
               data.append("""
-   </p>""")
+    </div>
+   </div>""")
             }
+          }
+          data.append("""
+  </div>""")
+          val childrens = v.allDirectChildrenOf(name)
+          if (childrens.hasNext) {
+            data.append("""
+  <h2>DirectChildrens</h2>
+  <div class="indent">""")
+            while (childrens.hasNext) {
+              val p = childrens.next
+              data.append(s"""
+   <a href="../$p/info.html">$p</a>""")
+            }
+            data.append(s"""
+  </div>""")
           }
           layout(s"$version/$name", Stream.empty, data.toStream)
         case None =>
