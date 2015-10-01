@@ -233,7 +233,7 @@ class MetaInfoJsonSpec extends Specification with StrictLogging {
       source = JObject( JField("path", JString(Paths.get(filePath).getParent().toString())) ),
       nameToGid = Map[String, String](),
       gidToName = Map[String, String](),
-      metaInfos = Map[String, MetaInfoRecord](),
+      metaInfosMap = Map[String, MetaInfoRecord](),
       dependencies = Seq(mainEnv),
       kind = MetaInfoEnv.Kind.Version)
 
