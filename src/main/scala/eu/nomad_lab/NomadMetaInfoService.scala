@@ -186,17 +186,40 @@ trait NomadMetaInfoService extends HttpService {
   <p><span class="key">$key:</span> <span class="value">${JsonSupport.writePrettyStr(value)}</span></p>""")
             }
           if (!r.superNames.isEmpty) {
-            data.append("<h2>Super Names</h2>")
+            data.append("""
+  <h2>Ancestors</h2>
+  <h3>Explicit parents</h3>""")
+
             if (r.superGids.length == r.superNames.length) {
               r.superNames.zipWithIndex.foreach{ case (sName, i) =>
                 data.append(s"""
-  <span title="${r.superGids(i)}><a href="../$sName/info.html">$sName</a></span>""")
+  <span title="${r.superGids(i)}"><a href="../$sName/info.html">$sName</a></span>""")
               }
             } else {
               r.superNames.foreach{ sName: String =>
                 data.append(s"""
   <a href="../$sName/info.html">$sName</a>""")
               }
+            }
+            val rootsByKind = v.firstAncestorsByType(name)
+            if (!rootsByKind.isEmpty)
+              data.append("""
+  <h2>All Parents by type</h2>""")
+
+            rootsByKind.foreach { case (kind, (roots, rest)) =>
+              data.append(s"""
+   <h4><a href="../$kind/info.html">$kind</a></h4>
+   <p>""")
+              for (root <- roots)
+                data.append(s"""\n    <a href="../$root/info.html">$root</a>""")
+              if (!rest.isEmpty){
+                data.append("(")
+                for (child <- rest)
+                  data.append(s"""\n    <a href="../$child/info.html">$child</a>""")
+                data.append(")")
+              }
+              data.append("""
+   </p>""")
             }
           }
           layout(s"$version/$name", Stream.empty, data.toStream)

@@ -342,7 +342,7 @@ trait MetaInfoEnv extends MetaInfoCollection {
     * nest in method and use context implicitly?
     */
   class SubIter(context: MetaInfoEnv, base: MetaInfoRecord, selfGid: Boolean, superGids: Boolean) extends Iterator[MetaInfoRecord] {
-    val known = mutable.Set[String]()
+    val known = mutable.Set[String](base.name)
     val toDo = mutable.ListBuffer(base.name)
 
     override def hasNext: Boolean = !toDo.isEmpty
@@ -350,7 +350,7 @@ trait MetaInfoEnv extends MetaInfoCollection {
     override def next(): MetaInfoRecord = {
       val now = toDo.head
       toDo.trimStart(1)
-      val nowR = context.metaInfoRecordForName(name, selfGid = selfGid, superGids = superGids)
+      val nowR = context.metaInfoRecordForName(now, selfGid = selfGid, superGids = superGids)
       if (nowR.isEmpty)
         throw new MetaInfoEnv.DependsOnUnknownNameException(context.name, known.toString, now)
       nowR.get.superNames.foreach { superName: String =>
@@ -372,6 +372,55 @@ trait MetaInfoEnv extends MetaInfoCollection {
     }
   }
 
+  /** ancestors by type, subdivided in roots, and children
+    *
+    * The roots of type X are the ancestors of type X that cannot be reached starting
+    * from others ancestors of type X going though ancestors of all types.
+    * children are those than can be reached
+    */
+  def firstAncestorsByType(name: String): Map[String,Tuple2[Set[String],Set[String]]] = {
+    val mInfo = metaInfoRecordForNameWithAllSuper(name, true, true).toArray
+    val nameMap: Map[String, Int] = mInfo.zipWithIndex.map{ case (mInfo, i) =>
+      mInfo.name -> i }(breakOut)
+    val edges: Map[Int, Seq[Int]] = mInfo.zipWithIndex.map{ case (mInfo, i) =>
+      i -> mInfo.superNames.map(nameMap(_)).toSeq
+    }(breakOut)
+    val typeGroups = (1.until(mInfo.length)).groupBy( i => mInfo(i).kindStr )
+    val childsByType = mutable.Map[String, mutable.Set[Int]]()
+    val toDo  = mutable.Set[Int](1.until(mInfo.length) : _*)
+
+    while (!toDo.isEmpty) {
+      val now = toDo.head
+      val kindNow = mInfo(now).kindStr
+      toDo -= now
+      val toDo2 = mutable.Set(edges(now): _*)
+      val known2 = mutable.Set(edges(now): _*)
+      while (!toDo2.isEmpty) {
+        val now2 = toDo2.head
+        toDo2 -= now2
+        if (mInfo(now2).kindStr == kindNow) {
+          if (childsByType.contains(kindNow))
+            childsByType(kindNow) += now2
+          else
+            childsByType += (kindNow -> mutable.Set(now2))
+          toDo -= now2
+        }
+        for (el <- edges(now2)) {
+          if (!known2(el)) {
+            toDo2 += el
+            known2 += el
+          }
+        }
+      }
+    }
+
+    childsByType.map{ case (kindStr, childs) =>
+      val allForKind = typeGroups(kindStr).toSet
+      val rootNames: Set[String] = (allForKind -- childs).map(mInfo(_).name)(breakOut)
+      val childNames: Set[String] = childs.map(mInfo(_).name)(breakOut)
+      kindStr -> (rootNames -> childNames)
+    }(breakOut): Map[String,Tuple2[Set[String],Set[String]]]
+  }
 }
 
 object MetaInfoEnv {
