@@ -1,6 +1,5 @@
 package eu.nomad_lab
 
-import eu.nomad_lab.rdb.Tables
 import org.jooq.impl.DSL
 import com.typesafe.scalalogging.StrictLogging
 import com.typesafe.config.{Config, ConfigFactory}
