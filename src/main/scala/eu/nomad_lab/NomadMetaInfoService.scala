@@ -67,7 +67,7 @@ trait NomadMetaInfoService extends HttpService {
 <html>
  <head>
   <meta charset="UTF-8">
-  <link rel="stylesheet" type="text/css" href="/css/nomadBase.css">
+  <link rel="stylesheet" type="text/css" href="/nmi/css/nomadBase.css">
   <title>""" #:: title #:: """</title>
 """ #:: extraHead #::: """
  </head>
@@ -256,18 +256,18 @@ trait NomadMetaInfoService extends HttpService {
   }
 
   val myRoute =
-    pathPrefix("css") {
-      path("nomadBase.css") {
-        get {
-          respondWithMediaType(`text/css`) {
-            complete {
-              mainCss
+    pathPrefix("nmi") {
+      pathPrefix("css") {
+        path("nomadBase.css") {
+          get {
+            respondWithMediaType(`text/css`) {
+              complete {
+                mainCss
+              }
             }
           }
         }
-      }
-    } ~
-    pathPrefix("nmi") {
+      } ~
       pathPrefix("v" / Segment) { version =>
         pathPrefix("n" / Segment) { name =>
           path("info.html") {
