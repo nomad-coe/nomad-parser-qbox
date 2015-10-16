@@ -25,6 +25,9 @@ class NomadMetaInfoActor extends Actor with NomadMetaInfoService {
     val filePath = classLoader.getResource("nomad-meta-info/nomad_meta_info/main.nomadmetainfo.json").getFile()
     val resolver = new RelativeDependencyResolver
     val mainEnv = SimpleMetaInfoEnv.fromFilePath(filePath, resolver)
+    val w = new java.io.FileWriter("/tmp/t.dot")
+    mainEnv.writeDot(w)
+    w.close()
     new SimpleMetaInfoEnv(
       name = "last",
       description = "latest version, unlike all others this one is symbolic and will change in time",

@@ -457,6 +457,37 @@ trait MetaInfoEnv extends MetaInfoCollection {
   def allDirectChildrenOf(name: String): Iterator[String] = {
     allUniqueEnvs(_ => true).foldLeft(directChildrenOf(name))( _ ++ _.directChildrenOf(name))
   }
+
+  /** writes a dot format description of the graph
+    */
+  def writeDot(s: java.io.Writer): Unit = {
+    s.write("""strict digraph meta_info_env {
+  rankdir=RL;
+""")
+    allNames.foreach{ name: String =>
+      metaInfoRecordForName(name, false, false) match {
+        case Some(m) =>
+          val attributes = m.kindStr match {
+            case "type_document_content" => "[shape=box]"
+            case "type_unknown" => "[color=green]"
+            case "type_unknown_meta" => "[color=green]"
+            case "type_document" => "[color=grey]"
+            case "type_meta" => "[color=blue]"
+            case "type_abstract_document_content" => ""
+            case "type_section" => "[color=red]"
+            case "type_connection" => "[color=orange]"
+            case _ => "[color=pink]"
+          }
+          if (!attributes.isEmpty)
+            s.write(s"  ${m.name} $attributes;\n")
+          for (superN <- m.superNames)
+            s.write(s"  ${m.name} -> $superN;\n")
+        case None =>
+          throw new Exception(s"Could not ger meta info with name $name")
+      }
+    }
+    s.write("}\n")
+  }
 }
 
 object MetaInfoEnv {
