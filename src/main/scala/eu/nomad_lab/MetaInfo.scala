@@ -8,6 +8,7 @@ import scala.collection.mutable
 import scala.collection.breakOut
 import scala.util.control.NonFatal
 import com.typesafe.scalalogging.StrictLogging
+
 /** Represents a piece of nomad meta info referring to other meta info by name.
   *
   * Can be interpreted within a context [[eu.nomad_lab.MetaInfoEnv]], but matches the

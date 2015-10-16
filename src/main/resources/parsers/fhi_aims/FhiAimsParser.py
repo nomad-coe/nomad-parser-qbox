@@ -956,7 +956,6 @@ class FhiAimsParser:
         self.rootParser = FileParser(lineFile=self.aimsOutputLineFile, context=self, firstParserContext=SectionContext(sections[0]), repeatsFirst=True, rootParser=self)
         self.rootParser.parse()
 
-
 if __name__ == "__main__":
     fileToParse = sys.argv[1]
     parser=FhiAimsParser(None, fileToParse)
