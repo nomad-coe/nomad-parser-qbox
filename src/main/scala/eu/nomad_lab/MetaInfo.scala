@@ -46,7 +46,7 @@ case class MetaInfoRecord(
     val baseObj = (
       ("name" -> name) ~
         ("gid" -> (if (gid.isEmpty) None else Some(gid))) ~
-        ("kindStr" -> (if (kindStr == "DocumentContentType") None else Some(kindStr)))~
+        ("kindStr" -> (if (kindStr == "type_document_content") None else Some(kindStr)))~
         ("description" -> description)~
         ("superNames" -> superNames)~
         ("superGids" -> (if (superGids.isEmpty) None else Some(superGids))) ~
@@ -95,7 +95,7 @@ class MetaInfoRecordSerializer extends CustomSerializer[MetaInfoRecord](format =
              implicit val formats = format;
              var name: String = "";
              var gid: String = "";
-             var kindStr: String = "DocumentContentType";
+             var kindStr: String = "type_document_content";
              var description: String = "";
              var superNames: Seq[String] = Seq();
              var superGids: Seq[String] = Seq();
