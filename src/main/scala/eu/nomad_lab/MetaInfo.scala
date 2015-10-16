@@ -21,7 +21,7 @@ case class MetaInfoRecord(
   val units:    Option[String] = None,
   val dtypeStr: Option[String] = None,
   val repeats: Option[Boolean] = None,
-  val shape:  Option[Seq[Int]] = None,
+  val shape:  Option[Seq[Either[Int,String]]] = None,
   val gid:              String = "",
   val superGids:   Seq[String] = Seq(),
   val otherKeys:  List[JField] = Nil) {
@@ -33,6 +33,15 @@ case class MetaInfoRecord(
     */
   def toJValue(extraArgs: Boolean = true, inlineExtraArgs: Boolean = true): JValue = {
     import org.json4s.JsonDSL._;
+    val jShape = shape match {
+      case None => JNothing
+      case Some(s) =>
+        val listShape: List[JValue] = s.map {
+          case Left(i) => JInt(i)
+          case Right(s) => JString(s)
+        }(breakOut)
+        JArray(listShape)
+    }
     val baseObj = (
       ("name" -> name) ~
         ("gid" -> (if (gid.isEmpty) None else Some(gid))) ~
@@ -43,7 +52,7 @@ case class MetaInfoRecord(
         ("units", units)~
         ("dtypeStr", dtypeStr)~
         ("repeats", repeats)~
-        ("shape", shape)
+        ("shape",jShape)
     );
     if (extraArgs) {
       if (inlineExtraArgs)
@@ -92,7 +101,7 @@ class MetaInfoRecordSerializer extends CustomSerializer[MetaInfoRecord](format =
              var units: Option[String] = None;
              var dtypeStr: Option[String] = None;
              var repeats: Option[Boolean] = None;
-             var shape: Option[Seq[Int]] = None;
+             var shape: Option[Seq[Either[Int,String]]] = None;
              var otherKeys: List[JField] = Nil;
              obj foreach {
                case JField("name", value) =>
@@ -148,8 +157,7 @@ class MetaInfoRecordSerializer extends CustomSerializer[MetaInfoRecord](format =
                  if (!value.toSome.isEmpty)
                    repeats = value.extract[Option[Boolean]]
                case JField("shape", value) =>
-                 if (!value.toSome.isEmpty)
-                   shape = value.extract[Option[Seq[Int]]]
+                 shape = value.extract[Option[Seq[Either[Int,String]]]]
                case JField(key, value) =>
                  if (!value.toSome.isEmpty)
                    otherKeys = JField(key, value) +: otherKeys
