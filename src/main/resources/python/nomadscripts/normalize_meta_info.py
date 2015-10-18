@@ -35,11 +35,11 @@ def normalizeFile(path, checkOnly, force, addGid, addSubGids, extraArgsHandling,
         hasErrors = True
         s("Error: loading {0!r},\n    the depenendencies already define different kinds with the same names:\n    ".format(
                 relpath))
-        s(str(hid))
+        s(str(map(lambda x: x.toDict(), hid)))
         s("\n")
     res = {"path":path, "env": env, "hasErrors": hasErrors, "hasChanges": False}
     try:
-        env1 = InfoKindEnv(infoKinds=env.infoKinds.values(), path=env.path, uri=env.uri, deps=env.deps)
+        env1 = InfoKindEnv(name = env.name, description = env.description, infoKinds=env.infoKinds.values(), path=env.path, uri=env.uri, deps=env.deps)
         env1.calcGids()
         validGids = True
     except:
@@ -92,7 +92,7 @@ def normalizeFile(path, checkOnly, force, addGid, addSubGids, extraArgsHandling,
         backup = backupBase + extra + ".bk"
         if not checkOnly:
             os.rename(path, backup)
-            with open(path, "w") as f:
+            with open(path, "wb") as f:
                 env.serialize(f.write, subGids = addSubGids, selfGid = addGid)
         s(repr(path))
         s(": %s, has changes, backup in " % ("OK" if not hasErrors else "tying to fix ERRORS"))
@@ -184,7 +184,7 @@ def normalizePaths(paths, checkOnly, force, addGid, addSubGids, extraArgsHandlin
     return {"paths": paths, "hasErrors": hasErrors, "hasChanges": hasChanges}
 
 if __name__ == "__main__":
-    defaultDir = os.path.normpath(os.path.join(basePath, "../nomad_meta_info"))
+    defaultDir = os.path.normpath(os.path.join(basePath, "../nomad-meta-info/nomad_meta_info"))
     usage = """usage: {command} [--check-only] [--force] [--add-gid] [--add-sub-gids] [--keep-extra-args] [--remove-extra-args] [--error-if-extra-args] [file/or/dir ...]
 
     normalizes the InfoKinds file/or/dir (that defalts to {dir})

@@ -1,7 +1,7 @@
 import logging
 from nomadcore import compact_sha
 import json
-import os
+import os, re
 from nomadcore.json_support import jsonCompactS, jsonCompactD, jsonIndentD
 """objects to handle a local InfoKinds with unique name (think self written json)"""
 
@@ -12,7 +12,7 @@ class InfoKindEl(object):
     ADD_EXTRA_ARGS = 2
     RAISE_IF_EXTRA_ARGS = 3
 
-    def __init__(self, name, description, kindStr = "DocumentContentType", units = None, super_names = None,
+    def __init__(self, name, description, kindStr = "type_document_content", units = None, super_names = None,
             dtypeStr = None, shape = None, extraArgsHandling = ADD_EXTRA_ARGS, repeats = None, **extra_args):
         if super_names is None:
             super_names = []
@@ -134,10 +134,10 @@ class InfoKindEl(object):
         res = {
             "description": self.description,
             "name": self.name,
-            "super_names": self.super_names,
+            "superNames": self.super_names,
         }
         try:
-            if self.kindStr != "DocumentContentType":
+            if self.kindStr != "type_document_content":
                 if self.kindStr is None or self.kindStr == "":
                     res["kindStr"] = "MetaType"
                 else:
@@ -146,7 +146,7 @@ class InfoKindEl(object):
                 if selfGid:
                     res["gid"] = env.gidOf(self.name, precalculatedGid = precalculatedGid)
                 if subGids:
-                    res["super_gids"] = [ env.gidOf(sName, precalculatedGid = precalculatedGid) for sName in self.super_names ]
+                    res["superGids"] = [ env.gidOf(sName, precalculatedGid = precalculatedGid) for sName in self.super_names ]
             elif subGids or selfGid:
                 raise Exception("env required in toDict for subGids or selfGid")
             if self.units is not None:
@@ -161,7 +161,7 @@ class InfoKindEl(object):
                 if inlineExtraArgs:
                     res.update(self.extra_args)
                 else:
-                    res["extra_args"] = self.extra_args
+                    res["extraArgs"] = self.extra_args
         except:
             logging.exception("error in InfoKindEl.toDict, partial dict is %s", res)
         return res
@@ -192,16 +192,18 @@ class RelativeDependencySolver:
         with open(dPath) as f:
             depInfo = json.load(f)
         if depInfo:
-            depIKEnv.fromJsonList(depInfo, source = { 'path': dPath }, dependencyLoad = True)
+            depIKEnv.fromJsonList(depInfo, name = os.path.basename(dPath), source = { 'path': dPath }, dependencyLoad = True)
         return depIKEnv
 
 
 class InfoKindEnv(object):
     """An environment keeping locally unique InfoKinds and their gids"""
-    def __init__(self, infoKinds = None, newSha = compact_sha.sha512, gids = None,
+    def __init__(self, infoKinds = None, name = None, description = None, newSha = compact_sha.sha512, gids = None,
             dependencyLoader = None, path = None, uri = None, deps = None):
         self.newSha = newSha
         self.clear()
+        self.name = name
+        self.description = description
         self.dependencyLoader = dependencyLoader
         if dependencyLoader is None:
             self.dependencyLoader = RelativeDependencySolver()
@@ -384,16 +386,21 @@ class InfoKindEnv(object):
 
     def serialize(self, writeOut, subGids = True, selfGid = True):
         infoKinds = self.sortedIKs()
-        writeOut("[ ")
-        addColon = False
+        writeOut("""{
+  "type": "nomad_meta_info_1_0",
+  "description": """)
+        if self.description:
+            jsonIndentD(self.description, writeOut, extraIndent = 4)
+        else:
+            writeOut('""')
+        writeOut(',\n')
         if not self.path:
             baseDir = os.getcwd()
         else:
             baseDir = os.path.normpath(os.path.dirname(os.path.abspath(self.path)))
         depKeys = set()
         if self.deps:
-            writeOut("{\n")
-            writeOut('    "dependencies": [ ')
+            writeOut('  "dependencies": [ ')
             depColon = False
             for d in self.deps:
                 path = d.path
@@ -406,18 +413,19 @@ class InfoKindEnv(object):
                             writeOut(", ")
                         else:
                             depColon = True
-                        jsonIndentD({"relativePath": os.path.relpath(path, baseDir)}, writeOut, extraIndent = 6)
+                        jsonIndentD({"relativePath": os.path.relpath(path, baseDir)}, writeOut, extraIndent = 4)
                         continue
                 if uri:
                     if depColon:
                         writeOut(", ")
                     else:
                         depColon = True
-                    jsonIndentD({"uri": uri}, writeOut, extraIndent = 6)
+                    jsonIndentD({"uri": uri}, writeOut, extraIndent = 4)
                     continue
                 raise Exception("Dependency on serializable %s" % d)
-            writeOut(']\n  }')
-            addColon = True
+            writeOut('],\n')
+        addColon = False
+        writeOut('  "metaInfos": [ ')
         for ik in infoKinds:
             if ik.name in depKeys:
                 continue
@@ -425,13 +433,13 @@ class InfoKindEnv(object):
                 writeOut(", ")
             else:
                 addColon = True
-            jsonIndentD(ik.toDict(env = self, subGids = subGids, selfGid = selfGid), writeOut, extraIndent = 2, check_circular = True)
-        writeOut("]")
+            jsonIndentD(ik.toDict(env = self, subGids = subGids, selfGid = selfGid), writeOut, extraIndent = 4, check_circular = True)
+        writeOut("]\n}\n")
 
     def sortedIKs(self):
         infoKinds = list(self.infoKinds.values())
-        infoKinds.sort()
-        return self.sortAndComplete(infoKinds, ignoreMissing = True)
+        infoKinds.sort(lambda x, y: cmp(x.name.lower()+x.name, y.name.lower()+y.name))
+        return infoKinds # self.sortAndComplete(infoKinds, ignoreMissing = True)
 
 
     def toJsonList(self, withGids):
@@ -456,39 +464,47 @@ class InfoKindEnv(object):
                 changes[k] = (v, newVal)
         return changes
 
-    def fromJsonList(self, jsonList, source, extraArgsHandling = InfoKindEl.ADD_EXTRA_ARGS, dependencyLoad=False):
+    def fromJsonList(self, jsonDict, name,  source, extraArgsHandling = InfoKindEl.ADD_EXTRA_ARGS, dependencyLoad=False):
+        typeStr = jsonDict.get("type","nomad_meta_info_1_0")
+        typeRe = re.compile(r"nomad_meta_info_(?P<major>[0-9]+)_(?P<minor>[0-9]+)$")
+        self.name = name
+        m = typeRe.match(typeStr)
+        if not m:
+            raise Exception("unexpected type '%s', expected nomad_meta_info_1_0" % typeStr)
+        if int(m.group("major")) != 1:
+            raise Exception("Unsupported major version %s, expeced 1")
+        dependencies = jsonDict.get("dependencies",[])
+        jsonList = jsonDict.get("metaInfos",[])
+        self.description = jsonDict.get("description","")
         overwritten = []
         gidToCheck = {}
+        deps = []
+        for d in dependencies:
+            if self.dependencyLoader is None:
+                raise Exception("no dependencyLoader while loading local_in")
+            dep = self.dependencyLoader(self, source, d)
+            if dep:
+                self.deps.append(dep)
         index = -1
         for ii in jsonList:
             index += 1
-            if "dependencies" in ii:
-                for d in ii["dependencies"]:
-                    if self.dependencyLoader is None:
-                        raise Exception("no dependencyLoader while loading local_in")
-                    dep = self.dependencyLoader(self, source, d)
-                    if dep:
-                        self.deps.append(dep)
-                continue
             val = dict(ii)
             if not "name" in ii:
-                if "dependencies" in ii:
-                    continue
                 raise Exception("InfoKind at %d is without name: %s" % (index, ii) )
             oldVal=self.infoKinds.get(ii['name'],None)
             gid=None
             if "gid" in ii:
                 gid = ii['gid']
                 del val['gid']
-            if "super_gids" in ii:
-                if not "super_names" in ii:
+            if "superGids" in ii:
+                if not "superNames" in ii:
                     raise Exception("super_gids without super_names in fromJsonList")
-                super_names = ii["super_names"]
-                super_gids = ii["super_gids"]
+                super_names = ii["superNames"]
+                super_gids = ii["superGids"]
                 if len(super_names) != len(super_gids):
-                    raise Exception("super_gids incompatible with super_names in fromJsonList: %s vs %s" % (ii["super_gids"], ii["super_names"]))
+                    raise Exception("superGids incompatible with superNames in fromJsonList: %s vs %s" % (ii["superGids"], ii["superNames"]))
                 toCheck = {}
-                for i in range(len(super_names)):
+                for i in range(len(superNames)):
                     assert not super_names[i] in toCheck.keys(), "duplicate super_name %r in %r" % (super_names[i], ii["name"])
                     toCheck[super_names[i]] = super_gids[i]
                 gidToCheck[ii["name"]] = toCheck
@@ -562,19 +578,21 @@ def loadJsonFile(filePath, dependencyLoader = None, extraArgsHandling = InfoKind
     try:
         with open(filePath) as f:
             o = json.load(f)
-            warnings = env.fromJsonList(o, source = {'path': filePath}, extraArgsHandling = extraArgsHandling)
+            warnings = env.fromJsonList(o, name = os.path.basename(filePath), source = {'path': filePath}, extraArgsHandling = extraArgsHandling)
     except:
         logging.exception("Error while loading file %s" % filePath)
         raise
     return env, warnings
 
-def loadJsonStream(fileStream, dependencyLoader = None, extraArgsHandling = InfoKindEl.ADD_EXTRA_ARGS, filePath = None, uri = None):
+def loadJsonStream(fileStream, name = None, dependencyLoader = None, extraArgsHandling = InfoKindEl.ADD_EXTRA_ARGS, filePath = None, uri = None):
     if filePath is None:
         try:
             filePath = fileStream.name
         except:
             filePath = None
-    env = InfoKindEnv(dependencyLoader = dependencyLoader, path = filePath, uri = uri)
+    if name is None and not filePath is None:
+        name = os.path.basename(filePath)
+    env = InfoKindEnv(dependencyLoader = dependencyLoader, name = name, path = filePath, uri = uri)
     try:
         o = json.load(fileStream)
         warnings = env.fromJsonList(o, source = {'path': filePath}, extraArgsHandling = extraArgsHandling)

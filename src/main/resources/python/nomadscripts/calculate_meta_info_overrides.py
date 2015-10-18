@@ -21,7 +21,7 @@ class GitTreeDependencySolver:
         if dPath in self.deps:
             return self.deps[dPath]
         depInfo = None
-        depIKEnv = InfoKindEnv(path = dPath, dependencyLoader=infoKindEnv.dependencyLoader)
+        depIKEnv = InfoKindEnv(name = os.path.basename(dPath), path = dPath, dependencyLoader=infoKindEnv.dependencyLoader)
         self.deps[dPath] = depIKEnv
         try:
             f=self.tree[dPath].data_stream

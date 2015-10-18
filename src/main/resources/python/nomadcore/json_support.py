@@ -41,6 +41,8 @@ class DumpToStream(object):
         self.indent = " " * extraIndent if extraIndent else  ""
         self.dumpF = self.dumpIndented if extraIndent else dumpF
     def dumpIndented(self, val):
+        if type(val) == unicode:
+            val = val.encode("utf_8")
         i = 0
         while True:
             j = val.find("\n", i)
