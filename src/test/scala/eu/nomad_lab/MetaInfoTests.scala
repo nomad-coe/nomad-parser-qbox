@@ -30,11 +30,8 @@ object MetaInfoJsonTests extends Properties("MetaInfoRecord") {
       1 -> Some("f32"),
       1 -> Some("i64"),
       1 -> Some("i32"),
-      1 -> Some("u64"),
-      1 -> Some("u32"),
       1 -> Some("B"),
       1 -> Some("C"),
-      1 -> Some("c"),
       1 -> Some("b")
     )
   } yield new MetaInfoRecord(name = name, kindStr = "DocumentContentType", description = description, units = units, dtypeStr = dtypeStr)

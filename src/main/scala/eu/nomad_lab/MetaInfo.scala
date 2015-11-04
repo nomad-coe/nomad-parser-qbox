@@ -77,14 +77,13 @@ object MetaInfoRecord {
     * f64: 64 bit floating point (double precision)
     * i64: 64 bit signed integer
     * b: byte
-    * c: unicode character
     * B: byte array (blob)
     * C: unicode string
     * D: a json dictionary (currently not very efficient)
     *
-    * Should probably be migrated to an Enumaration.
+    * Should probably be migrated to an Enumeration.
     */
-  final val dtypes = Seq("f", "i", "f32", "i32", "u32", "f64", "i64", "u64", "b", "c", "B", "C", "D")
+  final val dtypes = Seq("f", "i", "f32", "i32", "f64", "i64", "b", "B", "C", "D")
 }
 
 /** Json serialization to and deserialization support for MetaInfoRecord
