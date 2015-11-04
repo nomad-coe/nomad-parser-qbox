@@ -71,7 +71,7 @@ class CompactShaSpec extends Specification with StrictLogging {
   "metaInfoSha" >> {
     val mInfo = MetaInfoRecord(
       name = "sampleMeta",
-      kindStr = "DocumentContentType",
+      kindStr = "type_document_content",
       description = "just some test meta info"
     )
 

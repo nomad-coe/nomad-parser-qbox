@@ -4,22 +4,33 @@ import org.specs2.mutable.Specification
 import spray.testkit.Specs2RouteTest
 import spray.http._
 import StatusCodes._
+import org.{json4s => jn}
+import java.nio.file.Paths
 
 class NomadMetaInfoServiceSpec extends Specification with Specs2RouteTest with NomadMetaInfoService {
   def actorRefFactory = system
   
-  lazy val metaInfoCollection: MetaInfoCollection = {
+  val metaInfoCollection: MetaInfoCollection = {
     val classLoader: ClassLoader = getClass().getClassLoader();
-    val filePath = classLoader.getResource("nomad_meta_info/main.nomadmetainfo.json").getFile()
+    val filePath = classLoader.getResource("nomad-meta-info/nomad_meta_info/main.nomadmetainfo.json").getFile()
     val resolver = new RelativeDependencyResolver
-    SimpleMetaInfoEnv.fromFilePath(filePath, resolver)
+    val mainEnv = SimpleMetaInfoEnv.fromFilePath(filePath, resolver)
+    new SimpleMetaInfoEnv(
+      name = "last",
+      description = "latest version, unlike all others this one is symbolic and will change in time",
+      source = jn.JObject( jn.JField("path", jn.JString(Paths.get(filePath).getParent().toString())) ),
+      nameToGid = Map[String, String](),
+      gidToName = Map[String, String](),
+      metaInfosMap = Map[String, MetaInfoRecord](),
+      dependencies = Seq(mainEnv),
+      kind = MetaInfoEnv.Kind.Version)
   }
 
   "NomadMetaInfoService" should {
 
-    "meta info version v0.1 info.json is valid" in {
-      Get("/nomad_meta_info/version/v0.1/info.json") ~> myRoute ~> check {
-        (JsonUtils.parseStr(responseAs[String]) \ "name").extract[String] must_== "v0.1"
+    "meta info version of last version as expected" in {
+      Get("/nmi/v/last/info.json") ~> myRoute ~> check {
+        (JsonUtils.parseStr(responseAs[String]) \ "type").extract[String] must_== "nomad_meta_info_1_0"
       }
     }
 
@@ -30,7 +41,7 @@ class NomadMetaInfoServiceSpec extends Specification with Specs2RouteTest with N
     }
 
     "return a MethodNotAllowed error for PUT requests to meta info info.json" in {
-      Put("/nomad_meta_info/version/v0.1/info.json") ~> sealRoute(myRoute) ~> check {
+      Put("/nmi/v/last/info.json") ~> sealRoute(myRoute) ~> check {
         status === MethodNotAllowed
         responseAs[String] === "HTTP method not allowed, supported methods: GET"
       }

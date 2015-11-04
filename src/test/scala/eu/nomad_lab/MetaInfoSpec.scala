@@ -24,7 +24,7 @@ class MetaInfoJsonSpec extends Specification with StrictLogging {
     mRecord.name must_== "TestProperty1"
     mRecord.description must_== "a meta info property to test serialization to json"
     mRecord.superNames must beEmpty
-    mRecord.kindStr must_== "DocumentContentType"
+    mRecord.kindStr must_== "type_document_content"
     mRecord.units must beNone
     mRecord.repeats must beNone
     mRecord.shape must beNone
@@ -41,7 +41,7 @@ class MetaInfoJsonSpec extends Specification with StrictLogging {
     mRecord.name must_== "TestProperty1"
     mRecord.description must_== "a meta info property to test serialization to json"
     mRecord.superNames must beEmpty
-    mRecord.kindStr must_== "DocumentContentType"
+    mRecord.kindStr must_== "type_document_content"
     mRecord.units must beNone
     mRecord.repeats must beNone
     mRecord.shape must beNone
@@ -53,7 +53,7 @@ class MetaInfoJsonSpec extends Specification with StrictLogging {
     val mRecord = JsonSupport.readStr[MetaInfoRecord]("""
     {
         "name": "TestProperty2",
-        "kindStr": "DocumentContentType"
+        "kindStr": "type_document_content"
         "description": "a meta info property to test serialization to json",
         "superNames": [],
         "units": "pippo",
@@ -64,7 +64,7 @@ class MetaInfoJsonSpec extends Specification with StrictLogging {
     mRecord.name must_== "TestProperty2"
     mRecord.description must_== "a meta info property to test serialization to json"
     mRecord.superNames must beEmpty
-    mRecord.kindStr must_== "DocumentContentType"
+    mRecord.kindStr must_== "type_document_content"
     mRecord.units must_== Some("pippo")
     mRecord.repeats must_== Some(false)
     mRecord.shape must_== Some(Seq())
@@ -75,7 +75,7 @@ class MetaInfoJsonSpec extends Specification with StrictLogging {
     val mRecord = JsonSupport.readStr[MetaInfoRecord]("""
     {
         "name": "TestProperty3",
-        "kindStr": "DocumentContentType"
+        "kindStr": "type_document_content"
         "description": "a meta info property to test serialization to json",
         "superNames": ["TestProperty"],
         "units": null,
@@ -86,7 +86,7 @@ class MetaInfoJsonSpec extends Specification with StrictLogging {
     mRecord.name must_== "TestProperty3"
     mRecord.description must_== "a meta info property to test serialization to json"
     mRecord.superNames must_== Seq("TestProperty")
-    mRecord.kindStr must_== "DocumentContentType"
+    mRecord.kindStr must_== "type_document_content"
     mRecord.units must beNone
     mRecord.repeats must beNone
     mRecord.shape must beNone
@@ -97,7 +97,7 @@ class MetaInfoJsonSpec extends Specification with StrictLogging {
     val mRecord = JsonSupport.readStr[MetaInfoRecord]("""
     {
         "name": "TestProperty4",
-        "kindStr": "DocumentContentType"
+        "kindStr": "type_document_content"
         "description": "a meta info property to test serialization to json",
         "superNames": ["TestProperty"],
         "extra": "nr1",
@@ -106,7 +106,7 @@ class MetaInfoJsonSpec extends Specification with StrictLogging {
     mRecord.name must_== "TestProperty4"
     mRecord.description must_== "a meta info property to test serialization to json"
     mRecord.superNames must_== Seq("TestProperty")
-    mRecord.kindStr must_== "DocumentContentType"
+    mRecord.kindStr must_== "type_document_content"
     mRecord.units must beNone
     mRecord.repeats must beNone
     mRecord.shape must beNone
@@ -125,13 +125,13 @@ class MetaInfoJsonSpec extends Specification with StrictLogging {
         "superNames": ["TestProperty1"]
     },{
         "name": "TestProperty3",
-        "kindStr": "DocumentContentType",
+        "kindStr": "type_document_content",
         "gid": "dummyGid",
         "description": "a third meta info property to test gids",
         "superNames": []
     },{
         "name": "TestProperty4",
-        "kindStr": "AbstractDocumentContentType",
+        "kindStr": "type_abstract_document_content",
         "description": "a fourth meta info property to test gids",
         "superNames": ["TestProperty2","TestProperty3"]
     }]""") match {
@@ -224,7 +224,7 @@ class MetaInfoJsonSpec extends Specification with StrictLogging {
 
   "defaultEnv load" >> {
     val classLoader: ClassLoader = getClass().getClassLoader();
-    val filePath = classLoader.getResource("nomad_meta_info/main.nomadmetainfo.json").getFile()
+    val filePath = classLoader.getResource("nomad-meta-info/nomad_meta_info/main.nomadmetainfo.json").getFile()
     val resolver = new RelativeDependencyResolver
     val mainEnv = SimpleMetaInfoEnv.fromFilePath(filePath, resolver)
     val version = new SimpleMetaInfoEnv(
@@ -240,7 +240,7 @@ class MetaInfoJsonSpec extends Specification with StrictLogging {
     val vIt = version.versionsWithName("last")
     val v = vIt.next
     v must_== version
-    val dp = version.metaInfoRecordForName("DocumentContentType").get
-    dp.kindStr must_== "MetaType"
+    val dp = version.metaInfoRecordForName("type_document_content").get
+    dp.kindStr must_== "type_meta"
   }
 }

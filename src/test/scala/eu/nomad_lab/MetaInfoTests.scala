@@ -10,7 +10,7 @@ import scala.util.control.NonFatal
 object MetaInfoJsonTests extends Properties("MetaInfoRecord") {
   /** Generates a random MetaInfo record
     *
-    * no inheritance (superNames=Seq()), kindStr = "DocumentContentType"
+    * no inheritance (superNames=Seq()), kindStr = "type_document_content"
     */
   val genMetaInfoRecord = for {
     name <- Gen.alphaStr.suchThat(_.nonEmpty)
@@ -34,7 +34,7 @@ object MetaInfoJsonTests extends Properties("MetaInfoRecord") {
       1 -> Some("C"),
       1 -> Some("b")
     )
-  } yield new MetaInfoRecord(name = name, kindStr = "DocumentContentType", description = description, units = units, dtypeStr = dtypeStr)
+  } yield new MetaInfoRecord(name = name, kindStr = "type_document_content", description = description, units = units, dtypeStr = dtypeStr)
 
   /** Checks that dumping and reading back is the identity
     */
