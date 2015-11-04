@@ -22,7 +22,7 @@ case class MetaInfoRecord(
   val units:    Option[String] = None,
   val dtypeStr: Option[String] = None,
   val repeats: Option[Boolean] = None,
-  val shape:  Option[Seq[Either[Int,String]]] = None,
+  val shape:  Option[Seq[Either[Long,String]]] = None,
   val gid:              String = "",
   val superGids:   Seq[String] = Seq(),
   val otherKeys:  List[JField] = Nil) {
@@ -102,7 +102,7 @@ class MetaInfoRecordSerializer extends CustomSerializer[MetaInfoRecord](format =
              var units: Option[String] = None;
              var dtypeStr: Option[String] = None;
              var repeats: Option[Boolean] = None;
-             var shape: Option[Seq[Either[Int,String]]] = None;
+             var shape: Option[Seq[Either[Long,String]]] = None;
              var otherKeys: List[JField] = Nil;
              obj foreach {
                case JField("name", value) =>
@@ -158,7 +158,7 @@ class MetaInfoRecordSerializer extends CustomSerializer[MetaInfoRecord](format =
                  if (!value.toSome.isEmpty)
                    repeats = value.extract[Option[Boolean]]
                case JField("shape", value) =>
-                 shape = value.extract[Option[Seq[Either[Int,String]]]]
+                 shape = value.extract[Option[Seq[Either[Long,String]]]]
                case JField(key, value) =>
                  if (!value.toSome.isEmpty)
                    otherKeys = JField(key, value) +: otherKeys
