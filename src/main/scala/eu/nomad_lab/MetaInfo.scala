@@ -510,7 +510,7 @@ object MetaInfoEnv {
 
   /** two meta infos with the same name detected
     */
-  case class DuplicateNameException(name: String,
+  class DuplicateNameException(name: String,
     metaInfo1: MetaInfoRecord,
     metaInfo2: MetaInfoRecord
   ) extends Exception(s"DuplicateNameException, found two meta infos with the same name ($name): $metaInfo1 vs $metaInfo2") { }
@@ -523,7 +523,7 @@ object MetaInfoEnv {
 
   /** a meta info depends on an unknown name
     */
-  case class DependsOnUnknownNameException(
+  class DependsOnUnknownNameException(
     envName: String,
     name: String,
     unknownName: String
@@ -532,7 +532,7 @@ object MetaInfoEnv {
 
   /** a meta info has a circular dependency
     */
-  case class MetaInfoCircularDepException(
+  class MetaInfoCircularDepException(
     envName: String,
     name: String,
     nameInCicle: String,
@@ -567,7 +567,7 @@ object DependencyResolver {
 
   /** thrown when a circular dependency is detected
     */
-  case class CircularDepException(
+  class CircularDepException(
     source: JObject,
     dep: JObject,
     inProgress: String
@@ -577,7 +577,7 @@ object DependencyResolver {
 
   /** thrown when the given dependency is found but not expected
     */
-  case class UnexpectedDepException(
+  class UnexpectedDepException(
     source: JObject,
     dep: JObject
   ) extends Exception(
@@ -1027,7 +1027,7 @@ class RelativeDependencyResolver(
     if (deps.contains(dPath))
       return deps(dPath)
     if (inProgress.contains(dPath))
-      throw DependencyResolver.CircularDepException(
+      throw new DependencyResolver.CircularDepException(
         source, dep, inProgress.mkString("{",", ","}"))
     inProgress += dPath
     val newEnv = SimpleMetaInfoEnv.fromFilePath(dPath, dependencyResolver = rootResolver)
@@ -1047,7 +1047,7 @@ class NoDependencyResolver(
     */
   def resolveDependency(source: JObject, dep: JObject): MetaInfoEnv = {
     if (throwOnDep)
-      throw DependencyResolver.UnexpectedDepException(source, dep)
+      throw new DependencyResolver.UnexpectedDepException(source, dep)
     return new SimpleMetaInfoEnv("dummyEnv",
       description = "dummy environment replacing a dependency",
       source =  JsonUtils.mergeObjects(source,dep),
