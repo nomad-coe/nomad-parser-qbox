@@ -1,4 +1,4 @@
-package eu.nomad_lab
+package eu.nomad_lab.meta
 
 import org.specs2.mutable.Specification
 import org.json4s.DefaultFormats
@@ -6,6 +6,9 @@ import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JAr
 import java.nio.file.Paths
 import scala.collection.mutable
 import com.typesafe.scalalogging.StrictLogging
+import eu.nomad_lab.JsonSupport
+import eu.nomad_lab.JsonUtils
+import eu.nomad_lab.CompactSha
 
 /** Specification (fixed tests) for MetaInfo serialization
   */

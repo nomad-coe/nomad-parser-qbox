@@ -2,7 +2,9 @@ package eu.nomad_lab
 
 import org.specs2.mutable.Specification
 import java.nio.charset.StandardCharsets
-import com.typesafe.scalalogging.{StrictLogging}
+import com.typesafe.scalalogging.StrictLogging
+import eu.nomad_lab.meta.MetaInfoRecord
+
 
 /** Specification (fixed tests) for MetaInfo serialization
   */

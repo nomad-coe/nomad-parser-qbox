@@ -1,4 +1,4 @@
-package eu.nomad_lab
+package eu.nomad_lab.meta
 
 import eu.nomad_lab.JsonSupport.{readStr, writeStr}
 import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JArray, JObject, JValue, JField}

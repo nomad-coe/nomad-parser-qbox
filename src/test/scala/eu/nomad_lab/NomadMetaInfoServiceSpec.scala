@@ -6,6 +6,11 @@ import spray.http._
 import StatusCodes._
 import org.{json4s => jn}
 import java.nio.file.Paths
+import eu.nomad_lab.meta.MetaInfoCollection
+import eu.nomad_lab.meta.RelativeDependencyResolver
+import eu.nomad_lab.meta.SimpleMetaInfoEnv
+import eu.nomad_lab.meta.MetaInfoRecord
+import eu.nomad_lab.meta.MetaInfoEnv
 
 class NomadMetaInfoServiceSpec extends Specification with Specs2RouteTest with NomadMetaInfoService {
   def actorRefFactory = system
