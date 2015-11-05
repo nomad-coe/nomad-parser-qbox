@@ -70,6 +70,7 @@ fi
 ctest -S HDFJAVALinuxCMake.cmake -C Release -V -O hdf-java.log
 
 cp -rp hdf-java/build/_CPack_Packages/Linux/STGZ/HDFView-2.11.0-Linux/HDF_Group/HDFView/2.11.0 linux-native
+cp -rp hdf-java/build/bin/libhdf5_hl.* linux-native/lib
 
 if ! [[ -e netcdf-4.3.3.1.tar.gz ]] ; then
     wget ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-4.3.3.1.tar.gz
@@ -84,34 +85,34 @@ if ! dpkg -s libcurl4-openssl-dev >& /dev/null; then
     sudo apt-get install libcurl4-openssl-dev
 fi
 
-NC_CPPFLAGS="-I$baseDir/hdf-java/native/hdf5lib" \
-    " -I$baseDir/hdf-java/build/native/HDF4-prefix/src/HDF4/mfhdf/libsrc"\
-    " -I$baseDir/hdf-java/build/native/HDF4-prefix/src/HDF4/hdf/util"\
-    " -I$baseDir/hdf-java/build/native/HDF4-prefix/src/HDF4/hdf/src"\
-    " -I$baseDir/hdf-java/build/native/HDF4-prefix/src/HDF4-build"\
-    " -I$baseDir/hdf-java/build/native/HDF4-prefix/src/HDF4-build/JPEG-prefix/src/JPEG-build"\
-    " -I$baseDir/hdf-java/build/native/HDF4-prefix/src/HDF4-build/JPEG-prefix/src/JPEG/src"\
-    " -I$baseDir/hdf-java/build/native/HDF4-prefix/src/HDF4-build"\
-    " -I$baseDir/hdf-java/build/native/HDF5-prefix/src/HDF5-build/ZLIB-prefix/src/ZLIB-build"\
-    " -I$baseDir/hdf-java/build/native/HDF5-prefix/src/HDF5-build/ZLIB-prefix/src/ZLIB"\
-    " -I$baseDir/hdf-java/build/native/HDF5-prefix/src/HDF5-build"\
-    " -I$baseDir/hdf-java/build/native/HDF5-prefix/src/HDF5-build/SZIP-prefix/src/SZIP/src"\
-    " -I$baseDir/hdf-java/build/native/HDF5-prefix/src/HDF5-build/SZIP-prefix/src/SZIP/windows"\
-    " -I$baseDir/hdf-java/build/native/HDF5-prefix/src/HDF5-build/SZIP-prefix/src/SZIP-build"\
-    " -I$baseDir/hdf-java/build/native/HDF5-prefix/src/HDF5/src"\
-    " -I$baseDir/hdf-java/build/native/HDF5-prefix/src/HDF5/c++/src"\
-    " -I$baseDir/hdf-java/build/native/HDF5-prefix/src/HDF5/hl/src"\
-    " -I$baseDir/hdf-java/build/native/HDF5-prefix/src/HDF5/hl/c++/src"\
-    " -I$baseDir/hdf-java/build/bin"
+NC_CPPFLAGS="-I$baseDir/hdf-java/native/hdf5lib \
+     -I$baseDir/hdf-java/build/native/HDF4-prefix/src/HDF4/mfhdf/libsrc \
+     -I$baseDir/hdf-java/build/native/HDF4-prefix/src/HDF4/hdf/util \
+     -I$baseDir/hdf-java/build/native/HDF4-prefix/src/HDF4/hdf/src \
+     -I$baseDir/hdf-java/build/native/HDF4-prefix/src/HDF4-build \
+     -I$baseDir/hdf-java/build/native/HDF4-prefix/src/HDF4-build/JPEG-prefix/src/JPEG-build \
+     -I$baseDir/hdf-java/build/native/HDF4-prefix/src/HDF4-build/JPEG-prefix/src/JPEG/src \
+     -I$baseDir/hdf-java/build/native/HDF4-prefix/src/HDF4-build \
+     -I$baseDir/hdf-java/build/native/HDF5-prefix/src/HDF5-build/ZLIB-prefix/src/ZLIB-build \
+     -I$baseDir/hdf-java/build/native/HDF5-prefix/src/HDF5-build/ZLIB-prefix/src/ZLIB \
+     -I$baseDir/hdf-java/build/native/HDF5-prefix/src/HDF5-build \
+     -I$baseDir/hdf-java/build/native/HDF5-prefix/src/HDF5-build/SZIP-prefix/src/SZIP/src \
+     -I$baseDir/hdf-java/build/native/HDF5-prefix/src/HDF5-build/SZIP-prefix/src/SZIP/windows \
+     -I$baseDir/hdf-java/build/native/HDF5-prefix/src/HDF5-build/SZIP-prefix/src/SZIP-build \
+     -I$baseDir/hdf-java/build/native/HDF5-prefix/src/HDF5/src \
+     -I$baseDir/hdf-java/build/native/HDF5-prefix/src/HDF5/c++/src \
+     -I$baseDir/hdf-java/build/native/HDF5-prefix/src/HDF5/hl/src \
+     -I$baseDir/hdf-java/build/native/HDF5-prefix/src/HDF5/hl/c++/src \
+     -I$baseDir/hdf-java/build/bin"
 
-NC_LIBS="$baseDir/linux-native/lib/libhdf5_hl.a"\
-    " $baseDir/linux-native/lib/libhdf5.a"\
-    " $baseDir/linux-native/lib/libhdf.a"\
-    " $baseDir/linux-native/lib/libjpeg.a"\
-    " $baseDir/linux-native/lib/libmfhdf.a"\
-    " $baseDir/linux-native/lib/libszip.a"\
-    " $baseDir/linux-native/lib/libz.a"\
-    " -ldl -lm"
+NC_LIBS="$baseDir/linux-native/lib/libhdf5_hl.a \
+     $baseDir/linux-native/lib/libhdf5.a \
+     $baseDir/linux-native/lib/libhdf.a \
+     $baseDir/linux-native/lib/libjpeg.a \
+     $baseDir/linux-native/lib/libmfhdf.a \
+     $baseDir/linux-native/lib/libszip.a \
+     $baseDir/linux-native/lib/libz.a \
+     -ldl -lm"
 
 if ! [[ -e netcdf-4.3.3.1Build ]] ; then
     mkdir netcdf-4.3.3.1Build
