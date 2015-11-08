@@ -9,6 +9,7 @@ import datetime
 import logging
 import h5py
 
+import setup_paths
 import FhiAimsControlInParser
 from LineParsers import *
 import TrajUtils

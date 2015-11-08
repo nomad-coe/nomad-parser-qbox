@@ -122,7 +122,7 @@ lazy val flywayPostgres = (
 /*lazy val postgresSettings = { Seq( rdbUrl := "jdbc:postgres://localhost:5432/nomad_lab" )
   ++ flywayPostgres ++ jooqCommon ++ jooqPostgres };*/
 
-lazy val root = (project in file(".")).
+lazy val core = (project in file("core")).
   settings(commonSettings: _*).
   settings(
     libraryDependencies ++= commonLibs
@@ -134,5 +134,12 @@ lazy val root = (project in file(".")).
   } ).
   settings(flywayH2: _*).
   settings(jooqCommon: _*).
-  settings(jooqH2: _*).
+  settings(jooqH2: _*)
+
+lazy val frontend = (project in file("frontend")).
+  dependsOn(core).
+  settings(commonSettings: _*).
+  settings(
+    libraryDependencies ++= commonLibs
+  ).
   settings(Revolver.settings: _*)
