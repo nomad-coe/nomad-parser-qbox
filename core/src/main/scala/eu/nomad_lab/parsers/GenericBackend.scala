@@ -984,6 +984,21 @@ object GenericBackend {
     }
   }
 
+  /** root super sections of the meta info with the given metaName
+    *
+    * These are the first ancestors of type type_section in the inheritance DAG
+    * of metaName
+    */
+  def firstSuperSections(metaEnv: MetaInfoEnv, metaName: String): Set[String] = {
+    val allAnchestors = metaEnv.firstAncestorsByType(metaName)
+    allAnchestors.get("type_section") match {
+      case Some(anc) =>
+        anc._1
+      case None =>
+        Set()
+    }
+  }
+
 }
 
 abstract class GenericBackend(
