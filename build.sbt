@@ -125,7 +125,8 @@ lazy val flywayPostgres = (
 lazy val core = (project in file("core")).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= commonLibs
+    libraryDependencies ++= commonLibs,
+    name := "nomadCore"
   ).
   settings(flywaySettings: _*).
   //settings(h2Settings: _*).
@@ -136,10 +137,11 @@ lazy val core = (project in file("core")).
   settings(jooqCommon: _*).
   settings(jooqH2: _*)
 
-lazy val frontend = (project in file("frontend")).
+lazy val webservice = (project in file("webservice")).
   dependsOn(core).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= commonLibs
+    libraryDependencies ++= commonLibs,
+    name := "nomadWebService"
   ).
   settings(Revolver.settings: _*)

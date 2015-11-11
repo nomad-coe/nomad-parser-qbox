@@ -1,4 +1,4 @@
-package eu.nomad_lab
+package eu.nomad_lab.webservice
 
 import org.specs2.mutable.Specification
 import spray.testkit.Specs2RouteTest
@@ -11,6 +11,7 @@ import eu.nomad_lab.meta.RelativeDependencyResolver
 import eu.nomad_lab.meta.SimpleMetaInfoEnv
 import eu.nomad_lab.meta.MetaInfoRecord
 import eu.nomad_lab.meta.MetaInfoEnv
+import eu.nomad_lab.JsonUtils
 
 class NomadMetaInfoServiceSpec extends Specification with Specs2RouteTest with NomadMetaInfoService {
   def actorRefFactory = system

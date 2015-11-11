@@ -1,4 +1,4 @@
-package eu.nomad_lab
+package eu.nomad_lab.webservice
 
 import akka.actor.Actor
 import spray.routing._
@@ -20,6 +20,7 @@ import eu.nomad_lab.meta.MetaInfoRecord
 import eu.nomad_lab.meta.MetaInfoCollection
 import eu.nomad_lab.meta.RelativeDependencyResolver
 import eu.nomad_lab.meta.SimpleMetaInfoEnv
+import eu.nomad_lab.JsonSupport
 
 // we don't implement our route structure directly in the service actor because
 // we want to be able to test it independently, without having to spin up an actor
