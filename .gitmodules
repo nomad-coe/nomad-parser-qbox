@@ -1,3 +1,15 @@
 [submodule "src/main/resources/nomad-meta-info"]
   path = core/src/main/resources/nomad-meta-info
   url = ../nomad-meta-info.git
+
+[submodule "python-common"]
+  path = python-common
+  url = ../python-common.git
+
+[submodule "parser-cp2k"]
+  path = parser-cp2k
+  url = ../parser-cp2k.git
+
+[submodule "parser-fhi-aims"]
+  path = parser-fhi-aims
+  url = ../parser-fhi-aims.git
