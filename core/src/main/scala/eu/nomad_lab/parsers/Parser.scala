@@ -12,6 +12,15 @@ import eu.nomad_lab.JsonUtils
 import eu.nomad_lab.meta.MetaInfoEnv
 import eu.nomad_lab.meta.MetaInfoRecord
 import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JArray, JObject, JValue, JField}
+import org.apache.tika.Tika
+import com.typesafe.scalalogging.StrictLogging
+import java.nio.charset.StandardCharsets
+import java.nio.charset.CodingErrorAction
+import java.nio.charset.CharsetDecoder
+import java.nio.charset.CoderResult
+import java.nio.ByteBuffer
+import java.nio.CharBuffer
+
 
 /** prefiltering on the ancillary files performed
   *
@@ -32,6 +41,10 @@ object Trilean extends Enumeration {
   * all functions are expected to be reentrant and threadsafe
   */
 trait ParserGenerator {
+  /** unique name for this parser
+    */
+  def name: String
+
   /** description of the data that can be extracted by this parser
     */
   def parseableMetaInfo: MetaInfoEnv
@@ -168,5 +181,99 @@ trait ParserBackend {
   def addArrayValues(metaName: String, values: NArray, gIndex: Long = -1): Unit = {
     addArrayValue(metaName, values.getShape().map(_.toLong).toSeq);
     setArrayValues(metaName, values);
+  }
+}
+
+object ParserCollection {
+  val tika = new Tika()
+
+  /** Multiple parsers can handle the same file
+    */
+  class MultipleMatchException(
+    parsers: Seq[ParserGenerator],
+    filePath: String,
+    bytePrefix: Array[Byte],
+    stringPrefix: Option[String]
+  ) extends Exception(s"Multiple parsers match file $filePath: ${parsers.map{ (p: ParserGenerator) => JsonUtils.prettyStr(p.parserInfo)}.mkString(", ")}") { }
+}
+
+/** A set of parsers that can parse a tree
+  */
+class ParserCollection(
+  val parsers: Map[String, ParserGenerator]
+) extends StrictLogging {
+
+  val parsersByMimeType = {
+    val byMimeType = mutable.Map[String,ListBuffer[ParserGenerator]]()
+    parsers.foreach { case (_, parser) =>
+       parser.mainFileTypes.foreach { mimeTypeRe =>
+         byMimeType.get(mimeTypeRe) match {
+           case Some(pList) =>
+             pList.append(parser)
+           case None =>
+             byMimeType += (mimeTypeRe -> ListBuffer(parser))
+         }
+       }
+    }
+    byMimeType.map{ case (mimeType, parsers) =>
+      mimeType -> parsers.toSeq
+    }(breakOut): Map[String, Seq[ParserGenerator]]
+  }
+
+  def scanWithParsers(
+    parsers: Seq[ParserGenerator],
+    filePath: String,
+    bytePrefix: Array[Byte],
+    stringPrefix: Option[String],
+    allowMultipleMatches: Boolean = false
+  ) = {
+    val scanResults = parsers.flatMap { (parser: ParserGenerator) =>
+      parser.isMainFile(filePath, bytePrefix, stringPrefix) match {
+        case Trilean.False =>
+          None
+        case isMain => Some((isMain, parser))
+      }
+    }.groupBy(_._1)
+    scanResults.get(Trilean.True) match {
+      case Some(matching) =>
+        if (matching.size != 1)
+          throw new ParserCollection.MultipleMatchException(
+            matching.map(_._2), filePath, bytePrefix, stringPrefix)
+        matching
+      case None =>
+        scanResults.get(Trilean.Maybe) match {
+          case Some(matching) => matching
+          case None           => Seq()
+        }
+    }
+  }
+
+  def scanFile(filePath: String, bytePrefix: Array[Byte]): Seq[(Trilean.Value, ParserGenerator)] = {
+    val file = new java.io.File(filePath)
+    val mimeType: String = ParserCollection.tika.detect(bytePrefix, file.getName())
+    logger.debug(s"$filePath detected as $mimeType")
+    parsersByMimeType.get(mimeType) match {
+      case Some(parsers) =>
+        val stringPrefix = {
+          val utf8Decoder: CharsetDecoder = StandardCharsets.UTF_8.newDecoder()
+          utf8Decoder.onMalformedInput(CodingErrorAction.REPORT)
+          utf8Decoder.onMalformedInput(CodingErrorAction.REPORT)
+          val byteBuffer = ByteBuffer.wrap(bytePrefix)
+          val strBuf = CharBuffer.allocate(bytePrefix.length)
+          val utf8Decoding: CoderResult = utf8Decoder.decode(
+            byteBuffer, strBuf, false)
+          if (utf8Decoding.isError()) {
+            val isoDecoder = StandardCharsets.ISO_8859_1.newDecoder()
+            strBuf.clear()
+            val isoDecoding: CoderResult = isoDecoder.decode(
+              byteBuffer, strBuf, false)
+            assert(!isoDecoding.isError())
+          }
+          strBuf.toString()
+        }
+        scanWithParsers(parsers, filePath, bytePrefix, Some(stringPrefix))
+      case None =>
+        Seq()
+    }
   }
 }

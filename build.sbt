@@ -145,3 +145,12 @@ lazy val webservice = (project in file("webservice")).
     name := "nomadWebService"
   ).
   settings(Revolver.settings: _*)
+
+lazy val tool = (project in file("tool")).
+  dependsOn(core).
+  settings(commonSettings: _*).
+  settings(
+    libraryDependencies ++= commonLibs,
+    name := "nomadTool"
+  ).
+  settings(Revolver.settings: _*)
