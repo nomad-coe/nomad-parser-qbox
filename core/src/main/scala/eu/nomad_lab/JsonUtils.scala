@@ -223,8 +223,13 @@ object JsonUtils {
     *
     * Currently inefficent, use Serialization.write?
     */
-  def prettyWriter[W <: Writer](value: JValue, writer: W): Unit =
-    writer.write(prettyStr(value))
+  def prettyWriter[W <: Writer](value: JValue, writer: W, extraIndent: Int = 0): Unit = {
+    val w = if (extraIndent > 0)
+      new ExtraIndenter(extraIndent, writer)
+    else
+      writer
+    w.write(prettyStr(value))
+  }
 
   /** Dumps an indented json
     *
@@ -232,26 +237,32 @@ object JsonUtils {
     *
     * Currently inefficent, use Serialization.write?
     */
-  def prettyOutputStream[W <: OutputStream](value: JValue, writer: W): Unit = {
+  def prettyOutputStream[W <: OutputStream](value: JValue, writer: W, extraIndent: Int = 0): Unit = {
     val out = new BufferedWriter(new OutputStreamWriter(writer, StandardCharsets.UTF_8))
-    prettyWriter(value, out)
+    prettyWriter(value, out, extraIndent)
   }
 
   /** Returns an UTF_8 encoded indented json
     *
     * Object keys are output in generation order (not necessarily alphabetically)
     */
-  def prettyUft8(value: JValue): Array[Byte] =
-    prettyStr(value).getBytes(StandardCharsets.UTF_8)
+  def prettyUft8(value: JValue, extraIndent: Int = 0): Array[Byte] =
+    prettyStr(value, extraIndent).getBytes(StandardCharsets.UTF_8)
 
   /** Returns a string with indented json
     *
     * Object keys are output in generation order (not necessarily alphabetically)
     */
-  def prettyStr(value: JValue): String = {
-    value match {
-      case JNothing => ""
-      case _        => pretty(render(value))
+  def prettyStr(value: JValue, extraIndent: Int = 0): String = {
+    if (extraIndent == 0) {
+      value match {
+        case JNothing => ""
+        case _        => pretty(render(value))
+      }
+    } else {
+      val w = new StringWriter()
+      prettyWriter(value, w)
+      w.toString()
     }
   }
 
