@@ -150,7 +150,7 @@ Runs the main parsing step
         }
       }
     }
-    val backend: parsers.ParserBackend = backendType match {
+    val backend: parsers.ParserBackendInternal = backendType match {
       case BackendType.JsonWriter => null
       case BackendType.Netcdf => null
       case BackendType.JsonEventEmitter => null
@@ -163,19 +163,19 @@ Runs the main parsing step
         val buf = Array.fill[Byte](8*1024)(0)
         val nRead = tryRead(fIn, buf, 0)
         val minBuf = buf.dropRight(buf.size - nRead)
-        val possibleParsers = parserCollection.scanFile(path, minBuf)
-        for ((parserMatch, parser) <- possibleParsers) {
+        val possibleParsers = parserCollection.scanFile(path, minBuf).sorted
+        for (parsers.CandidateParser(parserMatch, parserName, parser) <- possibleParsers) {
           val optimizedParser: parsers.OptimizedParser= {
-            cachedOptimizedParsers.get(parser.name) match {
+            cachedOptimizedParsers.get(parserName) match {
               case Some(oParser) =>
                 oParser
               case None =>
                 val oParser = parser.optimizedParser(include = Seq(), exclude = Seq())
-                cachedOptimizedParsers += (parser.name -> oParser)
+                cachedOptimizedParsers += (parserName -> oParser)
                 oParser
             }
           }
-          val parsingStatus = optimizedParser.parse(path, backend)
+          val parsingStatus = optimizedParser.parseInternal(path, backend, parserName)
           parsingStatus match {
             case _ => ()
           }

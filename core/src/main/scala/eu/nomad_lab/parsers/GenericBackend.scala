@@ -1003,7 +1003,7 @@ object GenericBackend {
 
 abstract class GenericBackend(
   val metaInfoEnv: MetaInfoEnv
-) extends ParserBackend {
+) extends ParserBackendInternal {
 
   /** the manger for the sections
     */

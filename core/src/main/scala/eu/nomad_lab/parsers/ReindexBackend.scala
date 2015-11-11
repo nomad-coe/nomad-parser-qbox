@@ -28,9 +28,11 @@ object ReindexBackend {
   }
 
 }
-/** backend that changes the indexes used and keeps the mapping
+/** Backend that changes the indexes used and keeps the mapping
+  *
+  * Converts and internal backend to and external one
   */
-class ReindexBackend( val subParser: ParserBackend) extends ParserBackend {
+class ReindexBackend( val subParser: ParserBackendInternal) extends ParserBackendExternal {
   def metaInfoEnv: MetaInfoEnv = subParser.metaInfoEnv
 
   class OpenSectionUsageException(msg: String) extends Exception(msg) {}
@@ -61,12 +63,6 @@ class ReindexBackend( val subParser: ParserBackend) extends ParserBackend {
     subInfo + extraInfo
   }
 
-  /** opens a new section, do not use, use openSectionWithOldGIndex
-    */
-  def openSection(metaName: String): Long = {
-    throw new OpenSectionUsageException("cannot call openSection directly when reindexing, because then the mapping for references is unclear")
-  }
-
   def getOrCreateMapper(metaName: String): ReindexBackend.SectionMapper = {
     sectionMappers.get(metaName) match {
       case Some(sectionMapper) =>
@@ -82,7 +78,7 @@ class ReindexBackend( val subParser: ParserBackend) extends ParserBackend {
     *
     * return newGIndex? might be confusing as it should not be used
     */
-  def openSectionWithOldGIndex(metaName: String, oldGIndex: Long): Unit = {
+  def openSectionWithGIndex(metaName: String, oldGIndex: Long): Unit = {
     val newGIndex = subParser.openSection(metaName)
     val mapper = getOrCreateMapper(metaName)
     mapper.sectionMap += (oldGIndex -> newGIndex)

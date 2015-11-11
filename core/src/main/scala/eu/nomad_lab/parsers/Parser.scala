@@ -20,7 +20,7 @@ import java.nio.charset.CharsetDecoder
 import java.nio.charset.CoderResult
 import java.nio.ByteBuffer
 import java.nio.CharBuffer
-
+import scala.util.matching.Regex
 
 /** prefiltering on the ancillary files performed
   *
@@ -31,9 +31,31 @@ object AncillaryFilesPrefilter extends Enumeration {
   val WholeUpload, WholeSubtree, SubtreeDepth1, SameLevelOnly, MainFileOnly = Value
 }
 
-object Trilean extends Enumeration {
-  type Trilean = Value
-  val True, Maybe, False = Value
+/** describes the level of matching of the parser
+  *
+  *  lower matchPrioritz wins over larger, strong match over a weak one
+  */
+case class ParserMatch(
+  val matchPriority: Int = 0,
+  val weakMatch: Boolean = false
+) {}
+
+object ParserMatch {
+  implicit def orderingByPriority[A <: ParserMatch]: Ordering[A] =
+    Ordering.by(m => (m.matchPriority, m.weakMatch))
+}
+
+/** represents a possible matching parser
+  */
+case class CandidateParser(
+  val parserMatch: ParserMatch,
+  val parserName: String,
+  val parser: ParserGenerator
+) {}
+
+object CandidateParser {
+  implicit def orderingByMatch[A <: CandidateParser]: Ordering[A] =
+    Ordering.by(c => (c.parserMatch, c.parserName))
 }
 
 /** Describes an object able identify files it can parse and create a parser them
@@ -59,7 +81,7 @@ trait ParserGenerator {
   /** function that should decide if this main file can be parsed by this parser
     * looking at the first 1024 bytes of it
     */
-  def isMainFile(filePath: String, bytePrefix: Array[Byte], stringPrefix: Option[String]): Trilean.Value
+  def isMainFile(filePath: String, bytePrefix: Array[Byte], stringPrefix: Option[String]): Option[ParserMatch]
 
   /** returns an optimized parser that performs the actual parsing
     * 
@@ -106,16 +128,24 @@ trait OptimizedParser {
     */
   def parserGenerator: ParserGenerator
 
-  /** parses the file at the given path, calling the backend with the parser events
+  /** parses the file at the given path, calling the internal backend with the parser events
+    *
+    * parserName is used to identify the parser, mainly for logging/debugging
     */ 
-  def parse(mainFilePath: String, backend: ParserBackend): ParseResult.ParseResult
+  def parseInternal(mainFilePath: String, backend: ParserBackendInternal, parserName: String): ParseResult.ParseResult
+
+  /** parses the file at the given path, calling the external backend with the parser events
+    *
+    * parserName is used to identify the parser, mainly for logging/debugging
+    */ 
+  def parseExternal(mainFilePath: String, backend: ParserBackendExternal, parserName: String): ParseResult.ParseResult
 }
 
-/**Callbacks that are called by a streaming parser
+/**Basic callbacks that are called by a streaming parser
   *
   * methods that should store or evaluate the data extracted by the parser
   */
-trait ParserBackend {
+trait ParserBackendBase {
   /** The metaInfoEnv this parser was optimized for
     */
   def metaInfoEnv: MetaInfoEnv;
@@ -129,10 +159,6 @@ trait ParserBackend {
   /** returns information on an open section (for debugging purposes)
     */
   def openSectionInfo(metaName: String, gIndex: Long): String;
-
-  /** opens a new section.
-    */
-  def openSection(metaName: String): Long;
 
   /** sets info values of an open section.
     *
@@ -184,6 +210,33 @@ trait ParserBackend {
   }
 }
 
+
+/** Callbacks that are called by an internal streaming parser
+  *
+  * This kind of backend is in control of the GIndexes of the sections
+  * and chooses them
+  * The ReindexBackend can adapt a backend wanting to control gIndex
+  * with one that wants to set indexes
+  */
+trait ParserBackendInternal extends ParserBackendBase {
+  /** opens a new section, returning a valid gIndex
+    */
+  def openSection(metaName: String): Long;
+}
+
+/** Callbacks that are called by an external streaming parser
+  *
+  * Here index generation is controlled externally, this is good for external
+  * parsers as they become effectively decoupled, and can generate the whole
+  * stream of events without waiting for any answer (no latency or roundtrip)
+  * A GenIndexBackend (to do), can adapt and external backend to an internal one
+  */
+trait ParserBackendExternal extends ParserBackendBase {
+  /** Informs tha backend that a section with the given gIndex has been opened
+    */
+  def openSectionWithGIndex(metaName: String, gIndex: Long);
+}
+
 object ParserCollection {
   val tika = new Tika()
 
@@ -204,76 +257,75 @@ class ParserCollection(
 ) extends StrictLogging {
 
   val parsersByMimeType = {
-    val byMimeType = mutable.Map[String,ListBuffer[ParserGenerator]]()
-    parsers.foreach { case (_, parser) =>
+    val byMimeType = mutable.Map[String,ListBuffer[String]]()
+    parsers.foreach { case (parserName, parser) =>
        parser.mainFileTypes.foreach { mimeTypeRe =>
          byMimeType.get(mimeTypeRe) match {
            case Some(pList) =>
-             pList.append(parser)
+             pList.append(parserName)
            case None =>
-             byMimeType += (mimeTypeRe -> ListBuffer(parser))
+             byMimeType += (mimeTypeRe -> ListBuffer(parserName))
          }
        }
     }
     byMimeType.map{ case (mimeType, parsers) =>
-      mimeType -> parsers.toSeq
-    }(breakOut): Map[String, Seq[ParserGenerator]]
+      mimeType.r -> parsers.toSeq
+    }(breakOut): Array[(Regex, Seq[String])]
   }
 
   def scanWithParsers(
-    parsers: Seq[ParserGenerator],
+    parserNames: Seq[String],
     filePath: String,
     bytePrefix: Array[Byte],
     stringPrefix: Option[String],
     allowMultipleMatches: Boolean = false
-  ) = {
-    val scanResults = parsers.flatMap { (parser: ParserGenerator) =>
+  ): Seq[CandidateParser] = {
+    parserNames.flatMap { (parserName: String) =>
+      val parser = parsers(parserName)
       parser.isMainFile(filePath, bytePrefix, stringPrefix) match {
-        case Trilean.False =>
+        case Some(parserMatch) =>
+          Some(CandidateParser(parserMatch, parserName, parser))
+        case None =>
           None
-        case isMain => Some((isMain, parser))
       }
-    }.groupBy(_._1)
-    scanResults.get(Trilean.True) match {
-      case Some(matching) =>
-        if (matching.size != 1)
-          throw new ParserCollection.MultipleMatchException(
-            matching.map(_._2), filePath, bytePrefix, stringPrefix)
-        matching
-      case None =>
-        scanResults.get(Trilean.Maybe) match {
-          case Some(matching) => matching
-          case None           => Seq()
-        }
     }
   }
 
-  def scanFile(filePath: String, bytePrefix: Array[Byte]): Seq[(Trilean.Value, ParserGenerator)] = {
+  def scanFile(filePath: String, bytePrefix: Array[Byte]): Seq[CandidateParser] = {
     val file = new java.io.File(filePath)
     val mimeType: String = ParserCollection.tika.detect(bytePrefix, file.getName())
     logger.debug(s"$filePath detected as $mimeType")
-    parsersByMimeType.get(mimeType) match {
-      case Some(parsers) =>
-        val stringPrefix = {
-          val utf8Decoder: CharsetDecoder = StandardCharsets.UTF_8.newDecoder()
-          utf8Decoder.onMalformedInput(CodingErrorAction.REPORT)
-          utf8Decoder.onMalformedInput(CodingErrorAction.REPORT)
-          val byteBuffer = ByteBuffer.wrap(bytePrefix)
-          val strBuf = CharBuffer.allocate(bytePrefix.length)
-          val utf8Decoding: CoderResult = utf8Decoder.decode(
-            byteBuffer, strBuf, false)
-          if (utf8Decoding.isError()) {
-            val isoDecoder = StandardCharsets.ISO_8859_1.newDecoder()
-            strBuf.clear()
-            val isoDecoding: CoderResult = isoDecoder.decode(
-              byteBuffer, strBuf, false)
-            assert(!isoDecoding.isError())
+    val parsersDone = mutable.Set[String]()
+    lazy val stringPrefix = {
+      val utf8Decoder: CharsetDecoder = StandardCharsets.UTF_8.newDecoder()
+      utf8Decoder.onMalformedInput(CodingErrorAction.REPORT)
+      utf8Decoder.onMalformedInput(CodingErrorAction.REPORT)
+      val byteBuffer = ByteBuffer.wrap(bytePrefix)
+      val strBuf = CharBuffer.allocate(bytePrefix.length)
+      val utf8Decoding: CoderResult = utf8Decoder.decode(
+        byteBuffer, strBuf, false)
+      if (utf8Decoding.isError()) {
+        val isoDecoder = StandardCharsets.ISO_8859_1.newDecoder()
+        strBuf.clear()
+        val isoDecoding: CoderResult = isoDecoder.decode(
+          byteBuffer, strBuf, false)
+        assert(!isoDecoding.isError())
+      }
+      strBuf.toString()
+    }
+    parsersByMimeType.foldLeft(Seq[CandidateParser]()){ case (seq, (mimeRe, parserNames)) =>
+      mimeType match {
+        case mimeRe() =>
+          val parsersToDo = parserNames.filter(!parsersDone(_))
+          if (!parsersToDo.isEmpty) {
+            parsersDone ++= parsersToDo
+            seq ++ scanWithParsers(parsersToDo, filePath, bytePrefix, Some(stringPrefix))
+          } else {
+            seq
           }
-          strBuf.toString()
-        }
-        scanWithParsers(parsers, filePath, bytePrefix, Some(stringPrefix))
-      case None =>
-        Seq()
+        case _ =>
+          seq
+      }
     }
   }
 }
