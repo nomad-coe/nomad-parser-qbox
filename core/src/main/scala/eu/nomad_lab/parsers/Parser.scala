@@ -232,7 +232,9 @@ trait ParserBackendInternal extends ParserBackendBase {
   * A GenIndexBackend (to do), can adapt and external backend to an internal one
   */
 trait ParserBackendExternal extends ParserBackendBase {
-  /** Informs tha backend that a section with the given gIndex has been opened
+  /** Informs tha backend that a section with the given gIndex should be opened
+    *
+    * The index is assumed to be unused, it is an error to reopen an existing section.
     */
   def openSectionWithGIndex(metaName: String, gIndex: Long);
 }
