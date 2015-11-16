@@ -13,3 +13,6 @@
 [submodule "parser-fhi-aims"]
   path = parser-fhi-aims
   url = ../parser-fhi-aims.git
+[submodule "parsers/fhi-aims"]
+	path = parsers/fhi-aims
+	url = git@gitlab.mpcdf.mpg.de:nomad-lab/parser-fhi-aims.git
