@@ -404,6 +404,39 @@ object CachingBackend {
     }
   }
 
+  def apply(metaEnv: MetaInfoEnv, toIgnore: Set[String]): CachingBackend = {
+    // sections
+    val allNames: Set[String] = metaEnv.allNames.toSet
+    val sectionManagers: Map[String, CachingBackend.CachingSectionManager] = allNames.flatMap{ (name:String) =>
+      val metaInfo = metaEnv.metaInfoRecordForName(name, true, true).get
+      if (metaInfo.kindStr == "type_section") {
+        val superSectionNames = GenericBackend.firstSuperSections(metaEnv,name).toArray.sorted
+        Some((name, new CachingBackend.CachingSectionManager(
+          metaInfo,
+          superSectionNames)))
+      } else {
+        None
+      }
+    }(breakOut)
+    // concrete data
+    val metaDataManagers: Map[String, GenericBackend.MetaDataManager] = allNames.flatMap{ (name:String) =>
+      val metaInfo = metaEnv.metaInfoRecordForName(name, true, true).get
+      if (metaInfo.kindStr == "type_document_content") {
+        val superSectionNames = GenericBackend.firstSuperSections(metaEnv,name).toArray.sorted
+        if (superSectionNames.size != 1)
+          throw new InvalidMetaInfoException(metaInfo, s"multiple direct super sections: ${superSectionNames.mkString(", ")}")
+        if (!toIgnore(name)) {
+          Some(name -> cachingDataManager(metaInfo, sectionManagers(superSectionNames(0))))
+        } else {
+          Some(name -> new GenericBackend.DummyMetaDataManager(metaInfo, sectionManagers(superSectionNames(0))))
+        }
+      } else {
+        None
+      }
+    }(breakOut)
+
+    new CachingBackend(metaEnv, sectionManagers, metaDataManagers)
+  }
 }
 
 /** Backend that caches values
@@ -413,5 +446,4 @@ class CachingBackend(
   val sectionManagers: Map[String, CachingBackend.CachingSectionManager],
   val metaDataManagers: Map[String, GenericBackend.MetaDataManager]
 ) extends GenericBackend(metaInfoEnv) {
-
 }

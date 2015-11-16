@@ -16,6 +16,9 @@ import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JAr
   * for now.
   */
 object GenericBackend {
+  class InternalErrorException(
+    msg: String, what: Throwable = null
+  ) extends Exception(msg, what) { }
 
   class MissingSectionException(
     sectionName: String, gIndex: Long, msg: String, what: Throwable = null
@@ -204,9 +207,14 @@ object GenericBackend {
 
   /** dummy class that ignores input, useful for things that should be ignored
     */
-  abstract class DummyMetaDataManager(
-    metaInfo: MetaInfoRecord
+  class DummyMetaDataManager(
+    metaInfo: MetaInfoRecord,
+    val sectionManager: SectionManager
   ) extends MetaDataManager(metaInfo) {
+
+    /** adds a json value
+      */
+    def addValue(value: org.json4s.JValue, gIndex: Long): Unit = { }
 
     /** Adds a floating point value
       */
@@ -223,6 +231,7 @@ object GenericBackend {
     /** Adds a new array with the given values
       */
     override def addArrayValues(values: NArray, gIndex: Long = -1): Unit = { }
+
   }
 
   /** abstact class to handle integer scalar values
@@ -998,6 +1007,15 @@ object GenericBackend {
         Set()
     }
   }
+
+  class UnexpectedDataOutputException(
+    metaInfo: MetaInfoRecord
+  ) extends Exception(s"MetaInfo ${metaInfo.name} unexpectedly used to store a value. Are you trying to output a value for an abstract meta data? ${JsonUtils.prettyStr(metaInfo.toJValue())}") {}
+
+  class UnknownMetaInfoException(
+    metaName: String,
+    msg: String
+  ) extends Exception(s"Unknown meta info $metaName referenced, did you mispell the meta data or forget to add it to the metadata? $msg")
 
 }
 
