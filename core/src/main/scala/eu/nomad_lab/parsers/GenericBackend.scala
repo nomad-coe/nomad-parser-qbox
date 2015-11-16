@@ -1053,6 +1053,20 @@ abstract class GenericBackend(
     sectionManagers(metaName).closeSection(this, gIndex)
   }
 
+  /** returns a data manager for the given name
+    */
+  def dataManagerForName(metaName: String): GenericBackend.MetaDataManager = {
+    metaDataManagers.get(metaName) match {
+      case Some(manager) =>
+        manager
+      case None =>
+        metaInfoEnv.metaInfoRecordForName(metaName, true, true) match {
+          case Some(metaInfo) =>
+            throw new GenericBackend.UnexpectedDataOutputException(metaInfo)
+          case None =>
+            throw new GenericBackend.UnknownMetaInfoException(metaName, "When being asked to add a value.")
+        }
+    }
   }
 
   /** Adds a json value corresponding to metaName.
@@ -1061,7 +1075,7 @@ abstract class GenericBackend(
     * A gIndex of -1 means the latest section.
     */
   override def addValue(metaName: String, value: JValue, gIndex: Long = -1): Unit = {
-    metaDataManagers(metaName).addValue(value, gIndex)
+    dataManagerForName(metaName).addValue(value, gIndex)
   }
 
   /** Adds a floating point value corresponding to metaName.
@@ -1070,7 +1084,7 @@ abstract class GenericBackend(
     * A gIndex of -1 means the latest section.
     */
   override def addRealValue(metaName: String, value: Double, gIndex: Long = -1): Unit = {
-    metaDataManagers(metaName).addRealValue(value, gIndex)
+    dataManagerForName(metaName).addRealValue(value, gIndex)
   }
 
   /** Adds a new array value of the given size corresponding to metaName.
@@ -1080,7 +1094,7 @@ abstract class GenericBackend(
     * The array is unitialized.
     */
   override def addArrayValue(metaName: String, shape: Seq[Long], gIndex: Long = -1): Unit = {
-    metaDataManagers(metaName).addArrayValue(shape, gIndex)
+    dataManagerForName(metaName).addArrayValue(shape, gIndex)
   }
 
   /** Adds values to the last array added
@@ -1089,13 +1103,13 @@ abstract class GenericBackend(
     metaName: String, values: NArray,
     offset: Option[Seq[Long]] = None,
     gIndex: Long = -1): Unit = {
-    metaDataManagers(metaName). setArrayValues(values, offset, gIndex)
+    dataManagerForName(metaName). setArrayValues(values, offset, gIndex)
   }
 
   /** Adds an array value with the given array values
     */
   override def addArrayValues(metaName: String, values: NArray, gIndex: Long = -1): Unit = {
-    metaDataManagers(metaName).addArrayValues(values, gIndex)
+    dataManagerForName(metaName).addArrayValues(values, gIndex)
   }
 
 }
