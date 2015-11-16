@@ -6,10 +6,10 @@
 	path = python-common
 	url = ../python-common.git
 
-[submodule "parser-cp2k"]
-  path = parser-cp2k
-  url = ../parser-cp2k.git
-
 [submodule "parsers/fhi-aims"]
 	path = parsers/fhi-aims
 	url = ../parser-fhi-aims.git
+
+[submodule "parsers/cp2k"]
+	path = parsers/cp2k
+	url = ../parser-cp2k.git
