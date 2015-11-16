@@ -27,10 +27,14 @@ object ReindexBackend {
     val sectionMap = mutable.Map[Long, Long]()
   }
 
+  /** Internal error in the index mapping
+    */
+  class MappingException(msg: String) extends Exception(msg) {}
+
 }
 /** Backend that changes the indexes used and keeps the mapping
   *
-  * Converts and internal backend to and external one
+  * Converts and internal backend to an external one
   */
 class ReindexBackend( val subParser: ParserBackendInternal) extends ParserBackendExternal {
   def metaInfoEnv: MetaInfoEnv = subParser.metaInfoEnv
@@ -43,7 +47,17 @@ class ReindexBackend( val subParser: ParserBackendInternal) extends ParserBacken
     *
     * sections are identified by name of the meta info and their gIndex
     */
-  def openSections(): Iterator[(String, Long)] = subParser.openSections()
+  def openSections(): Iterator[(String, Long)] = {
+    subParser.openSections().map { case (metaName, gIndex) =>
+      sectionMappers(metaName).sectionMap.find { case (oldId,newId) =>
+        newId == gIndex } match {
+        case Some((oldId, newId)) =>
+          (metaName, oldId)
+        case None =>
+          throw new ReindexBackend.MappingException(s"open section in sub parsers references unknwon index $gIndex")
+      }
+    }
+  }
 
   /** returns information on an open section (for debugging purposes)
     */
@@ -75,8 +89,6 @@ class ReindexBackend( val subParser: ParserBackendInternal) extends ParserBacken
   }
 
   /** opens a new section that had an identifier oldGIndex
-    *
-    * return newGIndex? might be confusing as it should not be used
     */
   def openSectionWithGIndex(metaName: String, oldGIndex: Long): Unit = {
     val newGIndex = subParser.openSection(metaName)
