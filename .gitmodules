@@ -3,8 +3,8 @@
   url = ../nomad-meta-info.git
 
 [submodule "python-common"]
-  path = python-common
-  url = ../python-common.git
+	path = python-common
+	url = ../python-common.git
 
 [submodule "parser-cp2k"]
   path = parser-cp2k
