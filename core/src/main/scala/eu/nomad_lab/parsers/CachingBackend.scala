@@ -83,20 +83,13 @@ object CachingBackend {
           cachedSubSections += (metaInfo.name -> ListBuffer(value))
       }
     }
-
-    /** Callback when a section is closed
-      *
-      * add an overridable callback?
-      */
-    def onClose(backend: CachingBackend, sectionManager: CachingSectionManager): Unit = { }
   }
 
-  /** Managere for sections that can cache results
+  /** Manager for sections that can cache results
     */
   class CachingSectionManager(
     val metaInfo: MetaInfoRecord,
     val parentSectionNames: Array[String],
-    val backend: CachingBackend,
     lastSectionGIndex0: Long = -1,
     openSections0: Map[Long, CachingSection] = Map()
   ) extends GenericBackend.SectionManager {
@@ -124,17 +117,20 @@ object CachingBackend {
 
     /** returns the gIndex of a newly opened section
       */
-    def openSection(): Long = {
+    def openSection(gBackend: GenericBackend): Long = {
       _lastSectionGIndex += 1
       val newGIndex = _lastSectionGIndex
       openSections += (newGIndex -> new CachingSection(
         newGIndex,
         references = parentSectionNames.map{ parentName: String =>
-          backend.sectionManagers.get(parentName) match {
-            case Some(parentManager) =>
-              parentManager.lastSectionGIndex
-            case None =>
-              -1
+          gBackend match {
+            case backend: CachingBackend =>
+              backend.sectionManagers.get(parentName) match {
+                case Some(parentManager) =>
+                  parentManager.lastSectionGIndex
+                case None =>
+                  -1
+              }
           }
         }))
       newGIndex
@@ -143,16 +139,24 @@ object CachingBackend {
 
     /** closes the given section
       */
-    def closeSection(gIndex: Long) = {
+    def closeSection(gBackend: GenericBackend, gIndex: Long) = {
       val toClose = openSections(gIndex)
-      toClose.onClose(backend, this)
-      if (toClose.storeInSuper) {
-        for ((superName, superGIndex) <- parentSectionNames.zip(toClose.references)) {
-          val superSect = backend.sectionManagers(superName).openSections(superGIndex)
-          superSect.addSubsection(metaInfo, toClose)
-        }
+      gBackend match {
+        case backend: CachingBackend =>
+          onClose(backend, gIndex, toClose)
+          if (toClose.storeInSuper) {
+            for ((superName, superGIndex) <- parentSectionNames.zip(toClose.references)) {
+              val superSect = backend.sectionManagers(superName).openSections(superGIndex)
+              superSect.addSubsection(metaInfo, toClose)
+            }
+          }
       }
       openSections -= gIndex
+    }
+
+    /** callback on close (place to override to add specific actions)
+      */
+    def onClose(gBackend: GenericBackend, gIndex: Long, section: CachingSection): Unit = {
     }
 
     /** Information on an open section

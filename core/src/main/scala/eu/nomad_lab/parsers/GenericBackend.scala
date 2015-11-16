@@ -52,11 +52,11 @@ object GenericBackend {
 
     /** returns the gIndex of a newly opened section
       */
-    def openSection(): Long;
+    def openSection(backend: GenericBackend): Long;
 
     /** closes the given section
       */
-    def closeSection(gIndex: Long);
+    def closeSection(backend: GenericBackend, gIndex: Long);
 
     /** Information on an open section
       */
@@ -1033,7 +1033,7 @@ abstract class GenericBackend(
   /** opens a new section.
     */
   override def openSection(metaName: String): Long = {
-    sectionManagers(metaName).openSection()
+    sectionManagers(metaName).openSection(this)
   }
 
   /** sets info values of an open section.
@@ -1050,7 +1050,9 @@ abstract class GenericBackend(
     * metaName is the name of the meta info, gIndex the index of the section
     */
   override def closeSection(metaName: String, gIndex: Long): Unit = {
-    sectionManagers(metaName).closeSection(gIndex)
+    sectionManagers(metaName).closeSection(this, gIndex)
+  }
+
   }
 
   /** Adds a json value corresponding to metaName.
