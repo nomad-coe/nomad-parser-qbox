@@ -313,7 +313,7 @@ trait NomadMetaInfoService extends HttpService {
   }
 
   val myRoute =
-    pathPrefix("api"){
+    pathPrefix("ui"){
       getFromResourceDirectory("frontend") 
     } ~  
     pathPrefix("nmi") {
