@@ -1,0 +1,32 @@
+
+html, body{
+    height: 800px;
+    display: block;
+}
+.description {
+    font-style: italic;
+}
+
+
+    .done-true {
+      text-decoration: line-through;
+      color: grey;
+    }
+
+.searchPanel{
+	display: inline-block;
+	height:600px;
+    overflow:auto;
+	width:25%;
+	float:left;
+	position:relative;
+
+}
+
+.infoPanel{
+
+	width:70%;
+	float: right;
+	padding-left:2%;
+	padding-right:2%;
+}

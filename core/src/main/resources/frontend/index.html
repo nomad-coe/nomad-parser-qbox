@@ -1,0 +1,47 @@
+    <!doctype html>
+    <html ng-app="metaVisualizationApp">
+      <head>
+        <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.7/angular.min.js"></script>
+        <script src="controller.js"></script>
+        <link rel="stylesheet" href="metaInfo.css">
+      </head>
+      <body>
+        <h2>Nomad Repo</h2>
+        <input type="text" ng-model="query"  size="30"
+                   placeholder="Search">
+
+        <div ng-controller="AllDataController">
+        
+        <div class="searchPanel">
+          <ul>
+            <li ng-repeat="data in Data | filter: {name:query} ">
+              <span ><a href="" ng-click="display(data)">{{data['name']}}</a></span>
+            </li>
+          </ul>
+        </div>
+        <div class="infoPanel">
+           <h1> {{displayComplete['name']}} </h1> <div> : {{displayComplete['gid']}}</div>
+           <div class ="description"> {{displayComplete['description']}} </div>
+           <h2>Keys</h2>
+           <div ng-show="displayComplete['units'] != null" > units: {{ displayComplete['units'] }}</div>
+           <div ng-show="displayComplete['dtypeStr'] != null and displayComplete['dtypeStr'] != "" " >dtypeStr: {{ displayComplete['dtypeStr'] }}</div>
+           <div ng-show="displayComplete['shape'] != null" > shape: {{ displayComplete['shape'] }}</div>
+           <h2>Ancestors</h2>
+           <h3>Explicit parents</h3>
+           <ul>
+                <li ng-repeat="names in displayComplete['superNames'] ">
+                     <span ><a href="" ng-click="displayName(names)">{{names}}</a></span>
+                </li>
+           </ul>
+           <h2>DirectChildrens</h2>
+           <ul>
+                <li ng-repeat="names in displayComplete['children'] ">
+                     <span ><a href="" ng-click="displayName(names)">{{names}}</a></span>
+                </li>
+           </ul>
+
+        </div>
+        </div>
+      </body>
+    </html>
+

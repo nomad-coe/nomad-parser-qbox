@@ -9,6 +9,7 @@ import org.json4s.native.JsonMethods
 //import spray.httpx.unmarshalling._
 //import spray.httpx.marshalling.{streamMarshaller}
 //import spray.httpx.Json4sSupport
+import scala.collection.mutable.ArrayBuffer
 import scala.collection.breakOut
 import scala.collection.mutable
 import java.io.File
@@ -161,6 +162,53 @@ trait NomadMetaInfoService extends HttpService {
     }
   }
 
+
+  /** Create JSON for the "name" meta tag. Contains complete data including ancestors and children
+    */
+   def metaInfoForVersionAndNameJsonCompleteInfo (version: String, name: String): jn.JValue = {
+    val versions = metaInfoCollection.versionsWithName(version)
+    if (!versions.hasNext)
+      jn.JNull
+    else {
+      val v = versions.next
+      val metaInfo = v.metaInfoRecordForName(name, selfGid = true, superGids = true)
+      metaInfo match {
+        case Some(r) => //r.toJValue()
+        import jn.JsonDSL._
+        val superNames = ArrayBuffer[String]()
+        if (!r.superNames.isEmpty) {
+           if (r.superGids.length == r.superNames.length) {
+              r.superNames.zipWithIndex.foreach{ case (sName, i) =>
+                superNames += sName }
+              }else {
+                r.superNames.foreach{ sName: String =>
+                superNames += sName 
+                }
+              }
+            }
+        val rootsByKind = v.firstAncestorsByType(name)
+        val dtypeStr = if (r.dtypeStr.isEmpty) "" else r.dtypeStr.get
+        val childrenItr = v.allDirectChildrenOf(name)
+        val children = ArrayBuffer[String]()
+        while (childrenItr.hasNext) {
+          children += childrenItr.next
+        }
+        jn.JObject(jn.JField("type", "nomad_meta_versions_1_0") ::
+        jn.JField("versions", version) ::
+        jn.JField("name", name) ::
+        jn.JField("description", r.description) ::
+        jn.JField("gid", r.gid) :: 
+        jn.JField("units", r.units) :: 
+        jn.JField("dtypeStr", dtypeStr) :: 
+        jn.JField("kindStr", r.kindStr) ::
+        jn.JField("superNames", superNames) ::
+        jn.JField("children", children) ::
+        Nil)
+        case None => jn.JNull
+      }
+    }
+  }
+
   def metaInfoForVersionAndNameHtml(version: String, name: String): Stream[String] = {
     val versions = metaInfoCollection.versionsWithName(version)
     if (!versions.hasNext)
@@ -265,6 +313,9 @@ trait NomadMetaInfoService extends HttpService {
   }
 
   val myRoute =
+    pathPrefix("ui"){
+      getFromResourceDirectory("frontend") 
+    } ~  
     pathPrefix("nmi") {
       pathPrefix("css") {
         path("nomadBase.css") {
@@ -290,7 +341,16 @@ trait NomadMetaInfoService extends HttpService {
             get {
               respondWithMediaType(`application/json`) {
                 complete {
-                  JsonSupport.writePrettyStr(metaInfoForVersionAndNameJson(version, name))
+                  JsonSupport.writePrettyStr(metaInfoForVersionAndNameJson(version, name))                      
+                }
+              }
+            }
+          } ~
+          path("completeinfo.json") {
+            get {
+              respondWithMediaType(`application/json`) {
+                complete {
+                  JsonSupport.writePrettyStr(metaInfoForVersionAndNameJsonCompleteInfo(version, name))                   
                 }
               }
             }
@@ -328,6 +388,6 @@ trait NomadMetaInfoService extends HttpService {
             }
           }
         }
-      }
+      }  
     }
 }
