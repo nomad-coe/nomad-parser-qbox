@@ -1,7 +1,14 @@
-# NoMaD Lab Base Layer Installation
+# NOMAD Lab Base Layer Installation
 
+# submodules
+
+Get the git submodules in this repo:
+
+    git submodule update --init
 
 # scala
+
+Scala by itself is not strictly required, but it ensures that all dependencies are there (mainly java).
 
     #wget http://downloads.typesafe.com/scala/2.11.5/scala-2.11.5.deb?_ga=1.172612385.307956976.1430825833
     wget http://downloads.typesafe.com/scala/2.11.6/scala-2.11.6.deb
@@ -36,6 +43,9 @@ then just use sbt normally:
     > compile
     > test
     > testOnly *MyTests*
+    * tool/run
+    > re-start
+    > re-stop
     ...
 
 this interactive use keeps things cached and gives faster compilation/test, console will start an interactive scala environment where you can import and play with all the infrastructure (i.e. scala REPL + all dependencies and compiled code).
