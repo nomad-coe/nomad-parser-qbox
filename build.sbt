@@ -137,8 +137,16 @@ lazy val core = (project in file("core")).
   settings(jooqCommon: _*).
   settings(jooqH2: _*)
 
-lazy val webservice = (project in file("webservice")).
+lazy val base = (project in file("base")).
   dependsOn(core).
+  settings(commonSettings: _*).
+  settings(
+    libraryDependencies ++= commonLibs,
+    name := "nomadBase"
+  )
+
+lazy val webservice = (project in file("webservice")).
+  dependsOn(base).
   settings(commonSettings: _*).
   settings(
     libraryDependencies ++= commonLibs,
@@ -147,7 +155,7 @@ lazy val webservice = (project in file("webservice")).
   settings(Revolver.settings: _*)
 
 lazy val tool = (project in file("tool")).
-  dependsOn(core).
+  dependsOn(base).
   settings(commonSettings: _*).
   settings(
     libraryDependencies ++= commonLibs,
