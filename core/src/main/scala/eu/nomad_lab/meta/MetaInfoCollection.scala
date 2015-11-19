@@ -11,7 +11,7 @@ trait MetaInfoCollection {
 
   /** returns all versions just once
     */
-  def allUniqueEnvs(filter: MetaInfoEnv => Boolean): Iterator[MetaInfoEnv] = {
+  def allUniqueEnvs(filter: MetaInfoEnv => Boolean = { _ => true }): Iterator[MetaInfoEnv] = {
     val seen = mutable.Set[MetaInfoEnv]()
 
     allEnvs.filter{ el =>
