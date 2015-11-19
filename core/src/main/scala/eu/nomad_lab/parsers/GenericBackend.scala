@@ -998,13 +998,13 @@ object GenericBackend {
     * These are the first ancestors of type type_section in the inheritance DAG
     * of metaName
     */
-  def firstSuperSections(metaEnv: MetaInfoEnv, metaName: String): Set[String] = {
+  def firstSuperSections(metaEnv: MetaInfoEnv, metaName: String): Array[String] = {
     val allAnchestors = metaEnv.firstAncestorsByType(metaName)
     allAnchestors.get("type_section") match {
       case Some(anc) =>
-        anc._1
+        anc._1.toArray.sorted
       case None =>
-        Set()
+        Array()
     }
   }
 

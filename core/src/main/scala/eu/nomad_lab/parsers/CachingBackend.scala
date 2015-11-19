@@ -410,7 +410,7 @@ object CachingBackend {
     val sectionManagers: Map[String, CachingBackend.CachingSectionManager] = allNames.flatMap{ (name:String) =>
       val metaInfo = metaEnv.metaInfoRecordForName(name, true, true).get
       if (metaInfo.kindStr == "type_section") {
-        val superSectionNames = GenericBackend.firstSuperSections(metaEnv,name).toArray.sorted
+        val superSectionNames = GenericBackend.firstSuperSections(metaEnv,name)
         Some((name, new CachingBackend.CachingSectionManager(
           metaInfo,
           superSectionNames)))
@@ -422,7 +422,7 @@ object CachingBackend {
     val metaDataManagers: Map[String, GenericBackend.MetaDataManager] = allNames.flatMap{ (name:String) =>
       val metaInfo = metaEnv.metaInfoRecordForName(name, true, true).get
       if (metaInfo.kindStr == "type_document_content") {
-        val superSectionNames = GenericBackend.firstSuperSections(metaEnv,name).toArray.sorted
+        val superSectionNames = GenericBackend.firstSuperSections(metaEnv,name)
         if (superSectionNames.size != 1)
           throw new InvalidMetaInfoException(metaInfo, s"multiple direct super sections: ${superSectionNames.mkString(", ")}")
         if (!toIgnore(name)) {
