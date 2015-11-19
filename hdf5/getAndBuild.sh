@@ -127,7 +127,7 @@ cd ..
 
 # copy to sbt lib dirctory
 # we exclude the onld netcdf .jar shipped with hdf-java and the old logging jars
-mkdir -p ../lib
-cp -p linux-native/lib/fits.jar ../lib/
-cp -p linux-native/lib/jar*.jar ../lib/
-cp -rp linux-native/lib/lib* linux-native/lib/pkgconfig ../lib/
+mkdir -p ../core/lib
+cp -p linux-native/lib/fits.jar ../core/lib/
+cp -p linux-native/lib/jar*.jar ../core/lib/
+cp -rp linux-native/lib/lib* linux-native/lib/pkgconfig ../core/lib/
