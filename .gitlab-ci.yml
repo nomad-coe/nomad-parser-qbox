@@ -1,0 +1,28 @@
+before_script:
+  - sbt jooq:codegen
+
+stages:
+  - build
+  - test
+
+
+compilation:
+  stage: build
+  script:
+    - sbt compile
+  only:
+    - master
+  tags:
+    - compile
+
+
+testing:
+  stage: test
+  script:
+    - sbt test
+  only:
+    - master
+  tags:
+    - test
+    - spec2 
+  allow_failure: true
