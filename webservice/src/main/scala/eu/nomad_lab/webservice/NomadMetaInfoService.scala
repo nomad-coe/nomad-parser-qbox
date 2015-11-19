@@ -6,6 +6,8 @@ import spray.http._
 import MediaTypes._
 import org.{json4s => jn}
 import org.json4s.native.JsonMethods
+import org.json4s.JsonDSL._
+import org.json4s.jackson.JsonMethods._
 //import spray.httpx.unmarshalling._
 //import spray.httpx.marshalling.{streamMarshaller}
 //import spray.httpx.Json4sSupport
@@ -162,10 +164,9 @@ trait NomadMetaInfoService extends HttpService {
     }
   }
 
-
   /** Create JSON for the "name" meta tag. Contains complete data including ancestors and children
     */
-   def metaInfoForVersionAndNameJsonCompleteInfo (version: String, name: String): jn.JValue = {
+   def metaInfoForVersionAndNameJsonAnnotatedInfo (version: String, name: String): jn.JValue = {
     val versions = metaInfoCollection.versionsWithName(version)
     if (!versions.hasNext)
       jn.JNull
@@ -186,13 +187,12 @@ trait NomadMetaInfoService extends HttpService {
                 }
               }
             }
-        val rootsByKind = v.firstAncestorsByType(name)
         val dtypeStr = if (r.dtypeStr.isEmpty) "" else r.dtypeStr.get
         val childrenItr = v.allDirectChildrenOf(name)
         val children = ArrayBuffer[String]()
         while (childrenItr.hasNext) {
           children += childrenItr.next
-        }
+        } 
         jn.JObject(jn.JField("type", "nomad_meta_versions_1_0") ::
         jn.JField("versions", version) ::
         jn.JField("name", name) ::
@@ -209,6 +209,144 @@ trait NomadMetaInfoService extends HttpService {
     }
   }
 
+
+  /** Create JSON for the "name" meta tag. Contains complete data including ancestors and children
+    */
+   def metaInfoForVersionAndNameJsonAllParents (version: String, name: String): jn.JValue = {
+    val versions = metaInfoCollection.versionsWithName(version)
+    if (!versions.hasNext)
+      jn.JNull
+    else {
+      val v = versions.next
+      val metaInfo = v.metaInfoRecordForName(name, selfGid = true, superGids = true)
+      metaInfo match {
+        case Some(r) => 
+        import jn.JsonDSL._ 
+        var JSONStr = s"""   
+
+        """ 
+        val rootsByKind = v.firstAncestorsByType(name)
+        if (!rootsByKind.isEmpty){
+          var attributesName = r.kindStr match {
+            case "type_document_content" => """ "color":"red","shape":"box" """
+            case "type_unknown" => """ "color":"green","shape":"box" """
+            case "type_unknown_meta" => """ "color":"green","shape":"box" """
+            case "type_document" => """ "color":"grey","shape":"box" """
+            case "type_meta" => """ "color":"blue","shape":"box" """ 
+            case "type_abstract_document_content" => """ "color":"red","shape":"box" """ 
+            case "type_section" => """ "color":"blue","shape":"box" """ 
+            case "type_connection" => """ "orange":"blue","shape":"box" """ 
+            case _ => """ "color":"pink","shape":"box" """ 
+           }
+            JSONStr += s""" {
+               "nodes":{ 
+                  "${name}":{ $attributesName,"label":"${name}"},
+                """ 
+        
+          rootsByKind.foreach { case (kind, (roots, rest)) =>
+            var attributes = kind match {
+            case "type_document_content" => """ "color":"yellow","shape":"box" """
+            case "type_unknown" => """ "color":"green","shape":"box" """
+            case "type_unknown_meta" => """ "color":"green","shape":"box" """
+            case "type_document" => """ "color":"grey","shape":"box" """
+            case "type_meta" => """ "color":"blue","shape":"box" """ 
+            case "type_abstract_document_content" => """ "color":"red","shape":"box" """ 
+            case "type_section" => """ "color":"blue","shape":"box" """ 
+            case "type_connection" => """ "orange":"blue","shape":"box" """ 
+            case _ => """ "color":"pink","shape":"box" """ 
+           }  
+            for(root <- roots){ 
+                if (root != roots.last){       
+                    JSONStr += s""" 
+                    "${root}":{ $attributes,"label":"${root}"},  """
+                    }
+                else {   
+                    JSONStr += s""" 
+                    "${root}":{ $attributes,"label":"${root}"}
+                      """
+                    }
+                  }
+            if (!rest.isEmpty){
+               JSONStr += s""", """ // This comma is needed as after the last element there will be some more data
+            for(child <- rest)
+                if (child != rest.last) //Notice the "," at the end of the line. Json parsing crashes if there is comman after the last element 
+                   JSONStr += s""" 
+                    "${child}":{ $attributes,"label":"${child}"}, 
+                      """
+                else 
+                    JSONStr += s""" 
+                    "${child}":{ $attributes,"label":"${child}"}  """
+
+                if (kind != rootsByKind.last._1){ 
+                  JSONStr += s""", """
+                }      
+
+                }
+
+          }
+          JSONStr += s"""
+              },
+              "edges":{
+            
+            """    
+          //Now add the edges, hence second iteration over the rootsByKind; First add nodes to all the roots and then add 
+          //Again another iteration is needed due to the syntax of arborjs json 
+           if(!rootsByKind.isEmpty){
+              JSONStr += s""" 
+                      "${name}":{ """  
+              rootsByKind.foreach { case (kind, (roots, rest)) =>
+                for(root <- roots){ 
+                    if (root != roots.last){       
+                        JSONStr += s""" 
+                        "${root}":{},  """
+                    }
+                    else {   
+                        JSONStr += s""" 
+                        "${root}":{}
+                          """
+                    }
+                }
+                if (kind != rootsByKind.last._1){ 
+                JSONStr += s""", """
+                } 
+              }
+              JSONStr += s""" 
+                        }, """  
+            }
+
+          rootsByKind.foreach { case (kind, (roots, rest)) =>
+            for(root <- roots){
+                    JSONStr += s""" 
+                      "${root}":{  """  
+            if (!rest.isEmpty){
+            for(child <- rest)
+                if (child != rest.last) //Notice the "," at the end of the line. Json parsing crashes if there is comman after the last element 
+                   JSONStr += s""" 
+                    "${child}":{}, 
+                      """
+                else 
+                    JSONStr += s""" 
+                    "${child}":{}
+                    """
+                }
+                JSONStr += s""" 
+                    }  """ 
+            } 
+            if (kind != rootsByKind.last._1){ 
+                JSONStr += s""", """
+              } 
+          }
+           JSONStr += s"""    
+              }       
+            }
+            """ //Close of edges and the json object
+        }
+        parse(JSONStr)
+        case None => jn.JNull
+      
+    }
+  }
+}
   def metaInfoForVersionAndNameHtml(version: String, name: String): Stream[String] = {
     val versions = metaInfoCollection.versionsWithName(version)
     if (!versions.hasNext)
@@ -346,11 +484,20 @@ trait NomadMetaInfoService extends HttpService {
               }
             }
           } ~
-          path("completeinfo.json") {
+          path("annotated.json") {
             get {
               respondWithMediaType(`application/json`) {
                 complete {
-                  JsonSupport.writePrettyStr(metaInfoForVersionAndNameJsonCompleteInfo(version, name))                   
+                  JsonSupport.writePrettyStr(metaInfoForVersionAndNameJsonAnnotatedInfo(version, name))                   
+                }
+              }
+            }
+          }~
+          path("allparents.json") {
+            get {
+              respondWithMediaType(`application/json`) {
+                complete {
+                  JsonSupport.writePrettyStr(metaInfoForVersionAndNameJsonAllParents(version, name))                   
                 }
               }
             }

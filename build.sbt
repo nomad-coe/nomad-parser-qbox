@@ -46,6 +46,7 @@ lazy val commonLibs = {
     re2j,
     configLib,
     json4sNative,
+    json4sJackson,
     h2,
     scalacheck,
     tika,
