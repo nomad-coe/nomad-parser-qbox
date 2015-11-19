@@ -30,6 +30,7 @@ lazy val commonLibs = {
   val xzForJava     = "org.tukaani"         % "xz"              % "1.5"
   val netcdf        = "edu.ucar"            % "netcdf4"         % "4.6.3"
   val fastring      = "com.dongxiguo"      %% "fastring"        % "0.2.4"
+  val playJson      = "com.typesafe.play"  %% "play-json"       % "2.4.3"
   val log4j2        = Seq(
     "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.3",
     "org.apache.logging.log4j" % "log4j-api"        % "2.3",
