@@ -1,5 +1,6 @@
 package eu.nomad_lab.parsers;
 import ucar.ma2.{Array => NArray}
+import ucar.ma2.{IndexIterator => NIndexIterator}
 import ucar.ma2.DataType
 import ucar.ma2.ArrayString
 import scala.collection.mutable
@@ -8,8 +9,14 @@ import eu.nomad_lab.JsonUtils
 import eu.nomad_lab.meta.MetaInfoEnv
 import eu.nomad_lab.meta.MetaInfoRecord
 import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JArray, JObject, JValue, JField}
+import java.io.Writer
 
 object JsonWriterBackend {
+  /** section that writes all its values as a single json dictionary
+    *
+    * If standalone it will wite out the values immediately, otherwise tries to be
+    * outputted with its parent
+    */
   class JsonWriterSectionManager(
     metaInfo: MetaInfoRecord,
     parentSectionNames: Array[String],
@@ -32,24 +39,173 @@ object JsonWriterBackend {
           case None => ()
         }
       }
-      backend.writeOut(section)
+      backend.writeOut(metaInfo.name, section)
     }
   }
+
+  /** Utility function to write a NArray to a writer
+    */
+  def writeNArray(array: NArray, writeNextEl: NIndexIterator => Unit, writer: Writer): Unit = {
+    val shape = array.getShape()
+    val it = array.getIndexIterator()
+    val idx = Array.fill[Int](shape.size)(0)
+    writer.write("[" * shape.size)
+    if (!shape.find( _ <= 0 ).isEmpty) {
+      writer.write("]" * shape.size)
+    } else {
+      var comma: Boolean = false
+      while (idx(0) == shape(0)) {
+        if (comma)
+          writer.write(", ")
+        else
+          comma = true
+        writeNextEl(it)
+        var ii: Int = shape.size - 1
+        var toClose: Int = 0
+        idx(ii) += 1
+        while (ii > 0 && idx(ii) == shape(ii)) {
+          idx(ii) = 0
+          ii -= 1
+          idx(ii) += 1
+          toClose += 1
+        }
+        if (toClose > 0) {
+          writer.write("]" * toClose)
+          if (it.hasNext()) {
+            writer.write(",\n")
+            writer.write(" " * (shape.size - toClose))
+            writer.write("[" * toClose)
+          }
+          comma = false
+        }
+      }
+      writer.write("]")
+    }
+  }
+
+  /** Utility function to write a NArray of the given dtypeStr to a writer
+    */
+  def writeNArrayWithDtypeStr(array: NArray, dtypeStr: String, writer: Writer): Unit = {
+    val writeEl = dtypeStr match {
+      case "f" | "f64" =>
+        { (it: NIndexIterator) => writer.write(it.getDoubleNext().toString()) }
+      case "f32" =>
+        { (it: NIndexIterator) => writer.write(it.getFloatNext().toString()) }
+      case "i" | "i32" =>
+        { (it: NIndexIterator) => writer.write(it.getIntNext().toString()) }
+      case "i64" =>
+        { (it: NIndexIterator) => writer.write(it.getLongNext().toString()) }
+      case "b" =>
+        { (it: NIndexIterator) => writer.write(it.getByteNext().toString()) }
+      case "B" | "C" | "D" =>
+        { (it: NIndexIterator) => writer.write(it.next().toString()) }
+    }
+    writeNArray(array, writeEl, writer)
+  }
+
+  def apply(
+    metaEnv: MetaInfoEnv,
+    sectionFactory: (MetaInfoEnv, MetaInfoRecord, Array[String]) => CachingBackend.CachingSectionManager = CachingBackend.cachingSectionFactory,
+    dataFactory: (MetaInfoEnv, MetaInfoRecord, CachingBackend.CachingSectionManager) => GenericBackend.MetaDataManager = CachingBackend.cachingDataFactory(Set()),
+    outF: Writer
+  ): JsonWriterBackend = {
+    val (sectionManagers, metaDataManagers) = CachingBackend.instantiateManagers(metaEnv, sectionFactory, dataFactory)
+
+    new JsonWriterBackend(metaEnv, sectionManagers, metaDataManagers, outF)
+  }
+
 }
 
+/** Backend that outputs the parsed data as nomadinfo.json
+  */
 class JsonWriterBackend(
   metaInfoEnv: MetaInfoEnv,
   val sectionManagers: Map[String, CachingBackend.CachingSectionManager],
   val metaDataManagers: Map[String, GenericBackend.MetaDataManager],
-  val outF: java.io.Writer,
-  var writeHeader: Boolean = true
+  val outF: java.io.Writer
 ) extends GenericBackend(metaInfoEnv) {
-  def writeOut(section: CachingBackend.CachingSection): Unit = {
 
+  var writeComma: Boolean = false
+
+  outF.write("""{
+  "type": "nomad_info_1_0",
+  "sections": [
+    """)
+
+  def writeOut(metaName: String, section: CachingBackend.CachingSection): Unit = {
+    if (writeComma)
+      outF.write(", ")
+    else
+      writeComma = true
+    writeOutBase(metaName, section, 4)
   }
 
-  def writeOutBase(section: CachingBackend.CachingSection, indent: Int): Unit = {
-
+  def writeOutBase(metaName: String, section: CachingBackend.CachingSection, indent: Int): Unit = {
+    val baseIndenter = new JsonUtils.ExtraIndenter(indent, outF)
+    baseIndenter.write(s"""{
+  "type": "nomad_section_1_0",
+  "gIndex": ${section.gIndex},
+  "references": {""")
+    var refComma = false
+    for ((sectionName, gId) <- GenericBackend.firstSuperSections(metaInfoEnv, metaName).zip(section.references)) {
+      if (refComma)
+        outF.write(", ")
+      else
+        refComma = true
+      baseIndenter.write("""
+    "$sectionName": $gIndex""")
+    }
+    outF.write("]")
+    for ((metaName, vals) <- section.cachedSimpleValues) {
+      baseIndenter.write(""",
+"$metaName": """)
+      val repeats: Boolean = metaInfoEnv.metaInfoRecordForName(metaName).get.repeats.getOrElse(false)
+      if (repeats)
+        JsonUtils.prettyWriter(JArray(vals.toList), outF, indent + 2)
+      else if (vals.size != 1)
+        throw new JsonUtils.InvalidValueError(metaName, "JsonWriterBackend", JsonUtils.prettyStr(JArray(vals.toList)), "Non repeating value should have one value")
+      else
+        JsonUtils.prettyWriter(vals(0), outF, indent + 2)
+    }
+    for ((metaName, vals) <- section.cachedArrayValues) {
+      baseIndenter.write(""",
+"$metaName": """)
+      val metaInfo = metaInfoEnv.metaInfoRecordForName(metaName).get
+      val repeats: Boolean = metaInfo.repeats.getOrElse(false)
+      if (repeats) {
+        val innerIndenter = new JsonUtils.ExtraIndenter(indent + 4, outF)
+        outF.write("[")
+        var arrComma: Boolean = false
+        for (value <- vals) {
+          if (arrComma)
+            outF.write(",")
+          else
+            arrComma = true
+          innerIndenter.write("\n")
+          JsonWriterBackend.writeNArrayWithDtypeStr(value, metaInfo.dtypeStr.get, innerIndenter)
+        }
+        baseIndenter.write("\n    ]")
+      } else if (vals.size != 1) {
+        throw new JsonUtils.InvalidValueError(metaName, "JsonWriterBackend", s"#${vals.size}", "Non repeating value should have one value")
+      } else {
+        val innerIndenter = new JsonUtils.ExtraIndenter(indent + 2, outF)
+        JsonWriterBackend.writeNArrayWithDtypeStr(vals(0), metaInfo.dtypeStr.get, innerIndenter)
+      }
+    }
+    for ((metaName, vals) <- section.cachedSubSections) {
+      baseIndenter.write(""",
+"$metaName": [""")
+      var sectComma: Boolean = false
+      for (value <- vals) {
+        if (sectComma)
+          outF.write(",")
+        else
+          sectComma = true
+        writeOutBase(metaName, value, indent + 4)
+      }
+      outF.write("]")
+    }
+    baseIndenter.write("\n}")
   }
 
 }

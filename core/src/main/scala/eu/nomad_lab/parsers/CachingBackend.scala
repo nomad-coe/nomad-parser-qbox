@@ -404,39 +404,68 @@ object CachingBackend {
     }
   }
 
-  def apply(metaEnv: MetaInfoEnv, toIgnore: Set[String]): CachingBackend = {
+  /** Factory method creating caching sections
+    */
+  def cachingSectionFactory(
+    metaEnv: MetaInfoEnv, metaInfo: MetaInfoRecord, superSectionNames: Array[String]
+  ): CachingBackend.CachingSectionManager = {
+    new CachingBackend.CachingSectionManager(metaInfo, superSectionNames)
+  }
+
+  /** Factory method creating caching data managers
+    */
+  def cachingDataFactory(toIgnore: Set[String]): (MetaInfoEnv, MetaInfoRecord, CachingSectionManager) => GenericBackend.MetaDataManager = {
+    (metaEnv: MetaInfoEnv, metaInfo: MetaInfoRecord, superSection: CachingSectionManager) =>
+    if (!toIgnore(metaInfo.name))
+      cachingDataManager(metaInfo, superSection)
+    else
+      new GenericBackend.DummyMetaDataManager(metaInfo, superSection)
+  }
+
+  /** Using the given factory methods to intantiate the section and data managers
+    */
+  def instantiateManagers[T, U](
+    metaEnv: MetaInfoEnv,
+    sectionFactory: (MetaInfoEnv, MetaInfoRecord, Array[String]) => T = cachingSectionFactory _,
+    dataFactory: (MetaInfoEnv, MetaInfoRecord, T) => U = cachingDataFactory(Set())
+  ): Tuple2[Map[String, T], Map[String, U]] = {
     // sections
     val allNames: Set[String] = metaEnv.allNames.toSet
-    val sectionManagers: Map[String, CachingBackend.CachingSectionManager] = allNames.flatMap{ (name:String) =>
+    val sectionManagers: Map[String, T] = allNames.flatMap{ (name:String) =>
       val metaInfo = metaEnv.metaInfoRecordForName(name, true, true).get
       if (metaInfo.kindStr == "type_section") {
         val superSectionNames = GenericBackend.firstSuperSections(metaEnv,name)
-        Some((name, new CachingBackend.CachingSectionManager(
-          metaInfo,
-          superSectionNames)))
+        Some(name -> sectionFactory(metaEnv, metaInfo, superSectionNames))
       } else {
         None
       }
     }(breakOut)
     // concrete data
-    val metaDataManagers: Map[String, GenericBackend.MetaDataManager] = allNames.flatMap{ (name:String) =>
+    val metaDataManagers: Map[String, U] = allNames.flatMap{ (name:String) =>
       val metaInfo = metaEnv.metaInfoRecordForName(name, true, true).get
       if (metaInfo.kindStr == "type_document_content") {
         val superSectionNames = GenericBackend.firstSuperSections(metaEnv,name)
         if (superSectionNames.size != 1)
           throw new InvalidMetaInfoException(metaInfo, s"multiple direct super sections: ${superSectionNames.mkString(", ")}")
-        if (!toIgnore(name)) {
-          Some(name -> cachingDataManager(metaInfo, sectionManagers(superSectionNames(0))))
-        } else {
-          Some(name -> new GenericBackend.DummyMetaDataManager(metaInfo, sectionManagers(superSectionNames(0))))
-        }
+        Some(name -> dataFactory(metaEnv, metaInfo, sectionManagers(superSectionNames(0))))
       } else {
         None
       }
     }(breakOut)
 
+    (sectionManagers, metaDataManagers)
+  }
+
+  def apply(
+    metaEnv: MetaInfoEnv,
+    sectionFactory: (MetaInfoEnv, MetaInfoRecord, Array[String]) => CachingBackend.CachingSectionManager = cachingSectionFactory,
+    dataFactory: (MetaInfoEnv, MetaInfoRecord, CachingBackend.CachingSectionManager) => GenericBackend.MetaDataManager = cachingDataFactory(Set())
+  ): CachingBackend = {
+    val (sectionManagers, metaDataManagers) = instantiateManagers(metaEnv, sectionFactory, dataFactory)
+
     new CachingBackend(metaEnv, sectionManagers, metaDataManagers)
   }
+
 }
 
 /** Backend that caches values
