@@ -164,7 +164,7 @@ trait ParserBackendBase {
     *
     * references should be references to gIndex of the root sections this section refers to.
     */
-  def setSectionInfo(metaName: String, gIndex: Long, references: Map[String, Long]);
+  def setSectionInfo(metaName: String, gIndex: Long, references: Map[String, Long]): Unit;
 
   /** closes a section
     *
@@ -258,6 +258,8 @@ class ParserCollection(
   val parsers: Map[String, ParserGenerator]
 ) extends StrictLogging {
 
+  /** internal mapping of parsers names organized by the mime type of their main file
+    */
   val parsersByMimeType = {
     val byMimeType = mutable.Map[String,ListBuffer[String]]()
     parsers.foreach { case (parserName, parser) =>
@@ -275,6 +277,10 @@ class ParserCollection(
     }(breakOut): Array[(Regex, Seq[String])]
   }
 
+  /** Scans the given file with the given parsers and returns candidate parsers
+    *
+    * Low level, normally you should use scanFile.
+    */
   def scanWithParsers(
     parserNames: Seq[String],
     filePath: String,
@@ -293,6 +299,8 @@ class ParserCollection(
     }
   }
 
+  /** Scans the given file and returns the candidate parsers (unsorted)
+    */
   def scanFile(filePath: String, bytePrefix: Array[Byte]): Seq[CandidateParser] = {
     val file = new java.io.File(filePath)
     val mimeType: String = ParserCollection.tika.detect(bytePrefix, file.getName())

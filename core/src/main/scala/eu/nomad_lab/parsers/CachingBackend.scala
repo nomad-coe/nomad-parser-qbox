@@ -118,10 +118,15 @@ object CachingBackend {
     /** returns the gIndex of a newly opened section
       */
     def openSection(gBackend: GenericBackend): Long = {
-      _lastSectionGIndex += 1
-      val newGIndex = _lastSectionGIndex
-      openSections += (newGIndex -> new CachingSection(
-        newGIndex,
+      val newGIndex = lastSectionGIndex + 1
+      openSectionWithGIndex(gBackend, newGIndex)
+      newGIndex
+    }
+
+    def openSectionWithGIndex(gBackend: GenericBackend, gIndex: Long): Unit = {
+      _lastSectionGIndex = gIndex
+      openSections += (gIndex -> new CachingSection(
+        gIndex,
         references = parentSectionNames.map{ parentName: String =>
           gBackend match {
             case backend: CachingBackend =>
@@ -133,7 +138,6 @@ object CachingBackend {
               }
           }
         }))
-      newGIndex
     }
 
 
@@ -474,5 +478,5 @@ class CachingBackend(
   metaInfoEnv: MetaInfoEnv,
   val sectionManagers: Map[String, CachingBackend.CachingSectionManager],
   val metaDataManagers: Map[String, GenericBackend.MetaDataManager]
-) extends GenericBackend(metaInfoEnv) {
+) extends GenericBackend(metaInfoEnv) with ParserBackendExternal with ParserBackendInternal {
 }

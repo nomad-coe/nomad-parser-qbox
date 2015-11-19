@@ -120,10 +120,10 @@ object JsonWriterBackend {
   */
 class JsonWriterBackend(
   metaInfoEnv: MetaInfoEnv,
-  val sectionManagers: Map[String, CachingBackend.CachingSectionManager],
-  val metaDataManagers: Map[String, GenericBackend.MetaDataManager],
+  sectionManagers: Map[String, CachingBackend.CachingSectionManager],
+  metaDataManagers: Map[String, GenericBackend.MetaDataManager],
   val outF: java.io.Writer
-) extends GenericBackend(metaInfoEnv) {
+) extends CachingBackend(metaInfoEnv, sectionManagers, metaDataManagers) {
 
   var writeComma: Boolean = false
 

@@ -57,6 +57,10 @@ object GenericBackend {
       */
     def openSection(backend: GenericBackend): Long;
 
+    /** returns the gIndex of a newly opened section
+      */
+    def openSectionWithGIndex(backend: GenericBackend, gIndex: Long): Unit;
+
     /** closes the given section
       */
     def closeSection(backend: GenericBackend, gIndex: Long);
@@ -1021,7 +1025,7 @@ object GenericBackend {
 
 abstract class GenericBackend(
   val metaInfoEnv: MetaInfoEnv
-) extends ParserBackendInternal {
+) extends ParserBackendBase {
 
   /** the manger for the sections
     */
@@ -1050,8 +1054,14 @@ abstract class GenericBackend(
 
   /** opens a new section.
     */
-  override def openSection(metaName: String): Long = {
+  def openSection(metaName: String): Long = {
     sectionManagers(metaName).openSection(this)
+  }
+
+  /** opens a new section.
+    */
+  def openSectionWithGIndex(metaName: String, gIndex: Long): Unit = {
+    sectionManagers(metaName).openSectionWithGIndex(this, gIndex)
   }
 
   /** sets info values of an open section.
