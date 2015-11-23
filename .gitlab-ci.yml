@@ -19,6 +19,7 @@ compilation:
 testing:
   stage: test
   script:
+    - git submodule update --init
     - sbt test
   only:
     - master
