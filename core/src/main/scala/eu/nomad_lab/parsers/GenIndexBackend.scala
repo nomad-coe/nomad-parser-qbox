@@ -4,10 +4,6 @@ import scala.collection.mutable
 import eu.nomad_lab.meta.MetaInfoEnv
 import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JArray, JObject, JValue, JField}
 
-object GenIndexBackend {
-
-}
-
 /** Backend that generates unique indexes for sections
   *
   * Converts and external backend to an internal one

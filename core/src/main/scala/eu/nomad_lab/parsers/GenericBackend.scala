@@ -9,6 +9,7 @@ import eu.nomad_lab.JsonUtils
 import eu.nomad_lab.meta.MetaInfoEnv
 import eu.nomad_lab.meta.MetaInfoRecord
 import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JArray, JObject, JValue, JField}
+import com.typesafe.scalalogging.StrictLogging
 
 /** A generic backend that can support direct storing, or caching in the Section
   *
@@ -1032,7 +1033,7 @@ object GenericBackend {
 
 abstract class GenericBackend(
   val metaInfoEnv: MetaInfoEnv
-) extends ParserBackendBase {
+) extends ParserBackendBase with StrictLogging {
   var _parsingSession: Option[GenericBackend.ParsingSession] = None
   /** the current parsing session
     */

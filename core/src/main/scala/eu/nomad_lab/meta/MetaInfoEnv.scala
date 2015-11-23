@@ -93,7 +93,7 @@ trait MetaInfoEnv extends MetaInfoCollection {
   def toJValue(metaInfoWriter: MetaInfoEnv => JValue, selfGid: Boolean = false,
     superGids: Boolean = false, flat: Boolean = true): JObject = {
     val deps = JArray(if (!flat) {
-      allEnvs.map(metaInfoWriter).toList
+      allUniqueEnvs().map(metaInfoWriter).toList
     } else  {
       Nil
     })

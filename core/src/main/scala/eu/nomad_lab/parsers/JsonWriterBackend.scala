@@ -98,7 +98,7 @@ object JsonWriterBackend {
       case "b" =>
         { (it: NIndexIterator) => writer.write(it.getByteNext().toString()) }
       case "B" | "C" | "D" =>
-        { (it: NIndexIterator) => writer.write(it.next().toString()) }
+        { (it: NIndexIterator) => JsonUtils.dumpString(it.next().toString(), writer) }
     }
     writeNArray(array, writeEl, writer)
   }

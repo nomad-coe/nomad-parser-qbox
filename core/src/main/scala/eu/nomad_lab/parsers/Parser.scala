@@ -254,7 +254,7 @@ trait ParserBackendExternal extends ParserBackendBase {
     *
     * The index is assumed to be unused, it is an error to reopen an existing section.
     */
-  def openSectionWithGIndex(metaName: String, gIndex: Long);
+  def openSectionWithGIndex(metaName: String, gIndex: Long): Unit;
 }
 
 object ParserCollection {
