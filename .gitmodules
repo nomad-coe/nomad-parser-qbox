@@ -1,5 +1,5 @@
-[submodule "src/main/resources/nomad-meta-info"]
-  path = core/src/main/resources/nomad-meta-info
+[submodule "nomad-meta-info"]
+	path = nomad-meta-info
   url = ../nomad-meta-info.git
 
 [submodule "python-common"]
