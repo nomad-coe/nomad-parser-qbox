@@ -11,6 +11,31 @@ import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JAr
 
 object CachingBackend {
 
+  /** root object representing a parsing session
+    */
+  class CachingParsingSession (
+    mainFileUri: String,
+    parserInfo: JValue,
+    subsections: Map[String, Seq[CachingSection]] = Map()
+  ) extends GenericBackend.ParsingSession(mainFileUri, parserInfo) {
+    val cachedSubsections: mutable.Map[String, ListBuffer[CachingSection]] =
+      subsections.map { case (metaName, subs) =>
+        metaName -> ListBuffer(subs: _*)
+      }(breakOut)
+
+    /** Caches a subsection of metaInfo here
+      */
+    def addSubsection(metaInfo: MetaInfoRecord, value: CachingSection) {
+      cachedSubsections.get(metaInfo.name) match {
+        case Some(vals) =>
+          vals.append(value)
+        case None =>
+          cachedSubsections += (metaInfo.name -> ListBuffer(value))
+      }
+    }
+
+  }
+
   /** represents a section within a section manager, and can cache some values
     */
   class CachingSection (
@@ -150,8 +175,25 @@ object CachingBackend {
           onClose(backend, gIndex, toClose)
           if (toClose.storeInSuper) {
             for ((superName, superGIndex) <- parentSectionNames.zip(toClose.references)) {
-              val superSect = backend.sectionManagers(superName).openSections(superGIndex)
-              superSect.addSubsection(metaInfo, toClose)
+              backend.sectionManagers(superName).openSections.get(superGIndex) match {
+                case Some(superSect) =>
+                  superSect.addSubsection(metaInfo, toClose)
+                case None =>
+                  backend.storeToClosedSuper(superName, superGIndex, metaInfo, toClose)
+              }
+            }
+            if (toClose.references.isEmpty) {
+              backend.parsingSession match {
+                case Some(pSession) =>
+                  pSession match {
+                    case session: CachingBackend.CachingParsingSession =>
+                      session.addSubsection(metaInfo, toClose)
+                    case _ =>
+                      throw new GenericBackend.InternalErrorException("Caching backend expects a CachingParsingSession")
+                  }
+                case None =>
+                  throw new ParserBackendBase.InvalidCallSequenceException("close section called without open parsing session!")
+              }
             }
           }
       }
@@ -479,4 +521,16 @@ class CachingBackend(
   val sectionManagers: Map[String, CachingBackend.CachingSectionManager],
   val metaDataManagers: Map[String, GenericBackend.MetaDataManager]
 ) extends GenericBackend(metaInfoEnv) with ParserBackendExternal with ParserBackendInternal {
+
+  /** Started a parsing session
+    */
+  override def startedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
+    _parsingSession = Some(new CachingBackend.CachingParsingSession(mainFileUri, parserInfo))
+  }
+
+  /** Callback when a section should be stored in a closed super section
+    */
+  def storeToClosedSuper(superName: String, superGIndex: Long, metaInfo: MetaInfoRecord, toClose: CachingBackend.CachingSection): Unit = {
+    logger.warn(s"Dropping section ${metaInfo.name} gIndex ${toClose.gIndex}, as it cannot be added to closed super section $superName gIndex: $superGIndex")
+  }
 }

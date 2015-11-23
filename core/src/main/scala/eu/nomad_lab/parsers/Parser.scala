@@ -141,6 +141,16 @@ trait OptimizedParser {
   def parseExternal(mainFilePath: String, backend: ParserBackendExternal, parserName: String): ParseResult.ParseResult
 }
 
+object ParserBackendBase {
+  /** Exception thrown when an incorrect backend calling sequence is detected
+    * 
+    * For example: open section before opening parsing sessions, emitting value before opening a section,...
+    */
+  class InvalidCallSequenceException(
+    msg: String, what: Throwable = null
+  ) extends Exception(msg, what) {}
+}
+
 /**Basic callbacks that are called by a streaming parser
   *
   * methods that should store or evaluate the data extracted by the parser
@@ -149,6 +159,14 @@ trait ParserBackendBase {
   /** The metaInfoEnv this parser was optimized for
     */
   def metaInfoEnv: MetaInfoEnv;
+
+  /** Started a parsing session
+    */
+  def startedParsingSession(mainFileUri: String, parserInfo: JValue): Unit;
+
+  /** finished a parsing session
+    */
+  def finishedParsingSession(mainFileUri: String): Unit;
 
   /** returns the sections that are still open
     *

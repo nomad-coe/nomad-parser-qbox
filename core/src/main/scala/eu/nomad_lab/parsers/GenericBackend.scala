@@ -24,6 +24,13 @@ object GenericBackend {
     sectionName: String, gIndex: Long, msg: String, what: Throwable = null
   ) extends Exception(s"Missing section $sectionName with gIndex $gIndex, $msg", what) { }
 
+  /** root object representing a parsing session
+    */
+  class ParsingSession (
+    val mainFileUri: String,
+    val parserInfo: JValue
+  ) {
+  }
 
   /** the backend was called in an invalid way given the metadata known
     */
@@ -1026,6 +1033,10 @@ object GenericBackend {
 abstract class GenericBackend(
   val metaInfoEnv: MetaInfoEnv
 ) extends ParserBackendBase {
+  var _parsingSession: Option[GenericBackend.ParsingSession] = None
+  /** the current parsing session
+    */
+  def parsingSession: Option[GenericBackend.ParsingSession] = _parsingSession
 
   /** the manger for the sections
     */
@@ -1034,6 +1045,30 @@ abstract class GenericBackend(
   /** mangers for data
     */
   def metaDataManagers: Map[String, GenericBackend.MetaDataManager];
+
+  /** Started a parsing session
+    */
+  def startedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
+    _parsingSession = Some(new GenericBackend.ParsingSession(mainFileUri, parserInfo))
+  }
+
+  /** Finished a parsing session
+    */
+  def finishedParsingSession(mainFileUri: String): Unit =  {
+    parsingSession match {
+      case Some(session) =>
+        if (mainFileUri != session.mainFileUri)
+          throw new GenericBackend.InternalErrorException(s"Mismatched finished parsing of $mainFileUri while parsing session for ${session.mainFileUri} (${JsonUtils.prettyStr(session.parserInfo)}) was still open")
+        onFinisheParsingSession(session)
+      case None =>
+        throw new GenericBackend.InternalErrorException(s"Mismatched finished parsing of $mainFileUri event while no parsing session were open")
+    }
+    _parsingSession = None
+  }
+
+  /** Callback when a parsing finishes
+    */
+  def onFinisheParsingSession(parsingSession: GenericBackend.ParsingSession): Unit = { }
 
   /** returns the sections that are still open
     *

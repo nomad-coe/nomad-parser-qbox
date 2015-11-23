@@ -127,10 +127,27 @@ class JsonWriterBackend(
 
   var writeComma: Boolean = false
 
-  outF.write("""{
+  /** Started a parsing session
+    */
+  override def startedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
+    outF.write("""{
   "type": "nomad_info_1_0",
+  "mainFileUri": """)
+    JsonUtils.dumpString(mainFileUri, outF)
+    outF.write(""",
+  "parserInfo": """)
+    JsonUtils.prettyWriter(parserInfo, outF, 2)
+    outF.write(""",
   "sections": [
     """)
+  }
+
+  /** Finished a parsing session
+    */
+  override def finishedParsingSession(mainFileUri: String): Unit = {
+    outF.write("""]
+}""")
+  }
 
   def writeOut(metaName: String, section: CachingBackend.CachingSection): Unit = {
     if (writeComma)

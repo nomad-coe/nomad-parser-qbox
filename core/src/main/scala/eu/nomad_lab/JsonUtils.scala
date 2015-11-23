@@ -82,7 +82,7 @@ object JsonUtils {
 
   /** Dumps the given string escaping \ and "
     */
-  private def dumpString[W <: Writer](s: String, writer: W): Unit = {
+  def dumpString[W <: Writer](s: String, writer: W): Unit = {
     writer.write('"')
     var i0 = 0
     var j = i0

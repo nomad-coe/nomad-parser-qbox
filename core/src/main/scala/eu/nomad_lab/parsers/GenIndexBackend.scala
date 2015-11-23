@@ -19,6 +19,21 @@ class GenIndexBackend(val subParser: ParserBackendExternal) extends ParserBacken
 
   val lastIndex: mutable.Map[String, Long] = mutable.Map()
 
+  /** Started a parsing session
+    */
+  def startedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
+    if (!lastIndex.isEmpty)
+      throw new ParserBackendBase.InvalidCallSequenceException("startParsingSession called when GenIndexBackend.lastIndex is not empty (meaning open session)")
+    subParser.startedParsingSession(mainFileUri, parserInfo)
+  }
+
+  /** Finished a parsing session
+    */
+  def finishedParsingSession(mainFileUri: String): Unit = {
+    subParser.finishedParsingSession(mainFileUri)
+    lastIndex.clear()
+  }
+
   /** returns the sections that are still open
     *
     * sections are identified by name of the meta info and their gIndex
