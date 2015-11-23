@@ -1,0 +1,213 @@
+[  {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "StartedParsingSession",
+ "fields": [
+     {"name": "mainFileUri", "type": "string"},
+     {"name": "parserInfo",  "type": "string"}
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "FinishedParsingSession"
+ "fields": [
+     {"name": "mainFileUri", "type": "string"}
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "SetSectionInfo",
+ "fields": [
+  {"name": "metaName",   "type": "string"},
+  {"name": "gIndex",     "type": "long"  },
+  {"name": "references", "type": {"type": "map", "values": "long"}}
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "CloseSection",
+ "fields": [
+  {"name": "metaName",   "type": "string"},
+  {"name": "gIndex",     "type": "long"  }
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "AddValue",
+ "fields": [
+  {"name": "metaName",   "type": "string"},
+  {"name": "value",      "type": "string"},
+  {"name": "gIndex",     "type": "long"  }
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "AddRealValue",
+ "fields": [
+  {"name": "metaName",   "type": "string"},
+  {"name": "value",      "type": "double"},
+  {"name": "gIndex",     "type": "long"  }
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "AddArrayValue",
+ "fields": [
+  {"name": "metaName",   "type": "string"},
+  {"name": "shape",      "type": {"type": "array", "items": "long"}},
+  {"name": "gIndex",     "type": "long"  }
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "SetArrayValues_i32",
+ "fields": [
+  {"name": "metaName",    "type": "string"},
+  {"name": "gIndex",      "type": "long"  },
+  {"name": "valuesShape", "type": {"type": "array", "items": "long"}},
+  {"name": "flatValues",  "type": {"type": "array", "items": "int"}},
+  {"name": "offset",      "type": ["null", {"type": "array", "items": "long"}]}
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "SetArrayValues_i64",
+ "fields": [
+  {"name": "metaName",    "type": "string"},
+  {"name": "gIndex",      "type": "long"  },
+  {"name": "valuesShape", "type": {"type": "array", "items": "long"}},
+  {"name": "flatValues",  "type": {"type": "array", "items": "long"}},
+  {"name": "offset",      "type": ["null", {"type": "array", "items": "long"}]}
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "SetArrayValues_f32",
+ "fields": [
+  {"name": "metaName",    "type": "string"},
+  {"name": "gIndex",      "type": "long"  },
+  {"name": "valuesShape", "type": {"type": "array", "items": "long"}},
+  {"name": "flatValues",  "type": {"type": "array", "items": "float"}},
+  {"name": "offset",      "type": ["null", {"type": "array", "items": "long"}]}
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "SetArrayValues_f64",
+ "fields": [
+  {"name": "metaName",    "type": "string"},
+  {"name": "gIndex",      "type": "long"  },
+  {"name": "valuesShape", "type": {"type": "array", "items": "long"}},
+  {"name": "flatValues",  "type": {"type": "array", "items": "double"}},
+  {"name": "offset",      "type": ["null", {"type": "array", "items": "long"}]}
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "SetArrayValues_b",
+ "fields": [
+  {"name": "metaName",    "type": "string"},
+  {"name": "gIndex",      "type": "long"  },
+  {"name": "valuesShape", "type": {"type": "array", "items": "long"}},
+  {"name": "flatValues",  "type": {"type": "array", "items": "int"}},
+  {"name": "offset",      "type": ["null", {"type": "array", "items": "long"}]}
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "SetArrayValues_B",
+ "fields": [
+  {"name": "metaName",    "type": "string"},
+  {"name": "gIndex",      "type": "long"  },
+  {"name": "valuesShape", "type": {"type": "array", "items": "long"}},
+  {"name": "flatValues",  "type": {"type": "array", "items": "bytes"}},
+  {"name": "offset",      "type": ["null", {"type": "array", "items": "long"}]}
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "SetArrayValues_C",
+ "fields": [
+  {"name": "metaName",    "type": "string"},
+  {"name": "gIndex",      "type": "long"  },
+  {"name": "valuesShape", "type": {"type": "array", "items": "long"}},
+  {"name": "flatValues",  "type": {"type": "array", "items": "string"}},
+  {"name": "offset",      "type": ["null", {"type": "array", "items": "long"}]}
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "SetArrayValues_D",
+ "fields": [
+  {"name": "metaName",    "type": "string"},
+  {"name": "gIndex",      "type": "long"  },
+  {"name": "valuesShape", "type": {"type": "array", "items": "long"}},
+  {"name": "flatValues",  "type": {"type": "array", "items": "string"}},
+  {"name": "offset",      "type": ["null", {"type": "array", "items": "long"}]}
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "AddArrayValues_i32",
+ "fields": [
+  {"name": "metaName",    "type": "string"},
+  {"name": "gIndex",      "type": "long"  },
+  {"name": "valuesShape", "type": {"type": "array", "items": "long"}},
+  {"name": "flatValues",  "type": {"type": "array", "items": "int"}}
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "AddArrayValues_i64",
+ "fields": [
+  {"name": "metaName",    "type": "string"},
+  {"name": "gIndex",      "type": "long"  },
+  {"name": "valuesShape", "type": {"type": "array", "items": "long"}},
+  {"name": "flatValues",  "type": {"type": "array", "items": "long"}}
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "AddArrayValues_f32",
+ "fields": [
+  {"name": "metaName",    "type": "string"},
+  {"name": "gIndex",      "type": "long"  },
+  {"name": "valuesShape", "type": {"type": "array", "items": "long"}},
+  {"name": "flatValues",  "type": {"type": "array", "items": "float"}}
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "AddArrayValues_f64",
+ "fields": [
+  {"name": "metaName",    "type": "string"},
+  {"name": "gIndex",      "type": "long"  },
+  {"name": "valuesShape", "type": {"type": "array", "items": "long"}},
+  {"name": "flatValues",  "type": {"type": "array", "items": "double"}}
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "AddArrayValues_b",
+ "fields": [
+  {"name": "metaName",    "type": "string"},
+  {"name": "gIndex",      "type": "long"  },
+  {"name": "valuesShape", "type": {"type": "array", "items": "long"}},
+  {"name": "flatValues",  "type": {"type": "array", "items": "int"}}
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "AddArrayValues_B",
+ "fields": [
+  {"name": "metaName",    "type": "string"},
+  {"name": "gIndex",      "type": "long"  },
+  {"name": "valuesShape", "type": {"type": "array", "items": "long"}},
+  {"name": "flatValues",  "type": {"type": "array", "items": "bytes"}}
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "AddArrayValues_C",
+ "fields": [
+  {"name": "metaName",    "type": "string"},
+  {"name": "gIndex",      "type": "long"  },
+  {"name": "valuesShape", "type": {"type": "array", "items": "long"}},
+  {"name": "flatValues",  "type": {"type": "array", "items": "string"}}
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "AddArrayValues_D",
+ "fields": [
+  {"name": "metaName",    "type": "string"},
+  {"name": "gIndex",      "type": "long"  },
+  {"name": "valuesShape", "type": {"type": "array", "items": "long"}},
+  {"name": "flatValues",  "type": {"type": "array", "items": "string"}}
+ ]
+}, {"namespace": "eu.nomad_lab.parsers.avro",
+ "type": "record",
+ "name": "OpenSectionWithGIndex",
+ "fields": [
+  {"name": "metaName",    "type": "string"},
+  {"name": "gIndex",      "type": "long"  }
+ ]
+}
+]
