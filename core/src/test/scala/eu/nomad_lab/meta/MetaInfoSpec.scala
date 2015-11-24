@@ -227,7 +227,7 @@ class MetaInfoJsonSpec extends Specification with StrictLogging {
 
   "defaultEnv load" >> {
     val classLoader: ClassLoader = getClass().getClassLoader();
-    val filePath = classLoader.getResource("nomad-meta-info/nomad_meta_info/main.nomadmetainfo.json").getFile()
+    val filePath = classLoader.getResource("nomad_meta_info/main.nomadmetainfo.json").getFile()
     val resolver = new RelativeDependencyResolver
     val mainEnv = SimpleMetaInfoEnv.fromFilePath(filePath, resolver)
     val version = new SimpleMetaInfoEnv(

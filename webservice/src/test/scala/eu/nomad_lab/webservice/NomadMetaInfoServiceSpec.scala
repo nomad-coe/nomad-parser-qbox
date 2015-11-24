@@ -18,7 +18,7 @@ class NomadMetaInfoServiceSpec extends Specification with Specs2RouteTest with N
   
   val metaInfoCollection: MetaInfoCollection = {
     val classLoader: ClassLoader = getClass().getClassLoader();
-    val filePath = classLoader.getResource("nomad-meta-info/nomad_meta_info/main.nomadmetainfo.json").getFile()
+    val filePath = classLoader.getResource("nomad_meta_info/main.nomadmetainfo.json").getFile()
     val resolver = new RelativeDependencyResolver
     val mainEnv = SimpleMetaInfoEnv.fromFilePath(filePath, resolver)
     new SimpleMetaInfoEnv(
