@@ -287,6 +287,18 @@ object SimpleMetaInfoEnv extends StrictLogging {
     ensureGids:Boolean = true
   ): SimpleMetaInfoEnv = {
     val metaInfoJson = JsonUtils.parseInputStream(stream)
+    fromJValue(metaInfoJson, name, source, dependencyResolver, keepExistingGidsValues, ensureGids)
+  }
+
+  /** initializes a SimpleMetaInfoEnv with a parsed json
+    */
+  def fromJValue(metaInfoJson:JValue,
+    name: String,
+    source: JObject,
+    dependencyResolver: DependencyResolver,
+    keepExistingGidsValues: Boolean = true,
+    ensureGids:Boolean = true
+  ): SimpleMetaInfoEnv = {
     metaInfoJson \ "type" match {
       case JString(s) =>
         val typeRe = "^nomad_meta_info_([0-9]+)_([0-9])$".r
