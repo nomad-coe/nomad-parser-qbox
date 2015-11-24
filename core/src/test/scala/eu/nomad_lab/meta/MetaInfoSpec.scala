@@ -56,7 +56,7 @@ class MetaInfoJsonSpec extends Specification with StrictLogging {
     val mRecord = JsonSupport.readStr[MetaInfoRecord]("""
     {
         "name": "TestProperty2",
-        "kindStr": "type_document_content"
+        "kindStr": "type_document_content",
         "description": "a meta info property to test serialization to json",
         "superNames": [],
         "units": "pippo",
