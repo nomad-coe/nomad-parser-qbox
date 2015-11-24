@@ -76,8 +76,8 @@ class ParseEventsEmitter(
     * A gIndex of -1 means the latest section.
     * The array is unitialized.
     */
-  override def addArrayValue(metaName: String, shape: Seq[Long], gIndex: Long = -1): Unit = {
-    emitEvent(AddArrayValue(metaName, shape, gIndex))
+  override def addArray(metaName: String, shape: Seq[Long], gIndex: Long = -1): Unit = {
+    emitEvent(AddArray(metaName, shape, gIndex))
   }
 
   /** Adds values to the last array added

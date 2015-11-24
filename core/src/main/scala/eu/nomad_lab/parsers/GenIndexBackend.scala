@@ -85,8 +85,8 @@ class GenIndexBackend(val subParser: ParserBackendExternal) extends ParserBacken
 
   /** Adds a new array of the given size
     */
-  def addArrayValue(metaName: String, shape: Seq[Long], gIndex: Long = -1): Unit = {
-    subParser.addArrayValue(metaName, shape, gIndex)
+  def addArray(metaName: String, shape: Seq[Long], gIndex: Long = -1): Unit = {
+    subParser.addArray(metaName, shape, gIndex)
   }
 
   /** Adds values to the last array added

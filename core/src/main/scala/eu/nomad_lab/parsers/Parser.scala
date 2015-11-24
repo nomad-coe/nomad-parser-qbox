@@ -205,13 +205,13 @@ trait ParserBackendBase {
     */
   def addRealValue(metaName: String, value: Double, gIndex: Long = -1): Unit;
 
-  /** Adds a new array value of the given size corresponding to metaName.
+  /** Adds a new array of the given size corresponding to metaName.
     *
     * The value is added to the section the meta info metaName is in.
     * A gIndex of -1 means the latest section.
     * The array is unitialized.
     */
-  def addArrayValue(metaName: String, shape: Seq[Long], gIndex: Long = -1): Unit;
+  def addArray(metaName: String, shape: Seq[Long], gIndex: Long = -1): Unit;
 
   /** Adds values to the last array added
     */
@@ -223,7 +223,7 @@ trait ParserBackendBase {
   /** Adds an array value with the given array values
     */
   def addArrayValues(metaName: String, values: NArray, gIndex: Long = -1): Unit = {
-    addArrayValue(metaName, values.getShape().map(_.toLong).toSeq);
+    addArray(metaName, values.getShape().map(_.toLong).toSeq);
     setArrayValues(metaName, values);
   }
 }

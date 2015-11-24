@@ -85,8 +85,8 @@ class JsonParseEventsWriterBackend(
     * A gIndex of -1 means the latest section.
     * The array is unitialized.
     */
-  override def addArrayValue(metaName: String, shape: Seq[Long], gIndex: Long = -1): Unit = {
-    writeOut(AddArrayValue(metaName, shape, gIndex).toJValue)
+  override def addArray(metaName: String, shape: Seq[Long], gIndex: Long = -1): Unit = {
+    writeOut(AddArray(metaName, shape, gIndex).toJValue)
   }
 
   def flatWriter(metaName: String, values: NArray, outF: Writer): Unit = {

@@ -199,8 +199,8 @@ class ReindexBackend( val subParser: ParserBackendInternal) extends ParserBacken
 
   /** Adds a new array of the given size
     */
-  def addArrayValue(metaName: String, shape: Seq[Long], oldGIndex: Long = -1): Unit = {
-    subParser.addArrayValue(metaName, shape, toNewGIndex(metaName, oldGIndex))
+  def addArray(metaName: String, shape: Seq[Long], oldGIndex: Long = -1): Unit = {
+    subParser.addArray(metaName, shape, toNewGIndex(metaName, oldGIndex))
   }
 
   /** Adds values to the last array added

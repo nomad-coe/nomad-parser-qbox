@@ -199,8 +199,8 @@ object GenericBackend {
 
     /** Adds a new array of the given size
       */
-    def addArrayValue(shape: Seq[Long], gIndex: Long = -1): Unit; /*= {
-      throw new InvalidAssignementException(metaInfo, "addArrayValue not supported")
+    def addArray(shape: Seq[Long], gIndex: Long = -1): Unit; /*= {
+      throw new InvalidAssignementException(metaInfo, "addArray not supported")
     }*/
 
     /** Adds values to the last array added
@@ -212,7 +212,7 @@ object GenericBackend {
     /** Adds a new array with the given values
       */
     def addArrayValues(values: NArray, gIndex: Long = -1): Unit; /*= {
-      addArrayValue(values.getShape().map( _.toLong).toSeq, gIndex)
+      addArray(values.getShape().map( _.toLong).toSeq, gIndex)
       setArrayValues(values, gIndex = gIndex)
     }*/
   }
@@ -234,7 +234,7 @@ object GenericBackend {
 
     /** Adds a new array of the given size
       */
-    override def addArrayValue(shape: Seq[Long], gIndex: Long = -1): Unit = { }
+    override def addArray(shape: Seq[Long], gIndex: Long = -1): Unit = { }
 
     /** Adds values to the last array added
       */
@@ -273,7 +273,7 @@ object GenericBackend {
       dispatch_i(value.longValue, gI)
     }
 
-    override def addArrayValue(shape: Seq[Long], gIndex: Long = -1): Unit = {
+    override def addArray(shape: Seq[Long], gIndex: Long = -1): Unit = {
       if (!(shape.isEmpty || shape.length == 1 && shape(0) == 1))
         throw new InvalidAssignementException(metaInfo, "tried to add an non scalar array value to a scalar integer")
     }
@@ -333,7 +333,7 @@ object GenericBackend {
       dispatch_f(value, gI)
     }
 
-    override def addArrayValue(shape: Seq[Long], gIndex: Long = -1): Unit = {
+    override def addArray(shape: Seq[Long], gIndex: Long = -1): Unit = {
       if (!(shape.isEmpty || shape.length == 1 && shape(0) == 1))
         throw new InvalidAssignementException(metaInfo, "tried to add an non scalar array value to a scalar integer")
     }
@@ -388,7 +388,7 @@ object GenericBackend {
       throw new InvalidAssignementException(metaInfo, "addRealValue not supported")
     }
 
-    override def addArrayValue(shape: Seq[Long], gIndex: Long = -1): Unit = {
+    override def addArray(shape: Seq[Long], gIndex: Long = -1): Unit = {
       if (shape.length != 1)
         throw new InvalidAssignementException(metaInfo, "tried to add an non scalar array value to a scalar dictionary")
     }
@@ -460,7 +460,7 @@ object GenericBackend {
       throw new InvalidAssignementException(metaInfo, "addRealValue not supported")
     }
 
-    override def addArrayValue(shape: Seq[Long], gIndex: Long = -1): Unit = {
+    override def addArray(shape: Seq[Long], gIndex: Long = -1): Unit = {
       if (shape.length != 1)
         throw new InvalidAssignementException(metaInfo, "tried to add an non scalar array value to a scalar string")
     }
@@ -517,7 +517,7 @@ object GenericBackend {
       throw new InvalidAssignementException(metaInfo, "addRealValue not supported")
     }
 
-    override def addArrayValue(shape: Seq[Long], gIndex: Long = -1): Unit = {
+    override def addArray(shape: Seq[Long], gIndex: Long = -1): Unit = {
       if (shape.length != 1)
         throw new InvalidAssignementException(metaInfo, "tried to add an non scalar array value to a scalar dictionary")
     }
@@ -1151,14 +1151,14 @@ abstract class GenericBackend(
     dataManagerForName(metaName).addRealValue(value, gIndex)
   }
 
-  /** Adds a new array value of the given size corresponding to metaName.
+  /** Adds a new array of the given size corresponding to metaName.
     *
     * The value is added to the section the meta info metaName is in.
     * A gIndex of -1 means the latest section.
     * The array is unitialized.
     */
-  override def addArrayValue(metaName: String, shape: Seq[Long], gIndex: Long = -1): Unit = {
-    dataManagerForName(metaName).addArrayValue(shape, gIndex)
+  override def addArray(metaName: String, shape: Seq[Long], gIndex: Long = -1): Unit = {
+    dataManagerForName(metaName).addArray(shape, gIndex)
   }
 
   /** Adds values to the last array added

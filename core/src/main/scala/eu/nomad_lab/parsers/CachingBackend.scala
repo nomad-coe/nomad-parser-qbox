@@ -83,7 +83,7 @@ object CachingBackend {
           val target: NArray = arr.sectionNoReduce(targetOffset, targetShape, Array.fill[Int](targetShape.length)(1))
           MAMath.copy(target, values)
         case None =>
-          throw new GenericBackend.InvalidAssignementException(metaInfo, s"setArrayValue called on ${metaInfo.name} in section $gIndex before addArrayValue")
+          throw new GenericBackend.InvalidAssignementException(metaInfo, s"setArrayValue called on ${metaInfo.name} in section $gIndex before addArray")
       }
     }
 
@@ -314,7 +314,7 @@ object CachingBackend {
     def metaInfo: MetaInfoRecord;
     def createArray(shape: Seq[Long]): NArray;
 
-    def addArrayValue(shape: Seq[Long], gIndex: Long): Unit = {
+    def addArray(shape: Seq[Long], gIndex: Long): Unit = {
       addArrayValues(createArray(shape), gIndex)
     }
 

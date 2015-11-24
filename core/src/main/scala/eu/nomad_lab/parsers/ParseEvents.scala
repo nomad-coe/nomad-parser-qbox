@@ -122,13 +122,13 @@ final case class AddRealValue(
   }
 }
 
-/** Adds a new array value of the given size corresponding to metaName.
+/** Adds a new array of the given size corresponding to metaName.
   *
   * The value is added to the section the meta info metaName is in.
   * A gIndex of -1 means the latest section.
   * The array is unitialized.
   */
-final case class AddArrayValue(
+final case class AddArray(
   metaName: String, shape: Seq[Long], gIndex: Long = -1
 ) extends ParseEvent {
   override def eventName = "addArrayValue"
