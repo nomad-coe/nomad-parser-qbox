@@ -40,7 +40,7 @@ object JsonSupport {
     * A more modular approach with split implicit formats and exposed functions
     * might be better, but let's try to keep it simple and see how far we get.
     */
-  implicit val formats = DefaultFormats + new eu.nomad_lab.meta.MetaInfoRecordSerializer
+  implicit val formats = DefaultFormats + new eu.nomad_lab.meta.MetaInfoRecordSerializer + new eu.nomad_lab.parsers.ParseEventSerializer
 
   /** initializes a type T from the given the JValue and returns it
     */
