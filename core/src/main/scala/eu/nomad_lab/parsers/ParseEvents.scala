@@ -11,6 +11,244 @@ import eu.nomad_lab.meta.MetaInfoEnv
 import eu.nomad_lab.meta.MetaInfoRecord
 import java.io.Writer
 import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JArray, JObject, JValue, JField}
+import org.json4s.CustomSerializer
+
+object ParseEvent {
+  /** builds an array of the given size looking up the type from the backend metaInfo
+    */
+  def buildArray(backend: Option[ParserBackendExternal], metaName: String, valuesShape: Seq[Long], flatValues: List[JValue]): NArray = {
+    import org.json4s.DefaultFormats;
+    implicit val formats = DefaultFormats
+
+    var dtypeStr: String = ""
+    if (!backend.isEmpty && !metaName.isEmpty) {
+      backend.get.metaInfoEnv.metaInfoRecordForName(metaName) match {
+        case Some(metaI) =>
+          metaI.dtypeStr match {
+            case Some(dt) =>
+              dtypeStr = dt
+            case None =>
+              ()
+          }
+        case None =>
+          ()
+      }
+    }
+    if (dtypeStr.isEmpty) {
+      val size = if (!valuesShape.isEmpty)
+        valuesShape.foldLeft(1: Long)(_ * _)
+      else
+        flatValues.size.longValue
+      if (size > 0) {
+        dtypeStr = flatValues(0) match {
+          case _: JInt =>
+            "i64"
+          case _: JDouble =>
+            "f64"
+          case _: JString =>
+            "C"
+          case _: JObject =>
+            "D"
+          case _ =>
+              throw new GenericBackend.InternalErrorException(s"cannot recover dtypeStr for $metaName from ${flatValues(0)}")
+        }
+      }
+    }
+    val ishape: Array[Int] = valuesShape.map(_.intValue).toArray
+    val newArr = dtypeStr match {
+      case "i" | "i32" =>
+        NArray.factory(DataType.INT, ishape)
+      case "i64" =>
+        NArray.factory(DataType.LONG, ishape)
+      case "f" | "f64" =>
+        NArray.factory(DataType.DOUBLE, ishape)
+      case "f32" =>
+        NArray.factory(DataType.FLOAT, ishape)
+      case "b" =>
+        NArray.factory(DataType.BYTE, ishape)
+      case "B" =>
+        NArray.factory(DataType.STRING, ishape)
+      case "C" =>
+        NArray.factory(DataType.STRING, ishape)
+      case "D" =>
+        NArray.factory(DataType.STRING, ishape)
+      case _ =>
+        throw new GenericBackend.InternalErrorException(s"unsupported dtypeStr $dtypeStr for $metaName")
+    }
+    val writer = dtypeStr match {
+      case "i" | "i32" =>
+        { (it: NIndexIterator, value: JValue) =>
+          it.setIntNext(value.extract[Int]) }
+      case "i64" =>
+        { (it: NIndexIterator, value: JValue) =>
+          it.setLongNext(value.extract[Long]) }
+      case "f" | "f64" =>
+        { (it: NIndexIterator, value: JValue) =>
+          it.setDoubleNext(value.extract[Double]) }
+      case "f32" =>
+        { (it: NIndexIterator, value: JValue) =>
+          it.setFloatNext(value.extract[Float]) }
+      case "b" =>
+        { (it: NIndexIterator, value: JValue) =>
+          it.setByteNext(value.extract[Byte]) }
+      case "B" =>
+        { (it: NIndexIterator, value: JValue) =>
+          it.setObjectNext(value.extract[String]) }
+      case "C" =>
+        { (it: NIndexIterator, value: JValue) =>
+          it.setObjectNext(value.extract[String]) }
+      case "D" =>
+        { (it: NIndexIterator, value: JValue) =>
+          value match {
+            case obj: JObject =>
+              it.setObjectNext(JsonUtils.prettyStr(obj))
+            case _ =>
+              throw new JsonUtils.InvalidValueError(
+                fieldName = metaName,
+                context = "",
+                value = JsonUtils.prettyStr(value),
+                expected = "json dictionary")
+          }
+        }
+      case _ =>
+        throw new GenericBackend.InternalErrorException(s"Unexpected dtypeStr $dtypeStr for $metaName")
+    }
+    var l = flatValues
+
+    val iter = newArr.getIndexIterator()
+    while (iter.hasNext() && !l.isEmpty) {
+      l match {
+        case h::t =>
+          writer(iter, h)
+          l = t
+        case Nil =>
+          ()
+      }
+    }
+    newArr
+  }
+
+
+  /** converts back from json
+    */
+  def fromJValue(backend: Option[ParserBackendExternal], value: JValue)(implicit format: org.json4s.Formats): ParseEvent = {
+    value match {
+      case JObject(obj) => {
+        var event: String = "";
+        var metaName: String = "";
+        var gIndex: Long = -1;
+        var shape: Option[Seq[Long]] = None;
+        var valuesShape: Seq[Long] = Seq();
+        var offset: Option[Seq[Long]] = None;
+        var flatValues: List[JValue] = Nil;
+        var references: Map[String, Long] = Map();
+        var mainFileUri: String = "";
+        var parserInfo: JValue = JNothing;
+        obj foreach {
+          case JField("event", value) =>
+            value match {
+              case JString(s)       => event = s
+              case JNothing | JNull => ()
+              case _                => throw new JsonUtils.InvalidValueError(
+                "event", "ParseEvent", JsonUtils.prettyStr(value), "a string")
+            }
+          case JField("metaName", value) =>
+            value match {
+              case JString(s)       => metaName = s
+              case JNothing | JNull => ()
+              case _                => throw new JsonUtils.InvalidValueError(
+                "metaName", "ParseEvent", JsonUtils.prettyStr(value), "a string")
+            }
+          case JField("gIndex", value) =>
+            value match {
+              case JInt(i)          => gIndex = i.longValue
+              case JDecimal(i)      => gIndex = i.longValue
+              case JNothing | JNull => ()
+              case _                => throw new JsonUtils.InvalidValueError(
+                "gIndex", "NomadMetaInfo", JsonUtils.prettyStr(value), "a string")
+            }
+          case JField("shape", value) =>
+            if (!value.toOption.isEmpty)
+              shape = Some(value.extract[Seq[Long]])
+          case JField("valuesShape", value) =>
+            if (!value.toOption.isEmpty)
+              valuesShape = value.extract[Seq[Long]]
+          case JField("offset", value) =>
+            if (!value.toOption.isEmpty)
+              offset = Some(value.extract[Seq[Long]])
+          case JField("flatValues", value) =>
+            if (!value.toOption.isEmpty)
+              value match {
+                case JArray(arr) =>
+                  flatValues = arr
+                case JNothing | JNull =>
+                  ()
+                case _ =>
+                  throw new JsonUtils.InvalidValueError(
+                    "flatValues", "ParseEvent", JsonUtils.prettyStr(value), "an array")
+              }
+          case JField("references", value) =>
+            if (!value.toOption.isEmpty)
+              references = value.extract[Map[String, Long]]
+          case JField("mainFileUri", value) =>
+            value match {
+              case JString(s)       => mainFileUri = s
+              case JNothing | JNull => ()
+              case _                => throw new JsonUtils.InvalidValueError(
+                "mainFileUri", "ParseEvent", JsonUtils.prettyStr(value), "a string")
+            }
+          case JField("parserInfo", value) =>
+            parserInfo = value
+          case JField(field, value) =>
+            throw new JsonUtils.UnexpectedValueError(
+              "ParseEvent", field, "Unexpected field with value ${JsonUtils.prettyStr(value)}")
+        }
+        event match {
+          case "startedParsingSession" =>
+            StartedParsingSession(mainFileUri, parserInfo)
+          case "finishedParsingSession" =>
+            FinishedParsingSession(mainFileUri, parserInfo)
+          case "setSectionInfo" =>
+            SetSectionInfo(metaName, gIndex, references)
+          case "closeSection" =>
+            CloseSection(metaName, gIndex)
+          case "addValue" =>
+            AddValue(metaName, value, gIndex)
+          case "addRealValue" =>
+            value match {
+              case JDouble(d) =>
+                AddRealValue(metaName, d, gIndex)
+              case JInt(i) =>
+                AddRealValue(metaName, i.doubleValue, gIndex)
+              case JDecimal(d) =>
+                AddRealValue(metaName, d.doubleValue, gIndex)
+              case _ =>
+                throw new JsonUtils.InvalidValueError(
+                  "value", "ParseEvent", JsonUtils.prettyStr(value), "addRealValue expects a real value")
+            }
+          case "addArray" =>
+            shape match {
+              case Some(dims) =>
+                AddArray(metaName, dims, gIndex)
+              case None =>
+                throw new JsonUtils.InvalidValueError(
+                  "shape", "ParseEvent", shape.mkString("[",",","]"), "addArray requires a shape")
+            }
+          case "setArrayValues" =>
+            SetArrayValues(metaName, buildArray(backend, metaName, valuesShape, flatValues),
+              offset, gIndex)
+          case "addArrayValues" =>
+            AddArrayValues(metaName, buildArray(backend, metaName, valuesShape, flatValues), gIndex)
+          case "openSectionWithGIndex" =>
+            OpenSectionWithGIndex(metaName, gIndex)
+        }
+      }
+      case v =>
+        throw new JsonUtils.InvalidValueError(
+          "value", "ParseEvent", JsonUtils.prettyStr(value), "parse event should be an object")
+    }
+  }
+}
 
 /** Events of an external parser stream
   */
