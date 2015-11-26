@@ -38,7 +38,8 @@ Usage:
   nomadTool [--help]
     [--main-meta-file <path to nomadmetainfo.json to load>]
     [--meta-dot-file <where to output dot file>]
-    [--main-file <main file to parse>]
+    [--main-file-path <path of the main file to parse>]
+    [--main-file-uri <uri of the main file to parse>]
     [--parser <parser to use>]
     [--list-parsers]
     [--tree-to-parse <path to parse as tree>]
@@ -58,7 +59,8 @@ Runs the main parsing step
     var metaInfoDotFile: Option[String] = None
     val classLoader: ClassLoader = getClass().getClassLoader();
     var metaInfoPath = classLoader.getResource("nomad-meta-info/nomad_meta_info/main.nomadmetainfo.json").getFile()
-    var mainFile: Option[String] = None
+    var mainFilePath: Option[String] = None
+    var mainFileUri: Option[String] = None
     var treeToParse: Option[String] = None
     var parsersToUse: ListBuffer[String] = ListBuffer()
     var verbose: Boolean = false
@@ -85,12 +87,19 @@ Runs the main parsing step
           }
           metaInfoDotFile = Some(list.head)
           list = list.tail
-        case "--main-file" =>
+        case "--main-file-path" =>
           if (list.isEmpty) {
             println("Error: missing main meta file. $usage")
             return
           }
-          mainFile = Some(list.head)
+          mainFilePath = Some(list.head)
+          list = list.tail
+        case "--main-file-uri" =>
+          if (list.isEmpty) {
+            println("Error: missing main meta file. $usage")
+            return
+          }
+          mainFileUri = Some(list.head)
           list = list.tail
         case "--tree-to-parse" =>
           if (list.isEmpty) {
@@ -156,8 +165,12 @@ Runs the main parsing step
       case BackendType.JsonEventEmitter => null
     }
 
-    mainFile match {
+    mainFilePath match {
       case Some(path) =>
+        val uri = mainFileUri match {
+          case Some(mainUri) => mainUri
+          case None          => ("file://" + path)
+        }
         val cachedOptimizedParsers: mutable.Map[String, parsers.OptimizedParser] = mutable.Map()
         val fIn = new java.io.FileInputStream(path)
         val buf = Array.fill[Byte](8*1024)(0)
@@ -170,12 +183,12 @@ Runs the main parsing step
               case Some(oParser) =>
                 oParser
               case None =>
-                val oParser = parser.optimizedParser(include = Seq(), exclude = Seq())
+                val oParser = parser.optimizedParser(Seq())
                 cachedOptimizedParsers += (parserName -> oParser)
                 oParser
             }
           }
-          val parsingStatus = optimizedParser.parseInternal(path, backend, parserName)
+          val parsingStatus = optimizedParser.parseInternal(uri, path, backend, parserName)
           parsingStatus match {
             case _ => ()
           }

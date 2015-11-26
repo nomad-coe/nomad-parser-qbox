@@ -144,13 +144,13 @@ trait OptimizedParser {
     *
     * parserName is used to identify the parser, mainly for logging/debugging
     */ 
-  def parseInternal(mainFilePath: String, backend: ParserBackendInternal, parserName: String): ParseResult.ParseResult
+  def parseInternal(mainFileUri: String, mainFilePath: String, backend: ParserBackendInternal, parserName: String): ParseResult.ParseResult
 
   /** parses the file at the given path, calling the external backend with the parser events
     *
     * parserName is used to identify the parser, mainly for logging/debugging
     */ 
-  def parseExternal(mainFilePath: String, backend: ParserBackendExternal, parserName: String): ParseResult.ParseResult
+  def parseExternal(mainFileUri: String, mainFilePath: String, backend: ParserBackendExternal, parserName: String): ParseResult.ParseResult
 }
 
 object ParserBackendBase {
