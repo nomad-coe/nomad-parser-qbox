@@ -34,9 +34,9 @@ CREATE TABLE nomad_meta_info_anchestors (
         FOREIGN KEY(anchestor_metainfo_id) REFERENCES nomad_meta_infos (metainfo_id)
 );
 
-CREATE SEQUENCE nomad_meta_info_versions;
+CREATE SEQUENCE nomad_meta_info_versions_id_seq;
 CREATE TABLE nomad_meta_info_versions (
-       version_id INTEGER NOT NULL,
+       version_id INTEGER NOT NULL default nextval('nomad_meta_info_versions_id_seq'),
        name VARCHAR(128) NOT NULL
 );
 
