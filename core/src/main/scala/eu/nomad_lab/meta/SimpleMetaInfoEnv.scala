@@ -118,19 +118,23 @@ class SimpleMetaInfoEnv(
     * Does not trust the values in the metaInfo
     */
   def fixMetaInfo(metaInfo: MetaInfoRecord, selfGid: Boolean, superGids: Boolean): MetaInfoRecord = {
-    val gid = (
-      if (selfGid)
-        gidForName(metaInfo.name, recursive = true).getOrElse("")
-      else
-        ""
-    )
-    val sGids = (
-      if (superGids && !metaInfo.superNames.isEmpty)
-        metaInfo.superNames.map(gidForName(_, recursive = true).getOrElse(""))
-      else
-        Seq()
-    )
-    metaInfo.copy(gid = gid, superGids = sGids)
+    if (!selfGid && !superGids) {
+      metaInfo
+    } else {
+      val gid = (
+        if (selfGid)
+          gidForName(metaInfo.name, recursive = true).getOrElse("")
+        else
+          ""
+      )
+      val sGids = (
+        if (superGids && !metaInfo.superNames.isEmpty)
+          metaInfo.superNames.map(gidForName(_, recursive = true).getOrElse(""))
+        else
+          Seq()
+      )
+      metaInfo.copy(gid = gid, superGids = sGids)
+    }
   }
 
   /** Returns the metaInfoRecord for the given name
@@ -142,6 +146,14 @@ class SimpleMetaInfoEnv(
       case Some(baseVal) => Some(fixMetaInfo(baseVal, selfGid, superGids))
       case None =>
         firstFromDeps(_.metaInfoRecordForName(name, selfGid, superGids))
+    }
+  }
+
+  def metaInfoRecordForName(name: String): Option[MetaInfoRecord] = {
+    metaInfosMap.get(name) match {
+      case Some(baseVal) => Some(baseVal)
+      case None =>
+        firstFromDeps(_.metaInfoRecordForName(name))
     }
   }
 
@@ -392,9 +404,10 @@ object SimpleMetaInfoEnv extends StrictLogging {
         val metaInfo = jsonObj.extract[MetaInfoRecord]
         if (metaInfoCache.contains(metaInfo.name))
           throw new MetaInfoEnv.DuplicateNameException(metaInfo.name, metaInfo, metaInfoCache(metaInfo.name))
-        metaInfoCache += (metaInfo.name -> metaInfo)
+        metaInfoCache += (metaInfo.name -> metaInfo.copy(gid = "", superGids = Seq()))
         if (keepExistingGidsValues && !metaInfo.gid.isEmpty)
           nameToGid += (metaInfo.name -> metaInfo.gid)
+          // discarding superGids, keep anche check?
       } catch {
         case NonFatal(e) =>
           throw new MetaInfoEnv.ParseException(s"Error loading $name processing metaInfo ${JsonUtils.prettyStr(jsonObj)}", e)

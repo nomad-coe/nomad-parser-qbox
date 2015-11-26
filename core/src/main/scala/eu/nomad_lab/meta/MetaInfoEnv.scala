@@ -83,7 +83,8 @@ trait MetaInfoEnv extends MetaInfoCollection {
     *
     * gids and superGids are added only if requested
     */
-  def metaInfoRecordForName(name: String, selfGid: Boolean = false, superGids: Boolean = false): Option[MetaInfoRecord]
+  def metaInfoRecordForName(name: String, selfGid: Boolean = false, superGids: Boolean = false): Option[MetaInfoRecord];
+  def metaInfoRecordForName(name: String): Option[MetaInfoRecord];
 
   /** Converts the environment to json
     *
