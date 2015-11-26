@@ -38,14 +38,16 @@ final case class StartedParsingSession(
 /** finished a parsing session
   */
 final case class FinishedParsingSession(
-  mainFileUri: String
+  mainFileUri: String, parserInfo: JValue
 ) extends ParseEvent {
   override def eventName: String = "finishedParsingSession"
 
   override def toJValue: JValue = {
     import org.json4s.JsonDSL._;
     ("event" -> eventName) ~
-    ("mainFileUri" -> mainFileUri)
+    ("mainFileUri" -> (if (mainFileUri.isEmpty) JNothing else JString(mainFileUri))) ~
+    ("parserInfo" -> parserInfo)
+  }
   }
 }
 

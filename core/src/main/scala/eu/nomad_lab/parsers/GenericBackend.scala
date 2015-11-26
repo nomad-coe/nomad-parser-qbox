@@ -28,8 +28,8 @@ object GenericBackend {
   /** root object representing a parsing session
     */
   class ParsingSession (
-    val mainFileUri: String,
-    val parserInfo: JValue
+    var mainFileUri: String,
+    var parserInfo: JValue
   ) {
   }
 
@@ -1055,9 +1055,13 @@ abstract class GenericBackend(
 
   /** Finished a parsing session
     */
-  def finishedParsingSession(mainFileUri: String): Unit =  {
+  def finishedParsingSession(mainFileUri: String, parserInfo: JValue): Unit =  {
     parsingSession match {
       case Some(session) =>
+        if (session.mainFileUri.isEmpty)
+          session.mainFileUri = mainFileUri
+        if (session.parserInfo.toOption.isEmpty && !parserInfo.toOption.isEmpty)
+          session.parserInfo = parserInfo
         if (mainFileUri != session.mainFileUri)
           throw new GenericBackend.InternalErrorException(s"Mismatched finished parsing of $mainFileUri while parsing session for ${session.mainFileUri} (${JsonUtils.prettyStr(session.parserInfo)}) was still open")
         onFinisheParsingSession(session)

@@ -130,13 +130,19 @@ class JsonWriterBackend(
   /** Started a parsing session
     */
   override def startedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
+    super.startedParsingSession(mainFileUri, parserInfo)
     outF.write("""{
-  "type": "nomad_info_1_0",
+  "type": "nomad_info_1_0""")
+    if (!mainFileUri.isEmpty) {
+      outF.write("""
   "mainFileUri": """)
-    JsonUtils.dumpString(mainFileUri, outF)
-    outF.write(""",
+      JsonUtils.dumpString(mainFileUri, outF)
+    }
+    if (!parserInfo.toOption.isEmpty) {
+      outF.write(""",
   "parserInfo": """)
-    JsonUtils.prettyWriter(parserInfo, outF, 2)
+      JsonUtils.prettyWriter(parserInfo, outF, 2)
+    }
     outF.write(""",
   "sections": [
     """)
@@ -144,9 +150,20 @@ class JsonWriterBackend(
 
   /** Finished a parsing session
     */
-  override def finishedParsingSession(mainFileUri: String): Unit = {
+  override def finishedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
+    if (parsingSession.get.mainFileUri.isEmpty && !mainFileUri.isEmpty) {
+      outF.write("""
+  "mainFileUri": """)
+      JsonUtils.dumpString(mainFileUri, outF)
+    }
+    if (parsingSession.get.parserInfo.toOption.isEmpty && !parserInfo.toOption.isEmpty) {
+      outF.write(""",
+  "parserInfo": """)
+      JsonUtils.prettyWriter(parserInfo, outF, 2)
+    }
     outF.write("""]
 }""")
+    super.finishedParsingSession(mainFileUri, parserInfo)
   }
 
   def writeOut(metaName: String, section: CachingBackend.CachingSection): Unit = {

@@ -166,7 +166,7 @@ trait ParserBackendBase {
 
   /** finished a parsing session
     */
-  def finishedParsingSession(mainFileUri: String): Unit;
+  def finishedParsingSession(mainFileUri: String, parserInfo: JValue): Unit;
 
   /** returns the sections that are still open
     *

@@ -25,8 +25,8 @@ class GenIndexBackend(val subParser: ParserBackendExternal) extends ParserBacken
 
   /** Finished a parsing session
     */
-  def finishedParsingSession(mainFileUri: String): Unit = {
-    subParser.finishedParsingSession(mainFileUri)
+  def finishedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
+    subParser.finishedParsingSession(mainFileUri, parserInfo)
     lastIndex.clear()
   }
 

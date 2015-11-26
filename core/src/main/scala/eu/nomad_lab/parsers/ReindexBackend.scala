@@ -57,13 +57,20 @@ class ReindexBackend( val subParser: ParserBackendInternal) extends ParserBacken
 
   /** Finished a parsing session
     */
-  def finishedParsingSession(mainFileUri: String): Unit = {
-    subParser.finishedParsingSession(mainFileUri)
-    sectionMappers.foreach { case (metaName, sectionMapper: ReindexBackend.SectionMapper) =>
-      if (!sectionMapper.pendingInfos.isEmpty)
-        throw new ParserBackendBase.InvalidCallSequenceException(s"finishedParsingSession with still pending sections in $metaName: ${sectionMapper.pendingInfos}")
+  def finishedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
+    subParser.finishedParsingSession(mainFileUri, parserInfo)
+    def testOrException(): Exception = {
+      sectionMappers.foreach { case (metaName, sectionMapper: ReindexBackend.SectionMapper) =>
+        if (!sectionMapper.pendingInfos.isEmpty) {
+          return new ParserBackendBase.InvalidCallSequenceException(s"finishedParsingSession with still pending sections in $metaName: ${sectionMapper.pendingInfos}")
+        }
+      }
+      null
     }
+    val exception = testOrException()
     sectionMappers.clear()
+    if (exception != null)
+      throw exception
   }
 
   /** returns the sections that are still open

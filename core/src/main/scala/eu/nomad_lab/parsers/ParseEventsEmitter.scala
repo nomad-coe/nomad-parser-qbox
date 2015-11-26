@@ -30,8 +30,8 @@ class ParseEventsEmitter(
 
   /** finished a parsing session
     */
-  def finishedParsingSession(mainFileUri: String): Unit = {
-    emitEvent(FinishedParsingSession(mainFileUri))
+  def finishedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
+    emitEvent(FinishedParsingSession(mainFileUri, parserInfo))
   }
 
   /** sets info values of an open section.

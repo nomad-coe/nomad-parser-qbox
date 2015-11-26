@@ -16,23 +16,43 @@ class JsonParseEventsWriterBackend(
   val outF: Writer
 ) extends BaseParserBackend(metaInfoEnv) with ParserBackendExternal {
   var writeComma: Boolean = false
-
+  var mainFileUri: String = ""
+  var parserInfo: JValue = JNothing
 
   def startedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
+    this.mainFileUri = mainFileUri
+    this.parserInfo = parserInfo
     outF.write("""{
-  "type": "nomad_parse_events_1_0",
+  "type": "nomad_parse_events_1_0""")
+    if (!mainFileUri.isEmpty)  {
+      outF.write(""",
   "mainFileUri": """)
-    JsonUtils.dumpString(mainFileUri, outF)
-    outF.write(""",
+      JsonUtils.dumpString(mainFileUri, outF)
+    }
+    if (!parserInfo.toOption.isEmpty) {
+      outF.write(""",
   "parserInfo": """)
-    JsonUtils.prettyWriter(parserInfo, outF, 2)
+      JsonUtils.prettyWriter(parserInfo, outF, 2)
+    }
     outF.write(""",
   "events": [""")
   }
 
-  def finishedParsingSession(mainFileUri: String): Unit = {
+  def finishedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
+    if (this.mainFileUri.isEmpty && !mainFileUri.isEmpty) {
+      outF.write(""",
+  "mainFileUri": """)
+      JsonUtils.dumpString(mainFileUri, outF)
+    }
+    if (this.parserInfo.toOption.isEmpty && !parserInfo.toOption.isEmpty) {
+      outF.write(""",
+  "parserInfo": """)
+      JsonUtils.prettyWriter(parserInfo, outF, 2)
+    }
     outF.write("""]
 }""")
+    this.mainFileUri = ""
+    this.parserInfo = JNothing
   }
 
   def writeOut(event: JValue): Unit = {
