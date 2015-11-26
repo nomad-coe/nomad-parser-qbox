@@ -340,7 +340,6 @@ final case class SetSectionInfo(
   }
 }
 
-
 /** closes a section
   *
   * after this no other value can be added to the section.
@@ -465,6 +464,7 @@ object SetArrayValues {
     JArray(arr.toList)
   }
 }
+
 /** Adds values to the last array added
   */
 final case class SetArrayValues(
@@ -492,8 +492,9 @@ final case class SetArrayValues(
     backend.setArrayValues(metaName, values, offset, gIndex)
   }
 }
-  /** Adds an array value with the given array values
-    */
+
+/** Adds an array value with the given array values
+  */
 final case class AddArrayValues(
   metaName: String, values: NArray, gIndex: Long = -1
 ) extends ParseEvent {
@@ -512,10 +513,10 @@ final case class AddArrayValues(
   }
 }
 
-  /** Informs tha backend that a section with the given gIndex should be opened
-    *
-    * The index is assumed to be unused, it is an error to reopen an existing section.
-    */
+/** Informs tha backend that a section with the given gIndex should be opened
+  *
+  * The index is assumed to be unused, it is an error to reopen an existing section.
+  */
 final case class OpenSectionWithGIndex(
   metaName: String, gIndex: Long
 ) extends ParseEvent {
