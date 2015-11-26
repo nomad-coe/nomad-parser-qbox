@@ -67,7 +67,7 @@ object CachingBackend {
       }
     }
 
-    /** Sets values on an array (the latest) of metaIfo that should already be cached here
+    /** Sets values on an array (the latest) of metaInfo that should already be cached here
       */
     def setArrayValues[T](metaInfo: MetaInfoRecord, values: NArray, offset: Option[Seq[Long]]) {
       cachedArrayValues.get(metaInfo.name) match {
