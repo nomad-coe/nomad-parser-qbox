@@ -124,15 +124,20 @@ lazy val flywayPostgres = (
 /*lazy val postgresSettings = { Seq( rdbUrl := "jdbc:postgres://localhost:5432/nomad_lab" )
   ++ flywayPostgres ++ jooqCommon ++ jooqPostgres };*/
 
-lazy val core = (project in file("core")).
+// code generation step to before, so the api can be used in core
+// the generated code can also be generated to a directory that is then checked in
+// for example with:
+// settings(jooqOutputDirectory := (baseDirectory.value / "../core/src/main/java").getCanonicalFile())
+// this can be useful to have a separate project not compiled by default and then add the
+// generated files to git, for example for DB like postgres that not every developer might have installed
+lazy val cgen = (project in file("cgen")).
   settings(commonSettings: _*).
   settings(
     libraryDependencies ++= commonLibs,
-    name := "nomadCore",
-    (unmanagedResourceDirectories in Compile) += (baseDirectory.value / "../nomad-meta-info").getCanonicalFile()
+    name := "cgen"
   ).
   settings(flywaySettings: _*).
-  //settings(h2Settings: _*).
+  ////settings(h2Settings: _*).
   settings(rdbUrl := {
     "jdbc:h2:file:" + ((resourceManaged in Compile).value / "localdb_h2")
   } ).
@@ -140,8 +145,39 @@ lazy val core = (project in file("core")).
   settings(jooqCommon: _*).
   settings(jooqH2: _*)
 
+  //settings(sbtavrohugger.SbtAvrohugger.specificAvroSettings)
+
+
+lazy val core = (project in file("core")).
+  dependsOn(cgen).
+  settings(commonSettings: _*).
+  settings(
+    libraryDependencies ++= commonLibs,
+    name := "nomadCore",
+    (unmanagedResourceDirectories in Compile) += (baseDirectory.value / "../nomad-meta-info/meta_info").getCanonicalFile()
+  )//.
+  //settings(flywaySettings: _*).
+  ////settings(h2Settings: _*).
+  //settings(rdbUrl := {
+  //  "jdbc:h2:file:" + ((resourceManaged in Compile).value / "localdb_h2")
+  //} ).
+  //settings(flywayH2: _*).
+  //settings(jooqCommon: _*).
+  //settings(jooqH2: _*)
+
+
+lazy val fhiAims = (project in file("parsers/fhi-aims")).
+  dependsOn(core).
+  settings(commonSettings: _*).
+  settings(
+    libraryDependencies ++= commonLibs,
+    name := "fhiAims"
+  ).
+  settings(Revolver.settings: _*)
+
 lazy val base = (project in file("base")).
   dependsOn(core).
+  dependsOn(fhiAims).
   settings(commonSettings: _*).
   settings(
     libraryDependencies ++= commonLibs,
