@@ -253,23 +253,50 @@ object ParseEvent {
 /** Events of an external parser stream
   */
 sealed abstract class ParseEvent {
-  def eventName: String
+  /** name of this event
+    */
+  def eventName: String;
 
-  def toJValue: JValue
+  /** converts to a json value
+    */
+  def toJValue: JValue;
+
+  /** emits the corresponding event on a backend
+    */
+  def emitOnBackend(backend: ParserBackendExternal): Unit;
 }
+
+/** Json serialization to and deserialization support for MetaInfoRecord
+  */
+class ParseEventSerializer extends CustomSerializer[ParseEvent](format => (
+  {
+    case obj: JObject => {
+      ParseEvent.fromJValue(None, obj)(format)
+    }
+  },
+  {
+    case x: MetaInfoRecord => {
+      x.toJValue()
+    }
+  }
+))
 
 /** Started a parsing session
   */
 final case class StartedParsingSession(
   mainFileUri: String, parserInfo: JValue
 ) extends ParseEvent {
-  override def eventName: String = "startParsingSession"
+  override def eventName: String = "startedParsingSession"
 
   override def toJValue: JValue = {
     import org.json4s.JsonDSL._;
     ("event" -> eventName) ~
-    ("mainFileUri" -> mainFileUri) ~
+    ("mainFileUri" -> (if (mainFileUri.isEmpty) JNothing else JString(mainFileUri))) ~
     ("parserInfo" -> parserInfo)
+  }
+
+  override def emitOnBackend(backend: ParserBackendExternal): Unit = {
+    backend.startedParsingSession(mainFileUri, parserInfo)
   }
 }
 
@@ -286,6 +313,9 @@ final case class FinishedParsingSession(
     ("mainFileUri" -> (if (mainFileUri.isEmpty) JNothing else JString(mainFileUri))) ~
     ("parserInfo" -> parserInfo)
   }
+
+  override def emitOnBackend(backend: ParserBackendExternal): Unit = {
+    backend.finishedParsingSession(mainFileUri, parserInfo)
   }
 }
 
@@ -304,6 +334,10 @@ final case class SetSectionInfo(
     ("gIndex" -> gIndex) ~
     ("references" -> references)
   }
+
+  override def emitOnBackend(backend: ParserBackendExternal): Unit = {
+    backend.setSectionInfo(metaName, gIndex, references)
+  }
 }
 
 
@@ -321,6 +355,10 @@ final case class CloseSection(
     import org.json4s.JsonDSL._;
     ("event" -> eventName) ~
     ("gIndex" -> gIndex)
+  }
+
+  override def emitOnBackend(backend: ParserBackendExternal): Unit = {
+    backend.closeSection(metaName, gIndex)
   }
 }
 
@@ -341,6 +379,10 @@ final case class AddValue(
     ("gIndex" -> (if (gIndex == -1) JNothing else JInt(gIndex))) ~
     ("value" -> value)
   }
+
+  override def emitOnBackend(backend: ParserBackendExternal): Unit = {
+    backend.addValue(metaName, value, gIndex)
+  }
 }
 
 /** Adds a floating point value corresponding to metaName.
@@ -359,6 +401,10 @@ final case class AddRealValue(
     ("metaName" -> metaName) ~
     ("gIndex" -> (if (gIndex == -1) JNothing else JInt(gIndex))) ~
     ("value" -> value)
+  }
+
+  override def emitOnBackend(backend: ParserBackendExternal): Unit = {
+    backend.addRealValue(metaName, value, gIndex)
   }
 }
 
@@ -379,6 +425,10 @@ final case class AddArray(
     ("metaName" -> metaName) ~
     ("gIndex" -> (if (gIndex == -1) JNothing else JInt(gIndex))) ~
     ("shape" -> shape)
+  }
+
+  override def emitOnBackend(backend: ParserBackendExternal): Unit = {
+    backend.addArray(metaName, shape, gIndex)
   }
 }
 
@@ -437,6 +487,10 @@ final case class SetArrayValues(
     ("valuesShape" -> JArray(values.getShape().map{ (s: Int) => JInt(s) }(breakOut): List[JInt])) ~
     ("flatValues"  -> SetArrayValues.flatValues(metaName, values))
   }
+
+  override def emitOnBackend(backend: ParserBackendExternal): Unit = {
+    backend.setArrayValues(metaName, values, offset, gIndex)
+  }
 }
   /** Adds an array value with the given array values
     */
@@ -452,6 +506,10 @@ final case class AddArrayValues(
     ("valuesShape" -> JArray(values.getShape().map{ (i: Int) => JInt(i)}(breakOut): List[JInt])) ::
     ("flatValues"  -> SetArrayValues.flatValues(metaName, values)) :: Nil
   )
+
+  override def emitOnBackend(backend: ParserBackendExternal): Unit = {
+    backend.addArrayValues(metaName, values, gIndex)
+  }
 }
 
   /** Informs tha backend that a section with the given gIndex should be opened
@@ -468,5 +526,9 @@ final case class OpenSectionWithGIndex(
     ("event" -> eventName) ~
     ("metaName" -> metaName) ~
     ("gIndex" -> gIndex)
+  }
+
+  override def emitOnBackend(backend: ParserBackendExternal): Unit = {
+    backend.openSectionWithGIndex(metaName, gIndex)
   }
 }
