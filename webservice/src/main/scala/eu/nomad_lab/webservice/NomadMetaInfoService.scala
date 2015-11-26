@@ -21,6 +21,8 @@ import eu.nomad_lab.meta.MetaInfoCollection
 import eu.nomad_lab.meta.RelativeDependencyResolver
 import eu.nomad_lab.meta.SimpleMetaInfoEnv
 import eu.nomad_lab.JsonSupport
+import eu.nomad_lab.JsonUtils
+import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JArray, JObject, JValue, JField}
 
 // we don't implement our route structure directly in the service actor because
 // we want to be able to test it independently, without having to spin up an actor
@@ -206,6 +208,41 @@ trait NomadMetaInfoService extends HttpService {
     }
   }
 
+  def addStats(newData: JValue):String = {
+    "stats added"
+  }
+
+  def overviewStats: JValue = {
+    JNull
+  }
+
+  def overviewStatsHtml: Stream[String] = {
+    val parserStats = Stream.empty
+
+    layout(
+      title = "Parsers Overview",
+      extraHead = Stream.empty,
+      content = s"""
+<h1>Nomad Parsers Overview</h1>
+
+ <ul>
+  <li><a href="https://gitlab.rzg.mpg.de/nomad-lab/nomad-lab-base/wikis/Parser-Assignment">Parser assignements</a></li>
+ </ul>
+
+<h2>Statistics</h2>
+  <table>
+  <tr><th>
+    parser
+  </th><th>
+  </th><th>
+  </th><tr>
+""" #:: parserStats #::: """
+  </ul>""" #:: Stream.empty)
+  }
+
+  def detailedStats: JValue = {
+    JNull
+  }
 
   /** Create JSON for the "name" meta tag. Contains complete data including ancestors and children
     */
@@ -449,6 +486,42 @@ trait NomadMetaInfoService extends HttpService {
   }
 
   val myRoute =
+    pathPrefix("parsers"){
+      pathPrefix("addStat") {
+        post {
+           decompressRequest() {
+             entity(as[String]) { content: String =>
+               complete(addStats(JsonUtils.parseStr(content)))
+             }
+           }
+        }
+      } ~
+      pathPrefix("stats/last") {
+        path("overview.json") {
+          get {
+            respondWithMediaType(`application/json`) {
+              complete(JsonUtils.prettyStr(overviewStats))
+            }
+          }
+        } ~
+        path("overview.html") {
+          get {
+            respondWithMediaType(`application/json`) {
+              complete(overviewStatsHtml)
+            }
+          }
+        } ~
+        pathPrefix("detail") {
+          path("all.json") {
+            get {
+              respondWithMediaType(`application/json`) {
+                complete(JsonUtils.prettyStr(detailedStats))
+              }
+            }
+          }
+        }
+      }
+    } ~
     pathPrefix("ui"){
       getFromResourceDirectory("frontend") 
     } ~  
