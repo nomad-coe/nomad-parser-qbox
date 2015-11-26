@@ -45,6 +45,18 @@ object ParserMatch {
     Ordering.by(m => (m.matchPriority, m.weakMatch))
 }
 
+object MetaInfoOps {
+  object Ops extends Enumeration {
+    type Ops = Value;
+    val AddWithRoots, RemoveWithDescendents = Value
+  }
+}
+
+case class MetaInfoOps(
+  op: MetaInfoOps.Ops.Value,
+  regExps: Seq[String]
+){}
+
 /** represents a possible matching parser
   */
 case class CandidateParser(
@@ -92,7 +104,7 @@ trait ParserGenerator {
     * All optimization are optional there is no guarantee that the resulting
     * parser really skips some data.
     */
-  def optimizedParser(include: Seq[String], exclude: Seq[String]): OptimizedParser
+  def optimizedParser(optimizations: Seq[MetaInfoOps]): OptimizedParser
 }
 
 /** Possible parse results
