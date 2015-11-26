@@ -100,6 +100,12 @@ object JsonUtils {
     writer.write('"')
   }
 
+  def escapeString(s: String): String = {
+    val w = new java.io.StringWriter()
+    dumpString(s, w)
+    w.toString()
+  }
+
   /** Dumps an normalized ordered json
     *
     * Object keys are alphabetically ordered.
