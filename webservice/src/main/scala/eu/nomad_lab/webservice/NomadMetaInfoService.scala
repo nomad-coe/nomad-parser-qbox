@@ -305,13 +305,22 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
     val parserStats = keys.map { case (p, i) =>
       val pStats = Stats.myStats.stats(p)
       val nFiles = pStats.stats.getOrElse("section_run", 0: Int)
+      val nTotalEnergies = pStats.stats.getOrElse("totalDftEnergyT0", 0: Int)
+      val nBands = pStats.stats.getOrElse("band_segm_labels", 0: Int)
       val nKeys = pStats.stats.size
       val nData = pStats.stats.values.foldLeft(0:Int)(_ + _)
-      s"""<tr><td>${pStats.parserName}</td><td>${pStats.parserVersion}</td><td>$nFiles</td><td>$nKeys</td><td>$nData</td><td><a href="details/$i/info.json">details</a></td></tr>"""}.toStream
+      s"""<tr><td>${pStats.parserName}</td><td>${pStats.parserVersion}</td><td>$nFiles</td><td>$nTotalEnergies</td><td>$nBands</td><td>$nKeys</td><td>$nData</td><td><a href="details/$i/info.json">details</a></td></tr>"""}.toStream
 
     layout(
       title = "Parsers Overview",
-      extraHead = Stream.empty,
+      extraHead = Stream("""<style>
+th
+{border:1px solid black; padding:5px;}
+td
+{border:1px solid black; padding:5px;}
+table
+{border:1px solid black;}
+</style>"""),
       content = s"""
 <h1>Nomad Parsers Overview</h1>
 
@@ -320,13 +329,17 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
  </ul>
 
 <h2>Statistics</h2>
-  <table>
+  <table >
   <tr><th>
     Code
   </th><th>
     Parser Version
   </th><th>
     #Files
+  </th><th>
+    #Energies
+  </th><th>
+    #Band Structures
   </th><th>
     Type of Quantities
   </th><th>
