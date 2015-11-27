@@ -22,7 +22,78 @@ import eu.nomad_lab.meta.RelativeDependencyResolver
 import eu.nomad_lab.meta.SimpleMetaInfoEnv
 import eu.nomad_lab.JsonSupport
 import eu.nomad_lab.JsonUtils
+import com.typesafe.scalalogging.StrictLogging
 import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JArray, JObject, JValue, JField}
+
+object Stats{
+  class StatInfo(val parserName: String, val parserVersion: String, val parserInfo: JValue) {
+    val stats: mutable.Map[String, Int] = mutable.Map()
+
+    def append(data: JValue): Boolean = {
+      val name = data \ "parser" \ "name"
+      val version = data \ "parser" \ "version"
+      val newD = data \ "data"
+      newD match {
+        case JObject(obj) =>
+          obj.foreach { case (k, v) =>
+            v match {
+              case JInt(i) =>
+                stats += (k -> (i.intValue + stats.getOrElse(k, 0: Int)))
+              case _ => ()
+            }
+          }
+          return true
+        case _ => ()
+      }
+      false
+    }
+
+    def toJValue: JValue = {
+      JObject(
+        ("parser" -> parserInfo) ::
+          ("data" -> JObject(stats.map { case (k,v) => k -> JInt(v) }.toList)) :: Nil
+      )
+    }
+        
+  }
+
+  class AllStats {
+    val stats: mutable.Map[String, StatInfo] = mutable.Map()
+    
+    def append(data: JValue): Boolean = {
+      val name = data \ "parser" \ "name"
+      val version = data \ "parser" \ "version"
+      name match {
+        case JString(s) =>
+          version match {
+            case JString(s2) =>
+              val fullName = s + " " + s2
+              stats.get(fullName) match {
+                case Some(stat) =>
+                  return stat.append(data)
+                case None =>
+                  val newD = new StatInfo(s,s2, data \ "parser")
+                  stats += (fullName -> newD)
+                  return newD.append(data)
+              }
+            case _ => ()
+          }
+        case _ => ()
+      }
+      false
+    }
+
+    def toJValue: JValue = {
+      JObject( stats.map { case (k,v) =>
+        k -> v.toJValue }.toList
+      )
+    }
+  }
+  
+  val myStats = new AllStats
+
+}
+
 
 // we don't implement our route structure directly in the service actor because
 // we want to be able to test it independently, without having to spin up an actor
@@ -33,9 +104,6 @@ class NomadMetaInfoActor extends Actor with NomadMetaInfoService {
     val filePath = classLoader.getResource("nomad_meta_info/main.nomadmetainfo.json").getFile()
     val resolver = new RelativeDependencyResolver
     val mainEnv = SimpleMetaInfoEnv.fromFilePath(filePath, resolver)
-    val w = new java.io.FileWriter("/tmp/t.dot")
-    mainEnv.writeDot(w)
-    w.close()
     new SimpleMetaInfoEnv(
       name = "last",
       description = "latest version, unlike all others this one is symbolic and will change in time",
@@ -59,7 +127,7 @@ class NomadMetaInfoActor extends Actor with NomadMetaInfoService {
 
 
 // this trait defines our service behavior independently from the service actor
-trait NomadMetaInfoService extends HttpService {
+trait NomadMetaInfoService extends HttpService with StrictLogging {
 
   implicit val formats = JsonSupport.formats
 
@@ -129,10 +197,10 @@ trait NomadMetaInfoService extends HttpService {
   // should be changed so that Http error status can be returned
   def versionHtml(version: String): Stream[String] = {
     val versions = metaInfoCollection.versionsWithName(version)
-    if (!versions.hasNext)
+    if (!versions.hasNext) {
       layout(s"Unknown version", Stream.empty,
         Stream(s"Version $version unknown"))
-    else {
+    } else {
       val v = versions.next
       val names = v.allNames.toSet.toSeq.sorted.map{ name: String =>
         s"""<li><a href="n/${name}/info.html">${name}</a></li>"""
@@ -208,16 +276,38 @@ trait NomadMetaInfoService extends HttpService {
     }
   }
 
+  def addStatsStr(content: String):String = {
+    //logger.info(s"got data: '$content'")
+    addStats(JsonUtils.parseStr(content))
+  }
+
   def addStats(newData: JValue):String = {
-    "stats added"
+    if (Stats.myStats.append(newData))
+      "stats added"
+    else
+      "stats skipped"
   }
 
   def overviewStats: JValue = {
-    JNull
+    Stats.myStats.toJValue
+  }
+
+  def details(i: Int): JValue = {
+    val keys: Array[String] = Stats.myStats.stats.keys.toArray.sorted
+    if (i >= 0 && i < keys.size)
+      Stats.myStats.stats(keys(i)).toJValue
+    else
+      JNull
   }
 
   def overviewStatsHtml: Stream[String] = {
-    val parserStats = Stream.empty
+    val keys: Array[(String, Int)] = Stats.myStats.stats.keys.toArray.sorted.zipWithIndex
+    val parserStats = keys.map { case (p, i) =>
+      val pStats = Stats.myStats.stats(p)
+      val nFiles = pStats.stats.getOrElse("section_run", 0: Int)
+      val nKeys = pStats.stats.size
+      val nData = pStats.stats.values.foldLeft(0:Int)(_ + _)
+      s"""<tr><td>${pStats.parserName}</td><td>${pStats.parserVersion}</td><td>$nFiles</td><td>$nKeys</td><td>$nData</td><td><a href="details/$i/info.json">details</a></td></tr>"""}.toStream
 
     layout(
       title = "Parsers Overview",
@@ -232,10 +322,18 @@ trait NomadMetaInfoService extends HttpService {
 <h2>Statistics</h2>
   <table>
   <tr><th>
-    parser
+    Code
   </th><th>
+    Parser Version
   </th><th>
-  </th><tr>
+    #Files
+  </th><th>
+    Type of Quantities
+  </th><th>
+    Total Quantities
+  </th><th>
+    Extra Info
+  </th></tr>
 """ #:: parserStats #::: """
   </ul>""" #:: Stream.empty)
   }
@@ -487,16 +585,16 @@ trait NomadMetaInfoService extends HttpService {
 
   val myRoute =
     pathPrefix("parsers"){
-      pathPrefix("addStat") {
+      path("addStat") {
         post {
            decompressRequest() {
              entity(as[String]) { content: String =>
-               complete(addStats(JsonUtils.parseStr(content)))
+               complete(addStatsStr(content))
              }
            }
         }
       } ~
-      pathPrefix("stats/last") {
+      pathPrefix("stats" / "last") {
         path("overview.json") {
           get {
             respondWithMediaType(`application/json`) {
@@ -506,7 +604,7 @@ trait NomadMetaInfoService extends HttpService {
         } ~
         path("overview.html") {
           get {
-            respondWithMediaType(`application/json`) {
+            respondWithMediaType(`text/html`) {
               complete(overviewStatsHtml)
             }
           }
