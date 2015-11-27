@@ -307,9 +307,10 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
       val nFiles = pStats.stats.getOrElse("section_run", 0: Int)
       val nTotalEnergies = pStats.stats.getOrElse("totalDftEnergyT0", 0: Int)
       val nBands = pStats.stats.getOrElse("band_segm_labels", 0: Int)
+      val nGeometries = pStats.stats.getOrElse("CoreConfiguration", 0: Int)
       val nKeys = pStats.stats.size
       val nData = pStats.stats.values.foldLeft(0:Int)(_ + _)
-      s"""<tr><td>${pStats.parserName}</td><td>${pStats.parserVersion}</td><td>$nFiles</td><td>$nTotalEnergies</td><td>$nBands</td><td>$nKeys</td><td>$nData</td><td><a href="details/$i/info.json">details</a></td></tr>"""}.toStream
+      s"""<tr><td>${pStats.parserName}</td><td>${pStats.parserVersion}</td><td>$nFiles</td><td>$nGeometries</td><td>$nTotalEnergies</td><td>$nBands</td><td>$nKeys</td><td>$nData</td><td><a href="details/$i/info.json">details</a></td></tr>"""}.toStream
 
     layout(
       title = "Parsers Overview",
@@ -336,6 +337,8 @@ table
     Parser Version
   </th><th>
     #Files
+  </th><th>
+    #Geometries
   </th><th>
     #Energies
   </th><th>
