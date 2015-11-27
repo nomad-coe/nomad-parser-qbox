@@ -283,9 +283,9 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
 
   def addStats(newData: JValue):String = {
     if (Stats.myStats.append(newData))
-      "stats added"
+      "stats added\n"
     else
-      "stats skipped"
+      "stats skipped\n"
   }
 
   def overviewStats: JValue = {
@@ -609,11 +609,11 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
             }
           }
         } ~
-        pathPrefix("detail") {
-          path("all.json") {
+        pathPrefix("details" / IntNumber ) { (i :Int) =>
+          path("info.json") {
             get {
               respondWithMediaType(`application/json`) {
-                complete(JsonUtils.prettyStr(detailedStats))
+                complete(JsonUtils.prettyStr(details(i)))
               }
             }
           }
