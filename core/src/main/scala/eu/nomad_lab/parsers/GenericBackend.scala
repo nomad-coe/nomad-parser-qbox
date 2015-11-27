@@ -94,6 +94,8 @@ object GenericBackend {
       */
     final def convertJValue_i(value: JValue, shouldThrow: Boolean = true): Option[Long] = {
       value match {
+        case JBool(b) =>
+          if (b) Some(1: Long) else Some(0: Long)
         case JInt(i) =>
           Some(i.longValue)
         case JDecimal(d) =>
