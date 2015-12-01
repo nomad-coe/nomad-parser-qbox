@@ -54,6 +54,7 @@ angular.module('checklist-model', [])
     var getter = $parse(checklistModel);
     var setter = getter.assign;
     var checklistChange = $parse(attrs.checklistChange);
+    var checklistBeforeChange = $parse(attrs.checklistBeforeChange);
 
     // value added to list
     var value = attrs.checklistValue ? $parse(attrs.checklistValue)(scope.$parent) : attrs.value;
@@ -66,7 +67,7 @@ angular.module('checklist-model', [])
         var comparatorExpression = attrs.checklistComparator.substring(1);
         comparator = function (a, b) {
           return a[comparatorExpression] === b[comparatorExpression];
-        }
+        };
         
       } else {
         comparator = $parse(attrs.checklistComparator)(scope.$parent);
@@ -78,23 +79,38 @@ angular.module('checklist-model', [])
       if (newValue === oldValue) { 
         return;
       } 
-      var current = getter(scope.$parent);
-      if (angular.isFunction(setter)) {
-        if (newValue === true) {
-          setter(scope.$parent, add(current, value, comparator));
-        } else {
-          setter(scope.$parent, remove(current, value, comparator));
-        }
+
+      if (checklistBeforeChange && (checklistBeforeChange(scope) === false)) {
+        scope[attrs.ngModel] = contains(getter(scope.$parent), value, comparator);
+        return;
       }
+
+      setValueInChecklistModel(value, newValue);
 
       if (checklistChange) {
         checklistChange(scope);
       }
     });
-    
+
+    function setValueInChecklistModel(value, checked) {
+      var current = getter(scope.$parent);
+      if (angular.isFunction(setter)) {
+        if (checked === true) {
+          setter(scope.$parent, add(current, value, comparator));
+        } else {
+          setter(scope.$parent, remove(current, value, comparator));
+        }
+      }
+      
+    }
+
     // declare one function to be used for both $watch functions
     function setChecked(newArr, oldArr) {
-        scope[attrs.ngModel] = contains(newArr, value, comparator);
+      if (checklistBeforeChange && (checklistBeforeChange(scope) === false)) {
+        setValueInChecklistModel(value, scope[attrs.ngModel]);
+        return;
+      }
+      scope[attrs.ngModel] = contains(newArr, value, comparator);
     }
 
     // watch original model change
@@ -112,9 +128,7 @@ angular.module('checklist-model', [])
     terminal: true,
     scope: true,
     compile: function(tElement, tAttrs) {
-      if ((tElement[0].tagName !== 'INPUT' || tAttrs.type !== 'checkbox')
-          && (tElement[0].tagName !== 'MD-CHECKBOX')
-          && (!tAttrs.btnCheckbox)) {
+      if ((tElement[0].tagName !== 'INPUT' || tAttrs.type !== 'checkbox') && (tElement[0].tagName !== 'MD-CHECKBOX') && (!tAttrs.btnCheckbox)) {
         throw 'checklist-model should be applied to `input[type="checkbox"]` or `md-checkbox`.';
       }
 

@@ -1,0 +1,29 @@
+a{
+	text-decoration: none;
+    white-space: nowrap;
+}
+a:hover{
+	background-color: #eee;
+}
+ul{
+	list-style-type: none;
+}
+body{
+	padding-left: 5px;
+}
+/* Customization to limit height of the menu */
+.custom-restricted {
+    height: 1000px;
+ /*   border: 1px solid gray; 
+    border-radius: 4px;*/
+}
+#contentMore {
+        margin-left: 0.5em;
+    }
+
+.indent {
+    padding-left: 15px;
+}
+.button-custom{
+	margin: 2px 2px 2px 5px;
+}

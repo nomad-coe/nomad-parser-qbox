@@ -1,6 +1,6 @@
-    angular.module('metaVisualizationApp', [])
+    angular.module('metaVisualizationApp', ["checklist-model"])
     .controller('AllDataController', ['$scope', '$http', function($scope, $http) {
-      $scope.dataSearchList = [];
+      $scope.searchList = [];
 
       //TODO:Replace arborjs with cytoscapejs
       //TODO: Convert angular to Jquery
@@ -15,15 +15,14 @@
      })
 
       $scope.addToList = function(str){
-        console.log("Adding a new element niow")
-        if ($scope.dataSearchList.indexOf(str) >= 0) {
-          var index = $scope.dataSearchList.indexOf(str);
+        if ($scope.searchList.indexOf(str) >= 0) {
+          var index = $scope.searchList.indexOf(str);
           if (index > -1) {
-           $scope.dataSearchList.splice(index, 1);
+           $scope.searchList.splice(index, 1);
           }
         }
         else {
-          $scope.dataSearchList.push(str); 
+          $scope.searchList.push(str); 
         }
       }
       $scope.display = function(data){
