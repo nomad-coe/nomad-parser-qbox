@@ -177,7 +177,6 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
       env.kind == MetaInfoEnv.Kind.Version }.toList.groupBy{ env: MetaInfoEnv => env.name }
     val validVersions = versions.flatMap{ case (i,l) => if (l.length == 1) Some(i) else None }
     val problematicVersions = versions.flatMap{ case (i,l) => if (l.length != 1) Some(i) else None }
-    import jn.JsonDSL._
 
     jn.JObject(jn.JField("type", "nomad_meta_versions_1_0") ::
       jn.JField("versions", validVersions) ::
@@ -242,7 +241,6 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
       val metaInfo = v.metaInfoRecordForName(name, selfGid = true, superGids = true)
       metaInfo match {
         case Some(r) => //r.toJValue()
-          import jn.JsonDSL._
           val superNames = ArrayBuffer[String]()
           if (!r.superNames.isEmpty) {
             if (r.superGids.length == r.superNames.length) {
@@ -358,9 +356,9 @@ table
     JNull
   }
 
-  /** Create JSON for the "name" meta tag. Contains complete data including ancestors and children
+  /**"" Depriciated function "": Create JSON for the "name" meta tag. Contains complete data including ancestors and children
     */
-  def metaInfoForVersionAndNameJsonAllParents (version: String, name: String): jn.JValue = {
+  def metaInfoForVersionAndNameJsonAllParentsForArborjs (version: String, name: String): jn.JValue = {
     val versions = metaInfoCollection.versionsWithName(version)
     if (!versions.hasNext)
       jn.JNull
@@ -369,7 +367,6 @@ table
       val metaInfo = v.metaInfoRecordForName(name, selfGid = true, superGids = true)
       metaInfo match {
         case Some(r) =>
-          import jn.JsonDSL._
           var JSONStr = s"""
 
         """ 
@@ -489,6 +486,81 @@ table
             }
             """ //Close of edges and the json object
           }
+          parse(JSONStr)
+        case None => jn.JNull
+          
+      }
+    }
+  }
+
+  def concaticateJSONString(JSONStr: String,ObjStr: String, firstFlag:Boolean): String = {
+    if(!firstFlag) JSONStr + """, """+  ObjStr
+     else JSONStr +  ObjStr
+  }
+
+  /** Create JSON containing information graph information, for the "name" meta tag. Contains complete data including ancestors and children
+    */
+  def metaInfoForVersionAndNameJsonAllParents (version: String, name: String): jn.JValue = 
+  {
+    val versions = metaInfoCollection.versionsWithName(version)
+    if (!versions.hasNext)
+      jn.JNull
+    else {
+      val v = versions.next
+      val metaInfo = v.metaInfoRecordForName(name, selfGid = true, superGids = true)
+      metaInfo match {
+        case Some(r) =>
+          var JSONStr = s"""  {"nodes":[ """
+          var tStr = s""" """
+          var fFlag = true;
+          val rootsByKind = v.firstAncestorsByType(name)
+
+          rootsByKind.foreach {   
+            case (kind, (roots, rest)) =>  
+            tStr= s"""  
+             { "data": { "id":"${name} - ${kind}"} } """ 
+            JSONStr = concaticateJSONString(JSONStr,tStr,fFlag)
+            if(fFlag)fFlag = false   
+            for(root <- roots){
+              tStr = s"""
+                { "data":{ "id":"${root}"} }
+                """
+              JSONStr = concaticateJSONString(JSONStr,tStr,fFlag)    
+              
+            }
+            if (!rest.isEmpty){
+              for(child <- rest)
+                tStr = s""" 
+                { "data":{ "id":"${child}"} }  """
+                JSONStr = concaticateJSONString(JSONStr,tStr,fFlag)
+            }
+          }
+
+          JSONStr +=s""" 
+          ],
+          "edges": [
+          """ 
+          fFlag = true // First element, don't , before it
+          //Now add edges: { data: { source: 'n0', target: 'n1' } },
+           rootsByKind.foreach {   
+            case (kind, (roots, rest)) =>  
+            for(root <- roots){
+              tStr = s"""
+                 { "data": { "source": "${name} - ${kind}", "target": "${root}" } } 
+                 """
+              JSONStr = concaticateJSONString(JSONStr,tStr,fFlag)
+              if(fFlag)fFlag = false          
+              if (!rest.isEmpty){
+                for(child <- rest)
+                  tStr = s"""
+                    { "data": { "source": "${root}", "target": "${child}" } }  """
+                  JSONStr = concaticateJSONString(JSONStr,tStr,fFlag)
+              }
+            }
+          }  
+          JSONStr += s"""
+            ] }
+            """    
           parse(JSONStr)
         case None => jn.JNull
           

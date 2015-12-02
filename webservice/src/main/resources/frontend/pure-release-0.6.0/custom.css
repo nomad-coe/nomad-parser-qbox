@@ -27,3 +27,8 @@ body{
 .button-custom{
 	margin: 2px 2px 2px 5px;
 }
+#cy {
+    width: 800px;
+    height: 500px;
+/*    z-index: 999;*/
+}

@@ -5,14 +5,8 @@
   <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0">
   
   <title> NoMaD Lab Meta Info</title>
-  
-  <script src="scripts/angular.min.js"> </script>
-  <script src="scripts/jquery-2.1.4.min.js"> </script>
-  <script src="scripts/arbor.js" > </script>
-  <script src="scripts/graphics.js" > </script>
-  <script src="scripts/renderer.js" > </script>
-  <script src="scripts/checklist-model.js"> </script>
-  <script src="scripts/controller.js"> </script>
+
+
   <link rel="stylesheet" href="pure-release-0.6.0/pure-min.css">
   <!--[if lte IE 8]>
     <link rel="stylesheet" href="pure-release-0.6.0/grids-responsive-old-ie-min.css">
@@ -21,6 +15,21 @@
     <link rel="stylesheet" href="pure-release-0.6.0/grids-responsive-min.css">
   <!--<![endif]-->
   <link rel="stylesheet" href="pure-release-0.6.0/custom.css">
+  <script src="scripts/angular.min.js"> </script>
+  <script src="scripts/jquery-2.1.4.min.js"> </script>
+  <script src="scripts/arbor.js" > </script>
+  <script src="scripts/graphics.js" > </script>
+  <script src="scripts/renderer.js" > </script>
+  <script src="scripts/checklist-model.js"> </script>
+  <script src="scripts/controller.js"> </script>
+  <script src="http://code.jquery.com/jquery-2.0.3.min.js"></script>
+  <script src="http://cytoscape.github.io/cytoscape.js/api/cytoscape.js-latest/cytoscape.min.js"></script>
+
+    <!-- for testing with local version of cytoscape.js -->
+    <!--<script src="../cytoscape.js/build/cytoscape.js"></script>-->
+
+  <script src="https://cdn.rawgit.com/cpettitt/dagre/v0.7.4/dist/dagre.min.js"></script>
+  <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-dagre/1.1.2/cytoscape-dagre.js"></script>
 </head>
   <body ng-controller="AllDataController">
   <div class="pure-g">
@@ -42,7 +51,7 @@
     <div id="content" class="pure-g">  
       <div id="menu" class="pure-u-8-24 pure-menu pure-menu-scrollable custom-restricted" >
           <ul class="pure-menu-list">
-              <li class="pure-menu-item" ng-repeat="data in metaDataList | filter: query ">
+              <li class="pure-menu-item" style="display:block" ng-repeat="data in metaDataList | filter: query ">
                   <label>
                     <input type="checkbox" checklist-model="searchList" checklist-value="data['name']">
                   </label>              
@@ -79,12 +88,11 @@
              </li>
            </ul>
              <h2>All parents by type</h2>
+             <div id="cy"></div>
           </div>
-        </div>
-        <div class="pure-g">
-                <canvas id="viewport" class="pure-u-1-1" width="800" height="500" ></canvas>
         </div>
       </div>
     </div>
+
   </body>
 </html>
