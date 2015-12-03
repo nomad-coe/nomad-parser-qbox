@@ -51,7 +51,7 @@
     <div id="content" class="pure-g">  
       <div id="menu" class="pure-u-8-24 pure-menu pure-menu-scrollable custom-restricted" >
           <ul class="pure-menu-list">
-              <li class="pure-menu-item" style="display:block" ng-repeat="data in metaDataList | filter: query ">
+              <li class="pure-menu-item" style="display:inline-block;" ng-repeat="data in metaDataList | filter: query ">
                   <label>
                     <input type="checkbox" checklist-model="searchList" checklist-value="data['name']">
                   </label>              
