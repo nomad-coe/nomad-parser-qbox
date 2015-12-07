@@ -1,3 +1,9 @@
+head,body{
+    max-height: 100%;
+}
+body{
+    margin-top: 3px;
+}
 a{
 	text-decoration: none;
     white-space: nowrap;
@@ -13,10 +19,14 @@ body{
 }
 /* Customization to limit height of the menu */
 .custom-restricted {
-    height: 1000px;
+    height: 900px;
  /*   border: 1px solid gray; 
     border-radius: 4px;*/
 }
+#custom-menu-link{
+    display: inline-block;
+}
+
 #contentMore {
         margin-left: 0.5em;
     }

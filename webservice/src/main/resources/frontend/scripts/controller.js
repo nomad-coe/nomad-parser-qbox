@@ -72,8 +72,10 @@
           },
         });
         cy.on('click', 'node', function(evt){
-          $scope.display(this.id())
-          //console.log( 'clicked ' + this.id() );
+          var toDisplay = this.id()
+          
+          $scope.display(toDisplay.split(" -")[0])
+          console.log( 'clicked ' + toDisplay.split(" -")[0] );
         });
     }
     }]);

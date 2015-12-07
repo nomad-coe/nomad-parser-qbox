@@ -22,14 +22,9 @@
   <script src="scripts/renderer.js" > </script>
   <script src="scripts/checklist-model.js"> </script>
   <script src="scripts/controller.js"> </script>
-  <script src="https://code.jquery.com/jquery-2.0.3.min.js"></script>
-  <script src="https://cytoscape.github.io/cytoscape.js/api/cytoscape.js-latest/cytoscape.min.js"></script>
-
-    <!-- for testing with local version of cytoscape.js -->
-    <!--<script src="../cytoscape.js/build/cytoscape.js"></script>-->
-
-  <script src="https://cdn.rawgit.com/cpettitt/dagre/v0.7.4/dist/dagre.min.js"></script>
-  <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-dagre/1.1.2/cytoscape-dagre.js"></script>
+  <script src="scripts/cytoscape.min.js"></script>
+  <script src="scripts/dagre.min.js"></script>
+  <script src="scripts/cytoscape-dagre.js"></script>
 </head>
   <body ng-controller="AllDataController">
   <div class="pure-g">
@@ -51,11 +46,11 @@
     <div id="content" class="pure-g">  
       <div id="menu" class="pure-u-8-24 pure-menu pure-menu-scrollable custom-restricted" >
           <ul class="pure-menu-list">
-              <li class="pure-menu-item" style="display:inline-block;" ng-repeat="data in metaDataList | filter: query ">
-                  <label>
+              <li class="pure-menu-item" ng-repeat="data in metaDataList | filter: query ">
+                 <!-- <label>
                     <input type="checkbox" checklist-model="searchList" checklist-value="data['name']">
-                  </label>              
-                  <a href="" class="pure-menu-link" style="display:inline-block;" ng-click="display(data['name'])">
+                  </label>              -->
+                  <a href="" class="pure-menu-link" ng-click="display(data['name'])">
                   {{data['name']}}</a>  
               </li>
           </ul>
