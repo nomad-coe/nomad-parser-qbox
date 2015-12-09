@@ -507,66 +507,81 @@ table
       jn.JNull
     else {
       val v = versions.next
-      val metaInfo = v.metaInfoRecordForName(name, selfGid = true, superGids = true)
-      metaInfo match {
-        case Some(r) =>
-          var JSONStr = s"""  {"nodes":[ """
-          var tStr = s""" """
-          var fFlag = true;
-          val rootsByKind = v.firstAncestorsByType(name)
-
+      var nodes: List[jn.JValue] = Nil
+      var edges: List[jn.JValue] = Nil
+      v.metaInfoRecordForNameWithAllSuper(name, selfGid = true, superGids = false).foreach {
+        (metaInfo: MetaInfoRecord) =>
+          nodes = jn.JObject(
+            ("data" -> jn.JObject(
+              ("id" -> jn.JString(metaInfo.name)) :: Nil)) ::
+            ("style" -> JObject(
+              ("background-color" -> jn.JString(metaInfo.kindStr match {
+              case "type_document_content" => "#333333"
+              case "type_unknown" => "#00EE00"
+              case "type_unknown_meta" => "#00EE00"
+              case "type_document" => "#A0A0A0"
+              case "type_meta" => "#0000EE"
+              case "type_abstract_document_content" => "#00AAAA"
+              case "type_section" => "#EE0000"
+              case "type_connection" => "#AA1111"
+              case _ => "#EE00EE"
+            })) ::
+            ("shape" -> (if (metaInfo.name == name)
+               jn.JString("star")
+              else
+               jn.JNothing)) :: Nil)) :: Nil) :: nodes
+          val rootsByKind = v.firstAncestorsByType(metaInfo.name)
           rootsByKind.foreach {   
-            case (kind, (roots, rest)) =>  
-            tStr= s"""  
-             { "data": { "id":"${name} - ${kind}"} } """ 
-            JSONStr = concaticateJSONString(JSONStr,tStr,fFlag)
-            if(fFlag)fFlag = false   
-            for(root <- roots){
-              tStr = s"""
-                { "data":{ "id":"${root}"} }
-                """
-              JSONStr = concaticateJSONString(JSONStr,tStr,fFlag)    
-              
-            }
-            if (!rest.isEmpty){
-              for(child <- rest)
-                tStr = s""" 
-                { "data":{ "id":"${child}"} }  """
-                JSONStr = concaticateJSONString(JSONStr,tStr,fFlag)
-            }
-          }
-
-          JSONStr +=s""" 
-          ],
-          "edges": [
-          """ 
-          fFlag = true // First element, don't , before it
-          //Now add edges: { data: { source: 'n0', target: 'n1' } },
-           rootsByKind.foreach {   
-            case (kind, (roots, rest)) =>  
-            for(root <- roots){
-              tStr = s"""
-                 { "data": { "source": "${name} - ${kind}", "target": "${root}" } } 
-                 """
-              JSONStr = concaticateJSONString(JSONStr,tStr,fFlag)
-              if(fFlag)fFlag = false          
-              if (!rest.isEmpty){
-                for(child <- rest)
-                  tStr = s"""
-                    { "data": { "source": "${root}", "target": "${child}" } }  """
-                  JSONStr = concaticateJSONString(JSONStr,tStr,fFlag)
+            case (kindNow, (roots, _)) =>
+              if (metaInfo.name == name || metaInfo.kindStr == kindNow) {
+                roots.foreach { (root: String) =>
+                  edges = jn.JObject(
+                      ("data" ->
+                       jn.JObject(
+                          ("source" -> jn.JString(metaInfo.name)) ::
+                          ("target" -> jn.JString(root)) :: Nil
+                        )
+                      ) :: Nil
+                    ) :: edges
+                }
               }
-            }
-          }  
-          JSONStr += s"""
-            ] }
-            """    
-          parse(JSONStr)
-        case None => jn.JNull
-          
+          }
       }
+      val rootMetaInfo = v.metaInfoRecordForName(name).get
+      for (child <- v.allDirectChildrenOf(name)) {
+        val metaInfo = v.metaInfoRecordForName(child).get
+        if (rootMetaInfo.kindStr != "type_section" || metaInfo.kindStr == "type_section") {
+          nodes = jn.JObject(
+            ("data" -> jn.JObject(
+              ("id" -> jn.JString(metaInfo.name)) :: Nil)) ::
+            ("style" -> JObject(
+              ("background-color" -> jn.JString(metaInfo.kindStr match {
+              case "type_document_content" => "#333333"
+              case "type_unknown" => "#00EE00"
+              case "type_unknown_meta" => "#00EE00"
+              case "type_document" => "#A0A0A0"
+              case "type_meta" => "#0000EE"
+              case "type_abstract_document_content" => "#00AAAA"
+              case "type_section" => "#EE0000"
+              case "type_connection" => "#AA1111"
+              case _ => "#EE00EE"
+            })) :: Nil)) :: Nil) :: nodes
+          edges = jn.JObject(
+                      ("data" ->
+                       jn.JObject(
+                          ("source" -> jn.JString(child)) ::
+                          ("target" -> jn.JString(name)) :: Nil
+                        )
+                      ) :: Nil
+                    ) :: edges
+        }
+      }
+      jn.JObject(
+        ("nodes" -> jn.JArray(nodes)) ::
+        ("edges" -> jn.JArray(edges)) :: Nil)
     }
   }
+
 
   def metaInfoForVersionAndNameHtml(version: String, name: String): Stream[String] = {
     val versions = metaInfoCollection.versionsWithName(version)

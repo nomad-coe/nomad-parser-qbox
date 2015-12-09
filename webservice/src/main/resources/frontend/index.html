@@ -1,8 +1,8 @@
 <!doctype html>
 <html ng-app="metaVisualizationApp">
 <head>
-    <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   
   <title> NoMaD Lab Meta Info</title>
 
@@ -15,11 +15,8 @@
     <link rel="stylesheet" href="pure-release-0.6.0/grids-responsive-min.css">
   <!--<![endif]-->
   <link rel="stylesheet" href="pure-release-0.6.0/custom.css">
-  <script src="scripts/angular.min.js"> </script>
   <script src="scripts/jquery-2.1.4.min.js"> </script>
-  <script src="scripts/arbor.js" > </script>
-  <script src="scripts/graphics.js" > </script>
-  <script src="scripts/renderer.js" > </script>
+  <script src="scripts/angular.min.js"> </script>
   <script src="scripts/checklist-model.js"> </script>
   <script src="scripts/controller.js"> </script>
   <script src="scripts/cytoscape.min.js"></script>
@@ -39,18 +36,18 @@
           </div> 
         </div>
     </div>
-  </div>
+  </div>  
     <div id="searchPanel" class="pure-g">
       <input class="pure-u-8-24" type="text" ng-model="query"  size="30" placeholder="Search">
     </div>
     <div id="content" class="pure-g">  
       <div id="menu" class="pure-u-8-24 pure-menu pure-menu-scrollable custom-restricted" >
-          <ul class="pure-menu-list">
-              <li class="pure-menu-item" ng-repeat="data in metaDataList | filter: query ">
-                 <!-- <label>
-                    <input type="checkbox" checklist-model="searchList" checklist-value="data['name']">
-                  </label>              -->
-                  <a href="" class="pure-menu-link" ng-click="display(data['name'])">
+          <ul >
+              <li ng-repeat="data in metaDataList" | filter : query > 
+              <!-- <label>
+-                    <input type="checkbox" checklist-model="searchList" checklist-value="data['name']">
+-                  </label>              -->
+                  <a href="" ng-click="display(data['name'])">
                   {{data['name']}}</a>  
               </li>
           </ul>
