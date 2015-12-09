@@ -201,8 +201,9 @@ trait MetaInfoEnv extends MetaInfoCollection {
       }
     }
 
-    childsByType.map{ case (kindStr, childs) =>
-      val allForKind = typeGroups(kindStr).toSet
+    typeGroups.map { case (kindStr, allChilds) =>
+      val childs = childsByType.getOrElse(kindStr, mutable.Set())
+      val allForKind = allChilds.toSet
       val rootNames: Set[String] = (allForKind -- childs).map(mInfo(_).name)(breakOut)
       val childNames: Set[String] = childs.map(mInfo(_).name)(breakOut)
       kindStr -> (rootNames -> childNames)
