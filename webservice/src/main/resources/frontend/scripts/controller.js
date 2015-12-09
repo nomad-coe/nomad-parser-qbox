@@ -1,15 +1,13 @@
-    angular.module('metaVisualizationApp', ["checklist-model"])
-    .controller('AllDataController', ['$scope', '$http', function($scope, $http) {
+    var app = angular.module('metaVisualizationApp', ['checklist-model']);
+    app.controller('AllDataController', ['$scope', '$http', function($scope, $http) {
       $scope.searchList = [];
 
-      //TODO:Replace arborjs with cytoscapejs
       //TODO: Convert angular to Jquery
       $http.get('/nmi/v/last/info.json').success(function(data) {
        var parse = angular.fromJson(data);
        $scope.metaDataList =  parse['metaInfos'];
        $scope.display($scope.metaDataList[0]['name']);    
      })
-           
       $scope.addToList = function(str){
         if ($scope.searchList.indexOf(str) >= 0) {
           var index = $scope.searchList.indexOf(str);
@@ -20,7 +18,7 @@
         else {
           $scope.searchList.push(str); 
         }
-      }
+      };
       $scope.display = function(data){
         $http.get('/nmi/v/last/n/' + data+'/annotated.json').success(function(resData) {
          $scope.dataToDisplay = angular.fromJson(resData);
@@ -42,8 +40,10 @@
           container: document.getElementById('cy'),
           boxSelectionEnabled: false,
           autounselectify: true,
+          zoomingEnabled: false,
           layout: {
-            name: 'dagre'
+            name: 'dagre',
+            rankDir: 'RL'
           },
           style: [
             {
@@ -51,8 +51,8 @@
               style: {
                 'content': 'data(id)',
                 'text-opacity': 0.5,
-                'text-valign': 'center',
-                'text-halign': 'right',
+                'text-valign': 'bottom',
+                'text-halign': 'center',
                 'background-color': '#11479e'
               }
             },
