@@ -12,7 +12,6 @@ object KnownMetaInfoEnvs extends MetaInfoCollection {
     val filePath = classLoader.getResource("nomad_meta_info/common.nomadmetainfo.json").getFile()
     val resolver = new RelativeDependencyResolver
     val mainEnv = SimpleMetaInfoEnv.fromFilePath(filePath, resolver)
-    val w = new java.io.FileWriter("/tmp/t.dot")
     new SimpleMetaInfoEnv(
       name = "lastCommon",
       description = "latest version of the common values, unlike all others this one is symbolic and will change in time",
@@ -29,7 +28,6 @@ object KnownMetaInfoEnvs extends MetaInfoCollection {
     val filePath = classLoader.getResource("nomad_meta_info/all.nomadmetainfo.json").getFile()
     val resolver = new RelativeDependencyResolver
     val mainEnv = SimpleMetaInfoEnv.fromFilePath(filePath, resolver)
-    val w = new java.io.FileWriter("/tmp/t.dot")
     new SimpleMetaInfoEnv(
       name = "lastAll",
       description = "latest version of all the metaInfo (including code specific), unlike all others this one is symbolic and will change in time",
