@@ -63,7 +63,7 @@
            <h2 ng-show="dataToDisplay['units'] != null && dataToDisplay['dtypeStr'] != null && dataToDisplay['shape'] != null" >Keys</h2>
            <div class="indent" ng-show="dataToDisplay['units'] != null" > units: {{ dataToDisplay['units'] }}</div>
            <div class="indent" ng-show="dataToDisplay['dtypeStr'] != null" >dtypeStr: {{ dataToDisplay['dtypeStr'] }}</div>
-           <div class="indent" ng-show="dataToDisplay['shape'] != null" > shape: {{ dataToDisplay['shape'] }}</div>
+           <div class="indent" ng-show="dataToDisplay['shape'] != null && dataToDisplay['shape'].length > 0" > shape: {{ dataToDisplay['shape'] }}</div>
            <div ng-show="dataToDisplay['superNames'].length">
            <h2>Ancestors</h2>
              <h3>Explicit parents</h3>
@@ -81,9 +81,9 @@
            </ul>
 
              <h2>All parents by type</h2>
-             <div  class="pure-u-5-24"> <div id="circleSection"> </div> Section </div>
-             <div  class="pure-u-5-24">  <div id="circleAbstractType"> </div> Abstract Type</div>
-             <div  class="pure-u-5-24"> <div id="circleConcreteValue"> </div> Concete Values</div>
+             <div  class="pure-u-7-24"> <div id="circleSection"> </div> Section </div>
+             <div  class="pure-u-7-24">  <div id="circleAbstractType"> </div> Abstract Type</div>
+             <div  class="pure-u-7-24"> <div id="circleConcreteValue"> </div> Concete Values</div>
              <div id="cy"></div>
           </div>
         </div>
