@@ -543,9 +543,10 @@ table
           }
       }
       val rootMetaInfo = v.metaInfoRecordForName(name).get
+      val nChilds = v.allDirectChildrenOf(name).length
       for (child <- v.allDirectChildrenOf(name)) {
         val metaInfo = v.metaInfoRecordForName(child).get
-        if (rootMetaInfo.kindStr != "type_section" || metaInfo.kindStr == "type_section") {
+        if (nChilds <= 5 || metaInfo.kindStr == rootMetaInfo.kindStr) {
           nodes = jn.JObject(
             ("data" -> jn.JObject(
               ("id" -> jn.JString(metaInfo.name)) :: Nil)) ::
