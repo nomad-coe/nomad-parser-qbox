@@ -100,7 +100,23 @@ object Stats{
 // we want to be able to test it independently, without having to spin up an actor
 class NomadMetaInfoActor extends Actor with NomadMetaInfoService {
 
-  lazy val metaInfoCollection: MetaInfoCollection = KnownMetaInfoEnvs
+  //lazy val metaInfoCollection: MetaInfoCollection = KnownMetaInfoEnvs
+  lazy val metaInfoCollection: MetaInfoCollection = {
+    val classLoader: ClassLoader = getClass().getClassLoader();
+    val filePath = classLoader.getResource("nomad_meta_info/main.nomadmetainfo.json").getFile()
+    val resolver = new RelativeDependencyResolver
+    val mainEnv = SimpleMetaInfoEnv.fromFilePath(filePath, resolver)
+    new SimpleMetaInfoEnv(
+      name = "last",
+      description = "latest version, unlike all others this one is symbolic and will change in time",
+      source = jn.JObject( jn.JField("path", jn.JString(Paths.get(filePath).getParent().toString())) ),
+      nameToGid = Map[String, String](),
+      gidToName = Map[String, String](),
+      metaInfosMap = Map[String, MetaInfoRecord](),
+      dependencies = Seq(mainEnv),
+      kind = MetaInfoEnv.Kind.Version)
+  }
+
 
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
@@ -239,7 +255,9 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
               }
             }
           }
-          val dtypeStr = r.dtypeStr.getOrElse("") match {
+          val dtypeStr = r.dtypeStr match {
+            case Some(str) =>
+            jn.JString(str match {
             case "f" => "f (floating point value)"
             case "i" => "i (integer value)"
             case "f32" => "f32 (single precision float)"
@@ -251,6 +269,9 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
             case "C"   => "C (a unicode string)"
             case "D"   => "D (a json dictionary)"
             case  v    => s"$v (unknown type)"
+          })
+          case None =>
+            jn.JNothing
           }
           val children = v.allDirectChildrenOf(name).toList
           jn.JObject(jn.JField("type", "nomad_meta_versions_1_0") ::

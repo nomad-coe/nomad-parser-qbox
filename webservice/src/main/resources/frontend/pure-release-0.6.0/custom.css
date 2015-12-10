@@ -42,3 +42,30 @@ body{
     height: 500px;
 /*    z-index: 999;*/
 }
+#circleSection {
+    background-color: #EE0000;
+    width: 30px;
+    height: 30px;
+    -webkit-border-radius: 25px;
+    -moz-border-radius: 25px;
+    border-radius: 25px; 
+    float:left;
+}
+#circleAbstractType {
+    background-color: #00AAAA;
+    width: 30px;
+    height: 30px;
+    -webkit-border-radius: 25px;
+    -moz-border-radius: 25px;
+    border-radius: 25px; 
+    float:left;
+}
+#circleConcreteValue {
+    background-color: #333333;
+    width: 30px;
+    height: 30px;
+    -webkit-border-radius: 25px;
+    -moz-border-radius: 25px;
+    border-radius: 25px; 
+    float:left;
+}

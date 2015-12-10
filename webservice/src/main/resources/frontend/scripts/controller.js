@@ -6,7 +6,7 @@
       $http.get('/nmi/v/last/info.json').success(function(data) {
        var parse = angular.fromJson(data);
        $scope.metaDataList =  parse['metaInfos'];
-       $scope.display($scope.metaDataList[0]['name']);    
+       $scope.display('section_single_point_evaluation');    
      })
       $scope.addToList = function(str){
         if ($scope.searchList.indexOf(str) >= 0) {
