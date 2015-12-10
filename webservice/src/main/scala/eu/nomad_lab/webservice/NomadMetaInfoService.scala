@@ -15,6 +15,7 @@ import java.io.File
 import java.nio.file.Paths
 import java.nio.file.Files
 import java.nio.charset.StandardCharsets
+import eu.nomad_lab.meta.KnownMetaInfoEnvs
 import eu.nomad_lab.meta.MetaInfoEnv
 import eu.nomad_lab.meta.MetaInfoRecord
 import eu.nomad_lab.meta.MetaInfoCollection
@@ -99,21 +100,7 @@ object Stats{
 // we want to be able to test it independently, without having to spin up an actor
 class NomadMetaInfoActor extends Actor with NomadMetaInfoService {
 
-  lazy val metaInfoCollection: MetaInfoCollection = {
-    val classLoader: ClassLoader = getClass().getClassLoader();
-    val filePath = classLoader.getResource("nomad_meta_info/main.nomadmetainfo.json").getFile()
-    val resolver = new RelativeDependencyResolver
-    val mainEnv = SimpleMetaInfoEnv.fromFilePath(filePath, resolver)
-    new SimpleMetaInfoEnv(
-      name = "last",
-      description = "latest version, unlike all others this one is symbolic and will change in time",
-      source = jn.JObject( jn.JField("path", jn.JString(Paths.get(filePath).getParent().toString())) ),
-      nameToGid = Map[String, String](),
-      gidToName = Map[String, String](),
-      metaInfosMap = Map[String, MetaInfoRecord](),
-      dependencies = Seq(mainEnv),
-      kind = MetaInfoEnv.Kind.Version)
-  }
+  lazy val metaInfoCollection: MetaInfoCollection = KnownMetaInfoEnvs
 
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
@@ -252,12 +239,20 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
               }
             }
           }
-          val dtypeStr = if (r.dtypeStr.isEmpty) "" else r.dtypeStr.get
-          val childrenItr = v.allDirectChildrenOf(name)
-          val children = ArrayBuffer[String]()
-          while (childrenItr.hasNext) {
-            children += childrenItr.next
+          val dtypeStr = r.dtypeStr.getOrElse("") match {
+            case "f" => "f (floating point value)"
+            case "i" => "i (integer value)"
+            case "f32" => "f32 (single precision float)"
+            case "i32" => "i32 (32 bit integer)"
+            case "f64" => "f64 (double precision floating point)"
+            case "i64" => "i64 (64 bit integer)"
+            case "b"   => "b (boolean value)"
+            case "B"   => "B (variable length byte array i.e. a blob)"
+            case "C"   => "C (a unicode string)"
+            case "D"   => "D (a json dictionary)"
+            case  v    => s"$v (unknown type)"
           }
+          val children = v.allDirectChildrenOf(name).toList
           jn.JObject(jn.JField("type", "nomad_meta_versions_1_0") ::
             jn.JField("versions", version) ::
             jn.JField("name", name) ::
