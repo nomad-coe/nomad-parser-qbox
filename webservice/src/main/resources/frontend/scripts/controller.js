@@ -10,8 +10,7 @@
 
                   })
       $http.get('/nmi/v/last/annotatedinfo.json').success(function(data) {
-       var parse = angular.fromJson(data);
-       $scope.metaDataList =  parse['metaInfos'];
+       $scope.metaDataList = angular.fromJson(data);
        $scope.display('section_single_point_evaluation');
             })
       $scope.addToList = function(str){
@@ -28,9 +27,8 @@
 
       $scope.fetchVeriondata = function(version){
         $http.get('/nmi/v/'+version+'/annotatedinfo.json').success(function(data) {
-               var parse = angular.fromJson(data);
-               $scope.metaDataList =  parse['metaInfos'];
-               $scope.display('section_single_point_evaluation');
+               $scope.metaDataList = angular.fromJson(data);
+               $scope.display($scope.dataToDisplay['name']);
                     })
       }
       $scope.display = function(data){
@@ -42,9 +40,9 @@
          }
          else{
              var i;
-             for (i = 0; i < $scope.metaDataList.length ; i++) {
-               if($scope.metaDataList[i]['name'] == data){
-                 $scope.dataToDisplay = $scope.metaDataList[i];
+             for (i = 0; i < $scope.metaDataList['metaInfos'].length ; i++) {
+               if($scope.metaDataList['metaInfos'][i]['name'] == data){
+                 $scope.dataToDisplay = $scope.metaDataList['metaInfos'][i];
                          break;
                }
              }
