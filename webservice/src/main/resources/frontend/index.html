@@ -7,17 +7,18 @@
   <title> NoMaD Lab Meta Info</title>
 
 
-  <link rel="stylesheet" href="pure-release-0.6.0/pure-min.css">
+  <link rel="stylesheet" href="css/pure-min.css">
   <!--[if lte IE 8]>
-    <link rel="stylesheet" href="pure-release-0.6.0/grids-responsive-old-ie-min.css">
+    <link rel="stylesheet" href="css/grids-responsive-old-ie-min.css">
   <![endif]-->
   <!--[if gt IE 8]><!-->
-    <link rel="stylesheet" href="pure-release-0.6.0/grids-responsive-min.css">
+    <link rel="stylesheet" href="css/grids-responsive-min.css">
   <!--<![endif]-->
-  <link rel="stylesheet" href="pure-release-0.6.0/custom.css">
-    <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/select2/3.4.5/select2.css">
-    <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.8.5/css/selectize.default.css">
-    <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.css">
+  <link rel="stylesheet" href="css/custom.css">
+  <link rel="stylesheet" href="css/select2.css">
+  <link rel="stylesheet" href="css/selectize.default.css">
+  <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.css">
+  <link rel="stylesheet" href="css/select.css">
   <script src="scripts/jquery-2.1.4.min.js"> </script>
   <script src="scripts/angular.min.js"> </script>
   <script src="scripts/checklist-model.js"> </script>
@@ -27,10 +28,8 @@
   <script src="scripts/cytoscape-dagre.js"></script>
   <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.2.18/angular-sanitize.js"></script>
   <!-- ui-select files -->
-  <script src="dist/select.js"></script>
-  <link rel="stylesheet" href="dist/select.css">
-  <!-- Select2 theme -->
-  <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/select2/3.4.5/select2.css">
+  <script src="scripts/select.js"></script>
+
 </head>
   <body ng-controller="AllDataController">
   <div class="pure-g">
@@ -56,13 +55,13 @@
           </ui-select>
           <!-- <p>Selected: {{filter.version}}</p> -->
       </div>
-      <div class="pure-u-15-24">
+      <div class="pure-u-12-24 indent">
           <div class="pure-g">
               <div  class="pure-u-1" >
-                  Version Description: {{metaDataList.description}}
+                  <b> Version Description: </b> {{metaDataList.description}}
               </div>
               <div  class="pure-u-1" >
-                  Version Type: {{metaDataList.type}}
+                 <b>  Version Type: </b> {{metaDataList.type}}
               </div>
           </div>
       </div>
