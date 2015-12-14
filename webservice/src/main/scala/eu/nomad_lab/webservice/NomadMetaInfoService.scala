@@ -9,8 +9,7 @@ import org.json4s.native.JsonMethods
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import scala.collection.mutable.ArrayBuffer
-import scala.collection.breakOut
-import scala.collection.mutable
+import scala.collection.{mutable, breakOut}
 import java.io.File
 import java.nio.file.Paths
 import java.nio.file.Files
@@ -232,6 +231,31 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
       }
     }
   }
+
+  /** Create JSON with all meta tag. Contains complete data including ancestors and children
+    */
+  def annotatedVersionJson(version: String): jn.JValue = {
+    val versions = metaInfoCollection.versionsWithName(version)
+    if (!versions.hasNext)
+      jn.JNull
+    else {
+      val v = versions.next
+      val mInfo = v.toJValue(_ => jn.JNothing)
+      val nameList = v.allNames.toList
+      var daList: List[jn.JValue] = Nil
+      for(name <- nameList){
+        daList = metaInfoForVersionAndNameJsonAnnotatedInfo(version, name) :: daList
+      }
+      jn.JObject(
+        jn.JField("type",mInfo.\("type")) ::
+        jn.JField("name",mInfo.\("name")) ::
+        jn.JField("description",mInfo.\("description")) ::
+        jn.JField("dependencies",mInfo.\("dependencies")) ::
+        jn.JField("metaInfos", daList) :: Nil
+      )
+    }
+  }
+
 
   /** Create JSON for the "name" meta tag. Contains complete data including ancestors and children
     */
@@ -669,6 +693,15 @@ table
           get {
             respondWithMediaType(`text/html`) {
               complete{versionHtml(version)}
+            }
+          }
+        } ~
+        path("annotatedinfo.json") {
+          get {
+            respondWithMediaType(`application/json`) {
+              complete {
+                JsonSupport.writePrettyStr(annotatedVersionJson(version))
+              }
             }
           }
         } ~

@@ -3,7 +3,7 @@
       $scope.searchList = [];
 
       //TODO: Convert angular to Jquery
-      $http.get('/nmi/v/last/info.json').success(function(data) {
+      $http.get('/nmi/v/last/annotatedinfo.json').success(function(data) {
        var parse = angular.fromJson(data);
        $scope.metaDataList =  parse['metaInfos'];
        $scope.display('section_single_point_evaluation');    
@@ -20,13 +20,26 @@
         }
       };
       $scope.display = function(data){
-        $http.get('/nmi/v/last/n/' + data+'/annotated.json').success(function(resData) {
-         $scope.dataToDisplay = angular.fromJson(resData);
+         if(typeof data === 'object'){
+            $scope.dataToDisplay = data;
+            $http.get('/nmi/v/last/n/' + data['name']+'/allparents.json').success(function(allparentsData) {
+                        drawGraph(allparentsData['nodes'],allparentsData['edges'])
+                      })
+         }
+         else{
+             var i;
+             for (i = 0; i < $scope.metaDataList.length ; i++) {
+               if($scope.metaDataList[i]['name'] == data){
+                 $scope.dataToDisplay = $scope.metaDataList[i];
+                         break;
+               }
+             }
+             $http.get('/nmi/v/last/n/' + data+'/allparents.json').success(function(allparentsData) {
+                         drawGraph(allparentsData['nodes'],allparentsData['edges'])
+                       })
+         }
 
-          $http.get('/nmi/v/last/n/' + data+'/allparents.json').success(function(allparentsData) {
-            drawGraph(allparentsData['nodes'],allparentsData['edges'])
-          })
-       })
+
       }
 
 

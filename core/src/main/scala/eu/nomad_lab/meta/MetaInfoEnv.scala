@@ -159,6 +159,15 @@ trait MetaInfoEnv extends MetaInfoCollection {
     }
   }
 
+  /** Iterates on the given name and all its ancestors
+    */
+  def metaInfoRecordForNameWithAllSuperNameList(name: String, selfGid: Boolean = false, superGids: Boolean = false): List[String] = {
+    var allParents:List[String] = Nil
+    this.metaInfoRecordForNameWithAllSuper(name, selfGid, superGids).foreach {
+      (metaInfo: MetaInfoRecord) => allParents =  (metaInfo.name) :: allParents }
+    allParents
+  }
+
   /** ancestors by type, subdivided in roots, and children
     *
     * The roots of type X are the ancestors of type X that cannot be reached starting
