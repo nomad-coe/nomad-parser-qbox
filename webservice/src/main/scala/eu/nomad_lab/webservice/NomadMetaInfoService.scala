@@ -99,23 +99,7 @@ object Stats{
 // we want to be able to test it independently, without having to spin up an actor
 class NomadMetaInfoActor extends Actor with NomadMetaInfoService {
 
-  //lazy val metaInfoCollection: MetaInfoCollection = KnownMetaInfoEnvs
-  lazy val metaInfoCollection: MetaInfoCollection = {
-    val classLoader: ClassLoader = getClass().getClassLoader();
-    val filePath = classLoader.getResource("nomad_meta_info/main.nomadmetainfo.json").getFile()
-    val resolver = new RelativeDependencyResolver
-    val mainEnv = SimpleMetaInfoEnv.fromFilePath(filePath, resolver)
-    new SimpleMetaInfoEnv(
-      name = "last",
-      description = "latest version, unlike all others this one is symbolic and will change in time",
-      source = jn.JObject( jn.JField("path", jn.JString(Paths.get(filePath).getParent().toString())) ),
-      nameToGid = Map[String, String](),
-      gidToName = Map[String, String](),
-      metaInfosMap = Map[String, MetaInfoRecord](),
-      dependencies = Seq(mainEnv),
-      kind = MetaInfoEnv.Kind.Version)
-  }
-
+  lazy val metaInfoCollection: MetaInfoCollection = KnownMetaInfoEnvs
 
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test

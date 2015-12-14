@@ -15,6 +15,9 @@
     <link rel="stylesheet" href="pure-release-0.6.0/grids-responsive-min.css">
   <!--<![endif]-->
   <link rel="stylesheet" href="pure-release-0.6.0/custom.css">
+    <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/select2/3.4.5/select2.css">
+    <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.8.5/css/selectize.default.css">
+    <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.css">
   <script src="scripts/jquery-2.1.4.min.js"> </script>
   <script src="scripts/angular.min.js"> </script>
   <script src="scripts/checklist-model.js"> </script>
@@ -22,6 +25,12 @@
   <script src="scripts/cytoscape.min.js"></script>
   <script src="scripts/dagre.min.js"></script>
   <script src="scripts/cytoscape-dagre.js"></script>
+  <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.2.18/angular-sanitize.js"></script>
+  <!-- ui-select files -->
+  <script src="dist/select.js"></script>
+  <link rel="stylesheet" href="dist/select.css">
+  <!-- Select2 theme -->
+  <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/select2/3.4.5/select2.css">
 </head>
   <body ng-controller="AllDataController">
   <div class="pure-g">
@@ -36,7 +45,18 @@
           </div> 
         </div>
     </div>
-  </div>  
+  </div>
+  <div class="pure-g">
+      <div class="pure-u-8-24">    Version
+          <ui-select ng-model="filter.version" ng-click="fetchVeriondata(filter.version)" theme="bootstrap" ng-disabled="disabled" close-on-select="true"  title="Select a version">
+              <ui-select-match placeholder="Select version">{{$select.selected}}</ui-select-match>
+              <ui-select-choices repeat="version in versions | filter:$select.search">
+                  {{version}}
+              </ui-select-choices>
+          </ui-select>
+          <!-- <p>Selected: {{filter.version}}</p> -->
+      </div>
+  </div>
     <div id="searchPanel" class="pure-g">
       <input class="pure-u-8-24" type="text" ng-model="query"  size="30" placeholder="Search">
     </div>

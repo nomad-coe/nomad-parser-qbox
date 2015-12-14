@@ -1,13 +1,19 @@
-    var app = angular.module('metaVisualizationApp', ['checklist-model']);
+    var app = angular.module('metaVisualizationApp', ['checklist-model','ngSanitize', 'ui.select']);
     app.controller('AllDataController', ['$scope', '$http', function($scope, $http) {
       $scope.searchList = [];
-
+      $scope.filter = {};
+      $scope.filter.version = "last";
       //TODO: Convert angular to Jquery
+      $http.get('/nmi/info.json').success(function(versions) {
+                    $scope.versions =  angular.fromJson(versions)['versions'];
+                    console.log($scope.versions)
+
+                  })
       $http.get('/nmi/v/last/annotatedinfo.json').success(function(data) {
        var parse = angular.fromJson(data);
        $scope.metaDataList =  parse['metaInfos'];
-       $scope.display('section_single_point_evaluation');    
-     })
+       $scope.display('section_single_point_evaluation');
+            })
       $scope.addToList = function(str){
         if ($scope.searchList.indexOf(str) >= 0) {
           var index = $scope.searchList.indexOf(str);
@@ -19,10 +25,18 @@
           $scope.searchList.push(str); 
         }
       };
+
+      $scope.fetchVeriondata = function(version){
+        $http.get('/nmi/v/'+version+'/annotatedinfo.json').success(function(data) {
+               var parse = angular.fromJson(data);
+               $scope.metaDataList =  parse['metaInfos'];
+               $scope.display('section_single_point_evaluation');
+                    })
+      }
       $scope.display = function(data){
          if(typeof data === 'object'){
             $scope.dataToDisplay = data;
-            $http.get('/nmi/v/last/n/' + data['name']+'/allparents.json').success(function(allparentsData) {
+            $http.get('/nmi/v/'+$scope.filter.version+'/n/' + data['name']+'/allparents.json').success(function(allparentsData) {
                         drawGraph(allparentsData['nodes'],allparentsData['edges'])
                       })
          }
@@ -34,12 +48,10 @@
                          break;
                }
              }
-             $http.get('/nmi/v/last/n/' + data+'/allparents.json').success(function(allparentsData) {
+             $http.get('/nmi/v/'+$scope.filter.version+'/n/' + data+'/allparents.json').success(function(allparentsData) {
                          drawGraph(allparentsData['nodes'],allparentsData['edges'])
                        })
          }
-
-
       }
 
 
