@@ -53,7 +53,7 @@
           container: document.getElementById('cy'),
           boxSelectionEnabled: false,
           autounselectify: true,
-          zoomingEnabled: false,
+          zoomingEnabled: true,
           layout: {
             name: 'dagre',
             rankDir: 'RL'
