@@ -38,8 +38,8 @@ class GenIndexBackend(val subParser: ParserBackendExternal) extends ParserBacken
 
   /** returns information on an open section (for debugging purposes)
     */
-  def openSectionInfo(metaName: String, gIndex: Long): String = {
-    subParser.openSectionInfo(metaName, gIndex)
+  def sectionInfo(metaName: String, gIndex: Long): String = {
+    subParser.sectionInfo(metaName, gIndex)
   }
 
   /** opens a new section returning a new identifier for it

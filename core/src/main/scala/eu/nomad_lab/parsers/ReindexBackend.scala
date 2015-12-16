@@ -91,8 +91,8 @@ class ReindexBackend( val subParser: ParserBackendInternal) extends ParserBacken
 
   /** returns information on an open section (for debugging purposes)
     */
-  def openSectionInfo(metaName: String, gIndex: Long): String = {
-    val subInfo = subParser.openSectionInfo(metaName, gIndex)
+  def sectionInfo(metaName: String, gIndex: Long): String = {
+    val subInfo = subParser.sectionInfo(metaName, gIndex)
     val extraInfo = sectionMappers.get(metaName) match {
       case Some(sectionMapper) =>
         sectionMapper.pendingInfos.get(gIndex) match {
