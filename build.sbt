@@ -5,7 +5,7 @@
 lazy val commonSettings = Seq(
   organization  := "eu.nomad-laboratory",
   version       := "0.1",
-  scalaVersion  := "2.11.6",
+  scalaVersion  := "2.11.7",
   scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
   resolvers     += "netcdf releases" at "http://artifacts.unidata.ucar.edu/content/repositories/unidata-releases",
   fork in run   := true /*,
@@ -31,11 +31,12 @@ lazy val commonLibs = {
   val netcdf        = "edu.ucar"            % "netcdf4"         % "4.6.3"
   val fastring      = "com.dongxiguo"      %% "fastring"        % "0.2.4"
   val playJson      = "com.typesafe.play"  %% "play-json"       % "2.4.3"
+  val kafka         = "org.apache.kafka"   %% "kafka"           % "0.9.0.0" exclude("log4j", "log4j") exclude("org.slf4j","slf4j-log4j12")
   val log4j2        = Seq(
-    "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.3",
-    "org.apache.logging.log4j" % "log4j-api"        % "2.3",
-    "org.apache.logging.log4j" % "log4j-core"       % "2.3")
-
+    "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.5",
+    "org.apache.logging.log4j" % "log4j-api"        % "2.5",
+    "org.apache.logging.log4j" % "log4j-core"       % "2.5",
+    "org.apache.logging.log4j" % "log4j-1.2-api"    % "2.5")
   Seq(
     "io.spray"            %%  "spray-can"     % sprayV,
     "io.spray"            %%  "spray-routing" % sprayV,
@@ -54,6 +55,7 @@ lazy val commonLibs = {
     xzForJava,
     netcdf,
     fastring,
+    kafka,
     scalalog) ++ log4j2
 };
 
@@ -201,3 +203,31 @@ lazy val tool = (project in file("tool")).
     name := "nomadTool"
   ).
   settings(Revolver.settings: _*)
+
+lazy val calculationparser = (project in file("calculation-parser-worker")).
+  dependsOn(base).
+  settings(commonSettings: _*).
+  settings(
+    libraryDependencies ++= commonLibs,
+    name := "nomadCalculationParserWorker"
+  ).
+  settings(Revolver.settings: _*)
+
+lazy val normalizer = (project in file("normalizer-worker")).
+  dependsOn(base).
+  settings(commonSettings: _*).
+  settings(
+    libraryDependencies ++= commonLibs,
+    name := "nomadNormalizerWorker"
+  ).
+  settings(Revolver.settings: _*)
+
+lazy val treeparser = (project in file("tree-parser-worker")).
+  dependsOn(base).
+  settings(commonSettings: _*).
+  settings(
+    libraryDependencies ++= commonLibs,
+    name := "nomadTreeParserWorker"
+  ).
+  settings(Revolver.settings: _*)
+
