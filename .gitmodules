@@ -1,27 +1,39 @@
 [submodule "nomad-meta-info"]
 	path = nomad-meta-info
         url = ../nomad-meta-info.git
-
 [submodule "python-common"]
 	path = python-common
 	url = ../python-common.git
-
 [submodule "parsers/fhi-aims"]
 	path = parsers/fhi-aims
 	url = ../parser-fhi-aims.git
-
 [submodule "parsers/cp2k"]
 	path = parsers/cp2k
 	url = ../parser-cp2k.git
-
 [submodule "parsers/exciting"]
 	path = parsers/exciting
 	url = ../parser-exciting.git
-
 [submodule "parsers/gaussian"]
 	path = parsers/gaussian
 	url = ../parser-gaussian.git
-
 [submodule "parsers/sample-parser"]
 	path = parsers/sample-parser
 	url = ../sample-parser.git
+[submodule "parsers/lammps"]
+	path = parsers/lammps
+	url = ../parser-lammps.git
+[submodule "parsers/octopus"]
+	path = parsers/octopus
+	url = ../parser-octopus.git
+[submodule "parsers/quantum-espresso"]
+	path = parsers/quantum-espresso
+	url = ../parser-quantum-espresso.git
+[submodule "parsers/turbomole"]
+	path = parsers/turbomole
+	url = ../parser-turbomole.git
+[submodule "parsers/gpaw"]
+	path = parsers/gpaw
+	url = ../parser-gpaw.git
+[submodule "parsers/castep"]
+	path = parsers/castep
+	url = ../parser-castep.git
