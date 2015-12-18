@@ -1,7 +1,3 @@
-before_script:
-  - git submodule update --init
-  - sbt jooq:codegen
-
 stages:
   - build
   - test
@@ -10,6 +6,7 @@ stages:
 compilation:
   stage: build
   script:
+    - sbt jooq:codegen
     - sbt compile
   only:
     - master
@@ -20,6 +17,8 @@ compilation:
 testing:
   stage: test
   script:
+    - git submodule update --init
+    - sbt jooq:codegen
     - sbt test
   only:
     - master
