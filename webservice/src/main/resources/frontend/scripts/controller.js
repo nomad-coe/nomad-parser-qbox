@@ -11,7 +11,7 @@
                   })
       $http.get('/nmi/v/last/annotatedinfo.json').success(function(data) {
        $scope.metaDataList = angular.fromJson(data);
-       $scope.display('section_single_point_evaluation');
+       $scope.display('section_single_configuration_calculation');
             })
       $scope.addToList = function(str){
         if ($scope.searchList.indexOf(str) >= 0) {
