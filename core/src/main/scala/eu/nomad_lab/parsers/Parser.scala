@@ -188,7 +188,7 @@ trait ParserBackendBase {
 
   /** returns information on an open section (for debugging purposes)
     */
-  def openSectionInfo(metaName: String, gIndex: Long): String;
+  def sectionInfo(metaName: String, gIndex: Long): String;
 
   /** sets info values of an open section.
     *

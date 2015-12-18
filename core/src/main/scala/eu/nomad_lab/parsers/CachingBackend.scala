@@ -207,12 +207,12 @@ object CachingBackend {
 
     /** Information on an open section
       */
-    def openSectionInfo(gIndex: Long): String = {
+    def sectionInfo(gIndex: Long): String = {
       openSections.get(gIndex) match {
         case Some(section) =>
-          s"section ${metaInfo.name} (${parentSectionNames.zip(section.references).mkString("[",",","]")})"
+          s"open section ${metaInfo.name} (${parentSectionNames.zip(section.references).mkString("[",",","]")})"
         case None =>
-          s"section $gIndex in ${metaInfo.name} is not open!!"
+          s"section $gIndex in ${metaInfo.name} is closed"
       }
     }
 

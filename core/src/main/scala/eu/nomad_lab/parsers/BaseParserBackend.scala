@@ -29,11 +29,11 @@ abstract class BaseParserBackend(
 
   /** returns information on an open section (for debugging purposes)
     */
-  def openSectionInfo(metaName: String, gIndex: Long): String = {
+  def sectionInfo(metaName: String, gIndex: Long): String = {
     if (_openSections.contains(metaName -> gIndex))
-      s"section $metaName, gIndex $gIndex"
+      s"section $metaName, gIndex $gIndex is open"
     else
-      s"*error* non open section $metaName, gIndex $gIndex"
+      s"section $metaName, gIndex $gIndex is closed"
   }
 
   /** closes a section

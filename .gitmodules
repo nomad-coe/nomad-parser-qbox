@@ -1,6 +1,6 @@
 [submodule "nomad-meta-info"]
 	path = nomad-meta-info
-  url = ../nomad-meta-info.git
+        url = ../nomad-meta-info.git
 
 [submodule "python-common"]
 	path = python-common
@@ -13,3 +13,15 @@
 [submodule "parsers/cp2k"]
 	path = parsers/cp2k
 	url = ../parser-cp2k.git
+
+[submodule "parsers/exciting"]
+	path = parsers/exciting
+	url = ../parser-exciting.git
+
+[submodule "parsers/gaussian"]
+	path = parsers/gaussian
+	url = ../parser-gaussian.git
+
+[submodule "parsers/sample-parser"]
+	path = parsers/sample-parser
+	url = ../sample-parser.git

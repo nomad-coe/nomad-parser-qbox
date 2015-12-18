@@ -75,7 +75,7 @@ object GenericBackend {
 
     /** Information on an open section
       */
-    def openSectionInfo(gIndex: Long): String;
+    def sectionInfo(gIndex: Long): String;
   }
 
   /** base class for an object that handles values for the given metaInfo
@@ -1090,8 +1090,8 @@ abstract class GenericBackend(
 
   /** returns information on an open section (for debugging purposes)
     */
-  override def openSectionInfo(metaName: String, gIndex: Long): String = {
-    sectionManagers(metaName).openSectionInfo(gIndex)
+  override def sectionInfo(metaName: String, gIndex: Long): String = {
+    sectionManagers(metaName).sectionInfo(gIndex)
   }
 
   /** opens a new section.
