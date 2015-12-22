@@ -58,7 +58,7 @@ Runs the main parsing step
     var list: List[String] = args.toList
     var metaInfoDotFile: Option[String] = None
     val classLoader: ClassLoader = getClass().getClassLoader();
-    var metaInfoPath = classLoader.getResource("nomad-meta-info/nomad_meta_info/main.nomadmetainfo.json").getFile()
+    var metaInfoPath = classLoader.getResource("nomad_meta_info/main.nomadmetainfo.json").getFile()
     var mainFilePath: Option[String] = None
     var mainFileUri: Option[String] = None
     var treeToParse: Option[String] = None
