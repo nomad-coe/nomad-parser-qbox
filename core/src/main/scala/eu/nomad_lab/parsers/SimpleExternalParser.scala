@@ -86,7 +86,7 @@ class SimpleExternalParserGenerator(
   override val parseableMetaInfo: meta.MetaInfoEnv = {
     metaInfo match {
       case Some (metaI) => metaI
-      case None      => meta.KnownMetaInfoEnvs.lastAll
+      case None      => meta.KnownMetaInfoEnvs.all
     }
   }
 }
