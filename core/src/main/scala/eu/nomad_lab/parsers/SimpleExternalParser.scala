@@ -16,6 +16,9 @@ import eu.nomad_lab.JsonSupport.formats
 import eu.nomad_lab.JsonUtils
 import scala.sys.process.Process
 import scala.sys.process.ProcessIO
+import scala.util.control.NonFatal
+import scala.util.matching.Regex
+import scala.collection.mutable
 
 object SimpleExternalParserGenerator extends StrictLogging {
   /** Exception unpacking things from the resources and setting up environment
@@ -26,8 +29,9 @@ object SimpleExternalParserGenerator extends StrictLogging {
 
   /** Copies the resources files listed in resList to targetDir, renaming their prefixes as
     * defined in dirMap.
+    * returns target dir to use it a single lazy evaluation for envDir
     */
-  def setupEnv(dirMap: Map[String, String], resList: Seq[String], targetDir: Path): Unit = {
+  def copyAndRenameFromResources(resList: Seq[String], targetDir: Path, dirMap: Map[String, String] = Map()): Unit = {
     val classLoader: ClassLoader = getClass().getClassLoader();
     resList.foreach { (inFilePath: String) =>
       var outFilePath = inFilePath
@@ -51,42 +55,104 @@ object SimpleExternalParserGenerator extends StrictLogging {
       }
     }
   }
+
+  val varToReplaceRe = """\$\{([a-zA-Z][a-zA-Z0-9]*)\}""".r
+  def makeReplacements(repl: Map[String, String], str: String): String = {
+    var i: Int = 0
+    val s = new mutable.StringBuilder()
+    for (m <- varToReplaceRe.findAllMatchIn(str)) {
+      val varNow = m.group(1)
+      repl.get(varNow) match {
+        case Some(value) =>
+          s ++= str.substring(i, m.start) // would subSequence be more efficient?
+          s ++= value
+          i = m.end
+        case None =>
+          ()
+      }
+    }
+    if (i == 0) {
+      str
+    } else {
+      s ++= str.substring(i)
+      s.toString()
+    }
+  }
 }
 
 class SimpleExternalParserGenerator(
   val name: String,
   val parserInfo: JObject,
   val mainFileTypes: Seq[String],
-  val mainFileCheck: (String, Array[Byte], Option[String]) => Option[ParserMatch],
+  val mainFileRe: Regex,
   val dirMap: Map[String, String],
   val resList: Seq[String],
-  val cmd: (Path, Path) => Seq[String],
+  val cmd: Seq[String],
   val baseEnvDir: String,
   val baseTempDir: String,
-  metaInfo: Option[meta.MetaInfoEnv] = None,
+  val extraCmdVars: Map[String, String] = Map(),
+  val mainFileMatchPriority: Int = 0,
+  val mainFileMatchWeak: Boolean = false,
+  val cmdCwd: String = "${tmpDir}",
+  val cmdEnv: Map[String, String] = Map(),
+  val metaInfoEnv: Option[meta.MetaInfoEnv] = None,
   val ancillaryFilesPrefilter: AncillaryFilesPrefilter.Value = AncillaryFilesPrefilter.SubtreeDepth1
+) extends ParserGenerator with StrictLogging {
 
-) extends ParserGenerator {
-  val envDir = Files.createTempDirectory(Paths.get(baseTempDir), "parserEnv")
+  def setupEnv(): Path = {
+    val tDir = Files.createTempDirectory(Paths.get(baseTempDir), "parserEnv")
+    try {
+      SimpleExternalParserGenerator.copyAndRenameFromResources(resList, tDir, dirMap)
+      logger.info(s"Did setup of environment for parser $name in $tDir")
+    } catch {
+      case NonFatal(e) =>
+        logger.warn(s"Failed setup of environment for parser $name in $tDir due to $e")
+        throw new SimpleExternalParserGenerator.UnpackEnvException(s"Failed setup of environment for parser $name in $tDir", e)
+    }
+    tDir
+  }
 
-  SimpleExternalParserGenerator.setupEnv(dirMap, resList, envDir)
+  lazy val envDir: Path = setupEnv()
 
   /** function that should decide if this main file can be parsed by this parser
     * looking at the first 1024 bytes of it
     */
   def isMainFile(filePath: String, bytePrefix: Array[Byte], stringPrefix: Option[String]): Option[ParserMatch] = {
-    mainFileCheck(filePath, bytePrefix, stringPrefix)
+    stringPrefix match {
+      case Some(str) =>
+        mainFileRe.findFirstMatchIn(str) match {
+          case Some(m) =>
+            Some(ParserMatch(mainFileMatchPriority, mainFileMatchWeak))
+          case None =>
+            None
+        }
+      case None =>
+        None
+    }
   }
 
   def optimizedParser(optimizations: Seq[MetaInfoOps]): OptimizedParser = {
     val tmpDir = Files.createTempDirectory(Paths.get(baseTempDir), "parserTmp")
-    new SimpleExternalParser(this, cmd(envDir, tmpDir) , envDir, tmpDir)
+    val allReplacements = extraCmdVars +
+        ("envDir" -> envDir.toString()) +
+        ("tmpDir" -> tmpDir.toString())
+    val command = cmd.map{
+      SimpleExternalParserGenerator.makeReplacements(allReplacements, _)
+    }
+    new SimpleExternalParser(
+      parserGenerator = this,
+      cmd = command,
+      cmdCwd = SimpleExternalParserGenerator.makeReplacements(allReplacements, cmdCwd),
+      cmdEnv = cmdEnv.map{ case (key, value) =>
+        key -> SimpleExternalParserGenerator.makeReplacements(allReplacements, value)
+      },
+      tmpDir = tmpDir)
   }
 
   override val parseableMetaInfo: meta.MetaInfoEnv = {
-    metaInfo match {
-      case Some (metaI) => metaI
-      case None      => meta.KnownMetaInfoEnvs.all
+    metaInfoEnv match {
+      case Some(metaI) => metaI
+      case None        => meta.KnownMetaInfoEnvs.all
     }
   }
 }
@@ -108,7 +174,8 @@ object SimpleExternalParser {
 class SimpleExternalParser(
   val parserGenerator: SimpleExternalParserGenerator,
   val cmd: Seq[String],
-  val envDir: Path,
+  val cmdCwd: String,
+  val cmdEnv: Map[String, String],
   val tmpDir: Path
 ) extends OptimizedParser with StrictLogging {
   import SimpleExternalParser.ParseStreamException
@@ -325,7 +392,7 @@ class SimpleExternalParser(
 
     var hadErrors: Boolean = false
     try {
-      val proc = Process(cmd).run(new ProcessIO(sendInput _, jsonDecode _, logErrors _))
+      val proc = Process(cmd, new java.io.File(cmdCwd), cmdEnv.toSeq: _*).run(new ProcessIO(sendInput _, jsonDecode _, logErrors _))
       // should switch to finite state machine and allow async interaction, for now we just block...
       hadErrors = (proc.exitValue != 0)
     } catch {
