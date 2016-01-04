@@ -17,16 +17,24 @@ class GenIndexBackend(val subParser: ParserBackendExternal) extends ParserBacken
 
   /** Started a parsing session
     */
-  def startedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
+  def startedParsingSession(
+    mainFileUri: Option[String],
+    parserInfo: JValue,
+    parserStatus: Option[ParseResult.Value] = None,
+    parserErrors: JValue = JNothing): Unit = {
     if (!lastIndex.isEmpty)
       throw new ParserBackendBase.InvalidCallSequenceException("startParsingSession called when GenIndexBackend.lastIndex is not empty (meaning open session)")
-    subParser.startedParsingSession(mainFileUri, parserInfo)
+    subParser.startedParsingSession(mainFileUri, parserInfo, parserStatus, parserErrors)
   }
 
   /** Finished a parsing session
     */
-  def finishedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
-    subParser.finishedParsingSession(mainFileUri, parserInfo)
+  def finishedParsingSession(
+    parserStatus: Option[ParseResult.Value],
+    parserErrors: JValue = JNothing,
+    mainFileUri: Option[String],
+    parserInfo: JValue): Unit = {
+    subParser.finishedParsingSession(parserStatus, parserErrors, mainFileUri, parserInfo)
     lastIndex.clear()
   }
 

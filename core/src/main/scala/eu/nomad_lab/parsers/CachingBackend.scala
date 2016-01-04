@@ -14,10 +14,12 @@ object CachingBackend {
   /** root object representing a parsing session
     */
   class CachingParsingSession (
-    mainFileUri: String,
+    mainFileUri: Option[String],
     parserInfo: JValue,
+    parserStatus: Option[ParseResult.Value] = None,
+    parserErrors: JValue = JNothing,
     subsections: Map[String, Seq[CachingSection]] = Map()
-  ) extends GenericBackend.ParsingSession(mainFileUri, parserInfo) {
+  ) extends GenericBackend.ParsingSession(mainFileUri, parserInfo, parserStatus, parserErrors) {
     val cachedSubsections: mutable.Map[String, ListBuffer[CachingSection]] =
       subsections.map { case (metaName, subs) =>
         metaName -> ListBuffer(subs: _*)
@@ -524,8 +526,12 @@ class CachingBackend(
 
   /** Started a parsing session
     */
-  override def startedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
-    _parsingSession = Some(new CachingBackend.CachingParsingSession(mainFileUri, parserInfo))
+  override def startedParsingSession(
+    mainFileUri: Option[String],
+    parserInfo: JValue,
+    parserStatus: Option[ParseResult.Value] = None,
+    parserErrors: JValue = JNothing): Unit = {
+    _parsingSession = Some(new CachingBackend.CachingParsingSession(mainFileUri, parserInfo, parserStatus, parserErrors))
   }
 
   /** Callback when a section should be stored in a closed super section

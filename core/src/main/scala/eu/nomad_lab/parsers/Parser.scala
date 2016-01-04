@@ -174,11 +174,19 @@ trait ParserBackendBase {
 
   /** Started a parsing session
     */
-  def startedParsingSession(mainFileUri: String, parserInfo: JValue): Unit;
+  def startedParsingSession(
+    mainFileUri: Option[String],
+    parserInfo: JValue,
+    parserStatus: Option[ParseResult.Value] = None,
+    parserErrors: JValue = JNothing): Unit;
 
   /** finished a parsing session
     */
-  def finishedParsingSession(mainFileUri: String, parserInfo: JValue): Unit;
+  def finishedParsingSession(
+    parserStatus: Option[ParseResult.Value],
+    parserErrors: JValue = JNothing,
+    mainFileUri: Option[String] = None,
+    parserInfo: JValue = JNothing): Unit;
 
   /** returns the sections that are still open
     *

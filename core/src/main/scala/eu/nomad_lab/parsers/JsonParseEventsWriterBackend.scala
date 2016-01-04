@@ -16,43 +16,101 @@ class JsonParseEventsWriterBackend(
   val outF: Writer
 ) extends BaseParserBackend(metaInfoEnv) with ParserBackendExternal {
   var writeComma: Boolean = false
-  var mainFileUri: String = ""
+  var mainFileUri: Option[String] = None
   var parserInfo: JValue = JNothing
+  var parserStatus: Option[ParseResult.Value] = None
+  var parserErrors: JValue = JNothing
 
-  def startedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
+  def startedParsingSession(
+    mainFileUri: Option[String],
+    parserInfo: JValue,
+    parserStatus: Option[ParseResult.Value] = None,
+    parserErrors: JValue = JNothing): Unit = {
     this.mainFileUri = mainFileUri
     this.parserInfo = parserInfo
+    this.parserStatus = parserStatus
+    this.parserErrors = parserErrors
     outF.write("""{
   "type": "nomad_parse_events_1_0""")
-    if (!mainFileUri.isEmpty)  {
-      outF.write(""",
+    mainFileUri match {
+      case Some(uri) =>
+        outF.write(""",
   "mainFileUri": """)
-      JsonUtils.dumpString(mainFileUri, outF)
+        JsonUtils.dumpString(uri, outF)
+      case None => ()
     }
-    if (!parserInfo.toOption.isEmpty) {
-      outF.write(""",
+    parserInfo match {
+      case JNothing => ()
+      case _ =>
+        outF.write(""",
   "parserInfo": """)
-      JsonUtils.prettyWriter(parserInfo, outF, 2)
+        JsonUtils.prettyWriter(parserInfo, outF, 2)
+    }
+    parserStatus match {
+      case Some(status) =>
+        outF.write(""",
+  "parserStatus": """)
+        JsonUtils.dumpString(parserStatus.toString(), outF)
+      case None => ()
+    }
+    parserErrors match {
+      case JNothing => ()
+      case _ =>
+        outF.write(""",
+  "parserErrors": """)
+        JsonUtils.prettyWriter(parserErrors, outF, 2)
     }
     outF.write(""",
   "events": [""")
   }
 
-  def finishedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
-    if (this.mainFileUri.isEmpty && !mainFileUri.isEmpty) {
-      outF.write(""",
+  def finishedParsingSession(
+    parserStatus: Option[ParseResult.Value],
+    parserErrors: JValue = JNothing,
+    mainFileUri: Option[String] = None,
+    parserInfo: JValue = JNothing): Unit = {
+    outF.write("]")
+    if (this.mainFileUri.isEmpty) {
+      mainFileUri match {
+        case Some(uri) =>
+          outF.write(""",
   "mainFileUri": """)
-      JsonUtils.dumpString(mainFileUri, outF)
+          JsonUtils.dumpString(uri, outF)
+        case None => ()
+      }
     }
-    if (this.parserInfo.toOption.isEmpty && !parserInfo.toOption.isEmpty) {
-      outF.write(""",
+    if (this.parserInfo.toSome.isEmpty) {
+      parserInfo match {
+        case JNothing => ()
+        case _ =>
+          outF.write(""",
   "parserInfo": """)
-      JsonUtils.prettyWriter(parserInfo, outF, 2)
+          JsonUtils.prettyWriter(parserInfo, outF, 2)
+      }
     }
-    outF.write("""]
-}""")
-    this.mainFileUri = ""
+    if (this.parserStatus.isEmpty) {
+      parserStatus match {
+        case Some(status) =>
+          outF.write(""",
+  "parserStatus": """)
+          JsonUtils.dumpString(parserStatus.toString(), outF)
+        case None => ()
+      }
+    }
+    if (this.parserErrors.toSome.isEmpty) {
+      parserErrors match {
+        case JNothing => ()
+        case _ =>
+          outF.write(""",
+  "parserErrors": """)
+          JsonUtils.prettyWriter(parserErrors, outF, 2)
+      }
+    }
+    outF.write("\n}")
+    this.mainFileUri = None
     this.parserInfo = JNothing
+    this.parserStatus = None
+    this.parserErrors = JNothing
   }
 
   def writeOut(event: JValue): Unit = {

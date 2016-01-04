@@ -142,8 +142,10 @@ object ParseEvent {
         var offset: Option[Seq[Long]] = None;
         var flatValues: List[JValue] = Nil;
         var references: Map[String, Long] = Map();
-        var mainFileUri: String = "";
+        var mainFileUri: Option[String] = None;
         var parserInfo: JValue = JNothing;
+        var parserStatus: Option[ParseResult.Value] = None;
+        var parserErrors: JValue = JNothing;
         obj foreach {
           case JField("event", value) =>
             value match {
@@ -192,22 +194,32 @@ object ParseEvent {
               references = value.extract[Map[String, Long]]
           case JField("mainFileUri", value) =>
             value match {
-              case JString(s)       => mainFileUri = s
+              case JString(s)       => mainFileUri = Some(s)
               case JNothing | JNull => ()
               case _                => throw new JsonUtils.InvalidValueError(
                 "mainFileUri", "ParseEvent", JsonUtils.prettyStr(value), "a string")
             }
           case JField("parserInfo", value) =>
             parserInfo = value
+          case JField("parserStatus", value) =>
+            value match {
+              case JString(s) =>
+                parserStatus = Some(ParseResult.withName(s))
+              case JNothing | JNull => ()
+              case _                => throw new JsonUtils.InvalidValueError(
+                "parserStatus", "ParseEvent", JsonUtils.prettyStr(value), s"a string value that is one of ${ParseResult.values.mkString("[",",","]")}")
+            }
+          case JField("parserErrors", value) =>
+            parserErrors = value
           case JField(field, value) =>
             throw new JsonUtils.UnexpectedValueError(
               "ParseEvent", field, "Unexpected field with value ${JsonUtils.prettyStr(value)}")
         }
         event match {
           case "startedParsingSession" =>
-            StartedParsingSession(mainFileUri, parserInfo)
+            StartedParsingSession(mainFileUri, parserInfo, parserStatus, parserErrors)
           case "finishedParsingSession" =>
-            FinishedParsingSession(mainFileUri, parserInfo)
+            FinishedParsingSession(parserStatus, parserErrors, mainFileUri, parserInfo)
           case "setSectionInfo" =>
             SetSectionInfo(metaName, gIndex, references)
           case "closeSection" =>
@@ -284,38 +296,58 @@ class ParseEventSerializer extends CustomSerializer[ParseEvent](format => (
 /** Started a parsing session
   */
 final case class StartedParsingSession(
-  mainFileUri: String, parserInfo: JValue
+  mainFileUri: Option[String],
+  parserInfo: JValue,
+  parserStatus: Option[ParseResult.Value],
+  parserErrors: JValue
 ) extends ParseEvent {
   override def eventName: String = "startedParsingSession"
 
   override def toJValue: JValue = {
     import org.json4s.JsonDSL._;
     ("event" -> eventName) ~
-    ("mainFileUri" -> (if (mainFileUri.isEmpty) JNothing else JString(mainFileUri))) ~
-    ("parserInfo" -> parserInfo)
+    ("mainFileUri" -> (mainFileUri match {
+      case None => JNothing
+      case Some(s) => JString(s)})) ~
+    ("parserInfo" -> parserInfo) ~
+    ("parserStatus" -> (parserStatus match {
+      case None => JNothing
+      case Some(s) => JString(s.toString)})) ~
+    ("parserErrors" -> parserErrors)
   }
 
   override def emitOnBackend(backend: ParserBackendExternal): Unit = {
-    backend.startedParsingSession(mainFileUri, parserInfo)
+    backend.startedParsingSession(mainFileUri, parserInfo, parserStatus, parserErrors)
   }
 }
 
 /** finished a parsing session
   */
 final case class FinishedParsingSession(
-  mainFileUri: String, parserInfo: JValue
+  parserStatus: Option[ParseResult.Value],
+  parserErrors: JValue,
+  mainFileUri: Option[String],
+  parserInfo: JValue
 ) extends ParseEvent {
   override def eventName: String = "finishedParsingSession"
 
   override def toJValue: JValue = {
     import org.json4s.JsonDSL._;
     ("event" -> eventName) ~
-    ("mainFileUri" -> (if (mainFileUri.isEmpty) JNothing else JString(mainFileUri))) ~
+    ("parserStatus" -> (parserStatus match {
+      case None => JNothing
+      case Some(status) => JString(status.toString())
+    })) ~
+    ("parserErrors" -> parserErrors) ~
+    ("mainFileUri" -> (mainFileUri match {
+      case None => JNothing
+      case Some(uri) => JString(uri)
+    })) ~
     ("parserInfo" -> parserInfo)
   }
 
   override def emitOnBackend(backend: ParserBackendExternal): Unit = {
-    backend.finishedParsingSession(mainFileUri, parserInfo)
+    backend.finishedParsingSession(parserStatus, parserErrors, mainFileUri, parserInfo)
   }
 }
 

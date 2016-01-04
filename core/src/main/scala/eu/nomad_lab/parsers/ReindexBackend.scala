@@ -45,20 +45,28 @@ class ReindexBackend( val subParser: ParserBackendInternal) extends ParserBacken
 
   /** Started a parsing session
     */
-  def startedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
+  def startedParsingSession(
+    mainFileUri: Option[String],
+    parserInfo: JValue,
+    parserStatus: Option[ParseResult.Value] = None,
+    parserErrors: JValue = JNothing): Unit = {
     val exc = if (!sectionMappers.isEmpty)
       new ParserBackendBase.InvalidCallSequenceException("startParsingSession called when is not empty (meaning open session)")
     else
       null
-    subParser.startedParsingSession(mainFileUri, parserInfo)
+    subParser.startedParsingSession(mainFileUri, parserInfo, parserStatus, parserErrors)
     if (exc != null)
         throw exc
   }
 
   /** Finished a parsing session
     */
-  def finishedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
-    subParser.finishedParsingSession(mainFileUri, parserInfo)
+  def finishedParsingSession(
+    parserStatus: Option[ParseResult.Value],
+    parserErrors: JValue = JNothing,
+    mainFileUri: Option[String] = None,
+    parserInfo: JValue = JNothing): Unit = {
+    subParser.finishedParsingSession(parserStatus, parserErrors, mainFileUri, parserInfo)
     def testOrException(): Exception = {
       sectionMappers.foreach { case (metaName, sectionMapper: ReindexBackend.SectionMapper) =>
         if (!sectionMapper.pendingInfos.isEmpty) {

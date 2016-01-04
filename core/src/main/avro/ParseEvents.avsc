@@ -2,14 +2,19 @@
  "type": "record",
  "name": "StartedParsingSession",
  "fields": [
-     {"name": "mainFileUri", "type": "string"},
-     {"name": "parserInfo",  "type": "string"}
+     {"name": "mainFileUri", "type": ["null", "string"]},
+     {"name": "parserInfo",  "type": ["null", "string"]},
+     {"name": "parsingStatus", "type": ["null", "string"]},
+     {"name": "parsingErrors", "type": ["null", "string"]}
  ]
 }, {"namespace": "eu.nomad_lab.parsers.avro",
  "type": "record",
  "name": "FinishedParsingSession"
  "fields": [
-     {"name": "mainFileUri", "type": "string"}
+     {"name": "parsingStatus", "type": ["null", "string"]},
+     {"name": "parsingErrors", "type": ["null", "string"]},
+     {"name": "mainFileUri", "type": ["null", "string"]},
+     {"name": "parserInfo",  "type": ["null", "string"]}
  ]
 }, {"namespace": "eu.nomad_lab.parsers.avro",
  "type": "record",

@@ -24,14 +24,22 @@ class ParseEventsEmitter(
 
   /** Started a parsing session
     */
-  def startedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
-    emitEvent(StartedParsingSession(mainFileUri, parserInfo))
+  def startedParsingSession(
+    mainFileUri: Option[String],
+    parserInfo: JValue,
+    parserStatus: Option[ParseResult.Value] = None,
+    parserErrors: JValue = JNothing): Unit = {
+    emitEvent(StartedParsingSession(mainFileUri, parserInfo, parserStatus, parserErrors))
   }
 
   /** finished a parsing session
     */
-  def finishedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
-    emitEvent(FinishedParsingSession(mainFileUri, parserInfo))
+  def finishedParsingSession(
+    parserStatus: Option[ParseResult.Value],
+    parserErrors: JValue = JNothing,
+    mainFileUri: Option[String] = None,
+    parserInfo: JValue = JNothing): Unit = {
+    emitEvent(FinishedParsingSession(parserStatus, parserErrors, mainFileUri, parserInfo))
   }
 
   /** sets info values of an open section.

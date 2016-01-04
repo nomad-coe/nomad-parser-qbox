@@ -129,19 +129,41 @@ class JsonWriterBackend(
 
   /** Started a parsing session
     */
-  override def startedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
-    super.startedParsingSession(mainFileUri, parserInfo)
+  override def startedParsingSession(
+    mainFileUri: Option[String],
+    parserInfo: JValue,
+    parserStatus: Option[ParseResult.Value] = None,
+    parserErrors: JValue = JNothing): Unit = {
+    super.startedParsingSession(mainFileUri, parserInfo, parserStatus, parserErrors)
     outF.write("""{
   "type": "nomad_info_1_0""")
-    if (!mainFileUri.isEmpty) {
-      outF.write("""
+    mainFileUri match {
+      case Some(uri) =>
+        outF.write(""",
   "mainFileUri": """)
-      JsonUtils.dumpString(mainFileUri, outF)
+        JsonUtils.dumpString(uri, outF)
+      case None => ()
     }
-    if (!parserInfo.toOption.isEmpty) {
-      outF.write(""",
+    parserInfo match {
+      case JNothing => ()
+      case _ =>
+        outF.write(""",
   "parserInfo": """)
-      JsonUtils.prettyWriter(parserInfo, outF, 2)
+        JsonUtils.prettyWriter(parserInfo, outF, 2)
+    }
+    parserStatus match {
+      case Some(status) =>
+        outF.write(""",
+  "parserStatus": """)
+        JsonUtils.dumpString(parserStatus.toString(), outF)
+      case None => ()
+    }
+    parserErrors match {
+      case JNothing => ()
+      case _ =>
+        outF.write(""",
+  "parserErrors": """)
+        JsonUtils.prettyWriter(parserErrors, outF, 2)
     }
     outF.write(""",
   "sections": [
@@ -150,20 +172,61 @@ class JsonWriterBackend(
 
   /** Finished a parsing session
     */
-  override def finishedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
-    if (parsingSession.get.mainFileUri.isEmpty && !mainFileUri.isEmpty) {
-      outF.write("""
+  override def finishedParsingSession(
+    parserStatus: Option[ParseResult.Value],
+    parserErrors: JValue = JNothing,
+    mainFileUri: Option[String] = None,
+    parserInfo: JValue = JNothing): Unit = {
+    val session = parsingSession match {
+      case Some(pSession) => pSession
+      case None => throw new GenericBackend.InternalErrorException(s"Mismatched finished parsing of $mainFileUri while no parsing session were open")
+    }
+    val mainFileUriNotWritten = session.mainFileUri.isEmpty
+    val parserInfoNotWritten = session.parserInfo.toSome.isEmpty
+    val parserStatusNotWritten = session.parserStatus.isEmpty
+    val parserErrorsNotWritten = session.parserErrors.toSome.isEmpty
+
+    super.finishedParsingSession(parserStatus, parserErrors, mainFileUri, parserInfo)
+    outF.write("]")
+
+    if (mainFileUriNotWritten) {
+      mainFileUri match {
+        case Some(uri) =>
+          outF.write(""",
   "mainFileUri": """)
-      JsonUtils.dumpString(mainFileUri, outF)
+          JsonUtils.dumpString(uri, outF)
+        case None => ()
+      }
     }
-    if (parsingSession.get.parserInfo.toOption.isEmpty && !parserInfo.toOption.isEmpty) {
-      outF.write(""",
+    if (parserInfoNotWritten) {
+      parserInfo match {
+        case JNothing => ()
+        case _ =>
+          outF.write(""",
   "parserInfo": """)
-      JsonUtils.prettyWriter(parserInfo, outF, 2)
+          JsonUtils.prettyWriter(parserInfo, outF, 2)
+      }
     }
-    outF.write("""]
+    if (parserStatusNotWritten) {
+      parserStatus match {
+        case Some(status) =>
+          outF.write(""",
+  "parserStatus": """)
+          JsonUtils.dumpString(parserStatus.toString(), outF)
+        case None => ()
+      }
+    }
+    if (parserErrorsNotWritten) {
+      parserErrors match {
+        case JNothing => ()
+        case _ =>
+          outF.write(""",
+  "parserErrors": """)
+          JsonUtils.prettyWriter(parserErrors, outF, 2)
+      }
+    }
+    outF.write("""
 }""")
-    super.finishedParsingSession(mainFileUri, parserInfo)
   }
 
   def writeOut(metaName: String, section: CachingBackend.CachingSection): Unit = {

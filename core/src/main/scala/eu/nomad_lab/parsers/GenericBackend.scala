@@ -28,8 +28,10 @@ object GenericBackend {
   /** root object representing a parsing session
     */
   class ParsingSession (
-    var mainFileUri: String,
-    var parserInfo: JValue
+    var mainFileUri: Option[String],
+    var parserInfo: JValue,
+    var parserStatus: Option[ParseResult.Value] = None,
+    var parserErrors: JValue = JNothing
   ) {
   }
 
@@ -1051,31 +1053,65 @@ abstract class GenericBackend(
 
   /** Started a parsing session
     */
-  def startedParsingSession(mainFileUri: String, parserInfo: JValue): Unit = {
-    _parsingSession = Some(new GenericBackend.ParsingSession(mainFileUri, parserInfo))
+  def startedParsingSession(
+    mainFileUri: Option[String],
+    parserInfo: JValue,
+    parserStatus: Option[ParseResult.Value] = None,
+    parserErrors: JValue = JNothing): Unit = {
+    _parsingSession = Some(new GenericBackend.ParsingSession(mainFileUri, parserInfo, parserStatus, parserErrors))
   }
 
   /** Finished a parsing session
     */
-  def finishedParsingSession(mainFileUri: String, parserInfo: JValue): Unit =  {
-    parsingSession match {
-      case Some(session) =>
-        if (session.mainFileUri.isEmpty)
-          session.mainFileUri = mainFileUri
-        if (session.parserInfo.toOption.isEmpty && !parserInfo.toOption.isEmpty)
-          session.parserInfo = parserInfo
-        if (mainFileUri != session.mainFileUri)
-          throw new GenericBackend.InternalErrorException(s"Mismatched finished parsing of $mainFileUri while parsing session for ${session.mainFileUri} (${JsonUtils.prettyStr(session.parserInfo)}) was still open")
-        onFinisheParsingSession(session)
+  def finishedParsingSession(
+    parserStatus: Option[ParseResult.Value],
+    parserErrors: JValue = JNothing,
+    mainFileUri: Option[String] = None,
+    parserInfo: JValue = JNothing): Unit =  {
+    val session = parsingSession match {
+      case Some(pSession) => pSession
       case None =>
         throw new GenericBackend.InternalErrorException(s"Mismatched finished parsing of $mainFileUri event while no parsing session were open")
     }
+    if (session.mainFileUri.isEmpty)
+      session.mainFileUri = mainFileUri
+    else if (!mainFileUri.isEmpty && mainFileUri != session.mainFileUri)
+      throw new GenericBackend.InternalErrorException(s"Mismatched finished parsing of $mainFileUri while parsing session for ${session.mainFileUri} (${JsonUtils.prettyStr(session.parserInfo)})")
+    session.parserInfo match {
+      case JNothing =>
+        session.parserInfo = parserInfo
+      case _ =>
+        parserInfo match {
+          case JNothing => ()
+          case _ =>
+            if (JsonUtils.normalizedStr(parserInfo) != JsonUtils.normalizedStr(session.parserInfo)) {
+              throw new GenericBackend.InternalErrorException(s"Double setting of parserInfo to ${JsonUtils.normalizedStr(parserInfo)}, was ${JsonUtils.normalizedStr(session.parserInfo)}.")
+            }
+        }
+    }
+    if (session.parserStatus.isEmpty)
+      session.parserStatus = parserStatus
+    else if (!parserStatus.isEmpty && parserStatus != session.parserStatus)
+      throw new GenericBackend.InternalErrorException(s"Double setting of parserStatus to $parserStatus (was ${session.parserStatus}) while parsing ${session.mainFileUri} (${JsonUtils.prettyStr(session.parserInfo)}) in finishedParsingSession")
+    session.parserErrors match {
+      case JNothing =>
+        session.parserErrors = parserErrors
+      case _ =>
+        parserErrors match {
+          case JNothing => ()
+          case _ =>
+            if (JsonUtils.normalizedStr(parserErrors) != JsonUtils.normalizedStr(session.parserErrors)) {
+              throw new GenericBackend.InternalErrorException(s"Double setting of parserErrors to ${JsonUtils.normalizedStr(parserErrors)}, was ${JsonUtils.normalizedStr(session.parserErrors)}.")
+            }
+        }
+    }
+    onFinishedParsingSession(session)
     _parsingSession = None
   }
 
   /** Callback when a parsing finishes
     */
-  def onFinisheParsingSession(parsingSession: GenericBackend.ParsingSession): Unit = { }
+  def onFinishedParsingSession(parsingSession: GenericBackend.ParsingSession): Unit = { }
 
   /** returns the sections that are still open
     *
