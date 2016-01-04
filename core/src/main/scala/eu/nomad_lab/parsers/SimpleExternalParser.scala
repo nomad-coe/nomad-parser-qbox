@@ -47,12 +47,15 @@ object SimpleExternalParserGenerator extends StrictLogging {
         throw new UnpackEnvException(s"Cannot generate directory $outDir")
       val outF = new FileOutputStream(outPath.toFile())
       val inF: java.io.InputStream = classLoader.getResourceAsStream(inFilePath)
+      if (inF == null)
+        throw new UnpackEnvException(s"failed to get stream for resource at path $inFilePath")
       val buffer = Array.fill[Byte](8192)(0)
       var readBytes: Int = inF.read(buffer)
       while (readBytes > 0) {
         outF.write(buffer, 0, readBytes)
         readBytes = inF.read(buffer)
       }
+      logger.debug(s"resCopy: $inFilePath -> $outPath")
     }
   }
 
