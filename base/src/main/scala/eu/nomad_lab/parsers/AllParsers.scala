@@ -2,10 +2,25 @@ package eu.nomad_lab.parsers;
 import scala.collection.breakOut
 
 object AllParsers {
+  class DuplicateParser(name: String) extends Exception(
+    s"Duplicate parser with name $name") { }
+
   /** All known parsers
     */
   val knownParsers: Map[String, ParserGenerator] = {
-    Map()
+    val parserList: Seq[ParserGenerator] = Seq()
+
+    val res: Map[String, ParserGenerator] = parserList.map { (pg: ParserGenerator) =>
+      pg.name ->  pg
+    }(breakOut)
+
+    if (res.size != parserList.length) {
+      for (pg <- parserList) {
+        if (pg != res(pg.name))
+          throw new DuplicateParser(pg.name)
+      }
+    }
+    res
   }
 
   /** The default active parsers
