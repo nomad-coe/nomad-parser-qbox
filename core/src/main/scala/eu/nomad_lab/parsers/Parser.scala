@@ -91,7 +91,7 @@ trait ParserGenerator {
   def mainFileTypes: Seq[String]
 
   /** function that should decide if this main file can be parsed by this parser
-    * looking at the first 1024 bytes of it
+    * looking at the first few kilobytes of it
     */
   def isMainFile(filePath: String, bytePrefix: Array[Byte], stringPrefix: Option[String]): Option[ParserMatch]
 
