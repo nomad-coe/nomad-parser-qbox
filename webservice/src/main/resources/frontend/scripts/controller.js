@@ -2,6 +2,17 @@
     app.controller('AllDataController', ['$scope', '$http', function($scope, $http) {
       $scope.searchList = [];
       $scope.filter = {};
+      $scope.filter.Parents= [  { displayName: 'NO FILTER' , section:'', parent: 'ROOT' },
+                                { displayName: 'section_run' , section:'section_run', parent: 'ROOT' },
+                                { displayName: 'section_system_description' , section:'section_system_description', parent: 'section_run' },
+                                { displayName: 'section_single_configuration_calculation' , section:'section_single_configuration_calculation', parent: 'section_system_description' },
+                                { displayName: 'section_atom_kind' , section:'section_atom_kind', parent: 'section_system_description' },
+                                { displayName: 'section_method' , section:'section_method', parent: 'section_run' },
+                                { displayName: 'section_single_configuration_calculation' , section:'section_single_configuration_calculation', parent: 'section_method' },
+                                { displayName: 'section_atom_ref' , section:'section_atom_ref', parent: 'section_method' },
+                                { displayName: 'section_atom_kind_ref' , section:'section_atom_kind_ref', parent: 'section_method' },
+                                { displayName: 'section_k_band' , section:'section_k_band', parent: 'section_run' }  ];
+      $scope.filter.selectedParent= { displayName: 'NO FILTER' , section:'', parent: 'ROOT' } ;
       $scope.filter.version = "last";
       //TODO: Convert angular to Jquery
       $http.get('/nmi/info.json').success(function(versions) {
@@ -56,7 +67,7 @@
       ///////////////////////////////////////////////////////////////////////////////////
       ///       Cyptoscape Related stuff;
       //////////////////////////////////////////////////////////////////////////////////
-   
+
 
             var drawGraph = function(exnode,exedge){
       var cy = window.cy = cytoscape({
@@ -98,8 +109,34 @@
           var toDisplay = this.id()
           
           $scope.display(toDisplay.split(" -")[0])
-          console.log( 'clicked ' + toDisplay.split(" -")[0] );
+         // console.log( 'clicked ' + toDisplay.split(" -")[0] );
         });
     }
     }]);
-
+app.directive('master',function ($window) { //declaration; identifier master
+    function link(scope, element, attrs) { //scope we are in, element we are bound to, attrs of that element
+      scope.$watch(function(){ //watch any changes to our element
+        scope.style = { //scope variable style, shared with our controller
+//        console.log("Inside Style: " + angular.element($window).height());
+            height: ( angular.element($window).height() - element[0].offsetHeight )+'px', //set the height in style to our elements height
+          };
+      });
+    }
+      return {
+        restrict: 'AE', //describes how we can assign an element to our directive in this case like <div master></div
+        link: link // the function to link to our element
+      };
+});
+app.directive('resize',function ($window) { //declaration; identifier master
+    function link(scope, element, attrs) { //scope we are in, element we are bound to, attrs of that element
+      scope.$watch(function(){ //watch any changes to our element
+        scope.style2 = { //scope variable style, shared with our controller
+            height: angular.element($window).height() +'px', //set the height in style to our elements height
+          };
+      });
+    }
+      return {
+        restrict: 'AE', //describes how we can assign an element to our directive in this case like <div master></div
+        link: link // the function to link to our element
+      };
+});

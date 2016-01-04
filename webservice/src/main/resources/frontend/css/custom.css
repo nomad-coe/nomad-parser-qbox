@@ -19,18 +19,34 @@ body{
 }
 /* Customization to limit height of the menu */
 .custom-restricted {
-    height: 900px;
- /*   border: 1px solid gray; 
+ overflow: auto;
+ /*    height: 900px;
+   border: 1px solid gray;
     border-radius: 4px;*/
 }
-#custom-menu-link{
-    display: inline-block;
+.searchArea{
+    background-color: #DADADF;
+}
+.searchBox{
+    padding-top:5px;
+}
+.header{
+    background-color:#CCC;
+}
+#menu{
+    padding-top: 5px;
 }
 
+#content{
+        overflow: auto;
+    }
 #contentMore {
         margin-left: 0.5em;
     }
 
+.mainContent{
+    overflow: auto;
+}
 .indent {
     padding-left: 15px;
 }
@@ -38,9 +54,9 @@ body{
 	margin: 2px 2px 2px 5px;
 }
 #cy {
-    width: 800px;
+/*    width: 800px;
     height: 500px;
-/*    z-index: 999;*/
+    z-index: 999;*/
 }
 #circleSection {
     background-color: #EE0000;

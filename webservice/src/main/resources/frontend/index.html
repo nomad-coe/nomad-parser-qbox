@@ -6,14 +6,6 @@
   
   <title> NoMaD Lab Meta Info</title>
 
-
-  <link rel="stylesheet" href="css/pure-min.css">
-  <!--[if lte IE 8]>
-    <link rel="stylesheet" href="css/grids-responsive-old-ie-min.css">
-  <![endif]-->
-  <!--[if gt IE 8]><!-->
-    <link rel="stylesheet" href="css/grids-responsive-min.css">
-  <!--<![endif]-->
   <link rel="stylesheet" href="css/custom.css">
   <link rel="stylesheet" href="css/select2.css">
   <link rel="stylesheet" href="css/selectize.default.css">
@@ -32,92 +24,100 @@
 
 </head>
   <body ng-controller="AllDataController">
-  <div class="pure-g">
-    <h2 class="pure-u-2-3">NoMaD Repository Meta Info</h2>
-    <div class="pure-u-1-3">
-      <div class="pure-g">
-        <div class="pure-u-1">
-          Kind: {{dataToDisplay['kindStr']}}
-        </div>
-        <div class="pure-u-1">
-          Gid: {{dataToDisplay['gid']}}
-          </div> 
-        </div>
-    </div>
-  </div>
-  <div class="pure-g">
-      <div class="pure-u-8-24">    Version
-          <ui-select ng-model="filter.version" ng-change="fetchVeriondata(filter.version)" theme="bootstrap" ng-disabled="disabled" close-on-select="true"  title="Select a version">
-              <ui-select-match placeholder="Select version">{{$select.selected}}</ui-select-match>
-              <ui-select-choices repeat="version in versions | filter:$select.search">
-                  {{version}}
-              </ui-select-choices>
-          </ui-select>
-          <!-- <p>Selected: {{filter.version}}</p> -->
-      </div>
-      <div class="pure-u-12-24 indent">
-          <div class="pure-g">
-              <div  class="pure-u-1" >
-                  <b> Version Description: </b> {{metaDataList.description}}
-              </div>
-              <div  class="pure-u-1" >
-                 <b>  Version Type: </b> {{metaDataList.type}}
+  <div class="container-fluid">
+      <!--Main container for everything-->
+      <div class="row">
+
+          <!-- Search related Stuff-->
+          <div class="col-xs-6 col-md-3 searchArea">
+            <div master class="row" >
+                <div class="col-xs-12 searchBox">
+                    <input class="col-xs-12" type="text" ng-model="query"  size="30" placeholder="Search">
+                </div>
+                <div class="col-xs-12"> Filter by Parent
+                        <!-- <p>Selected: {{filter.version}}</p> -->
+                        <ui-select ng-model="filter.selectedParent" theme="bootstrap" ng-disabled="disabled"  close-on-select="true" title="Filter by Parent">
+                            <ui-select-match placeholder="Select a parent in the list ">{{$select.selected.displayName}}</ui-select-match>
+                            <ui-select-choices group-by="'parent'" repeat="parents in filter.Parents| filter:$select.search ">
+                                {{parents.displayName}}
+                            </ui-select-choices>
+                        </ui-select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-xs-12 custom-restricted" id="menu" ng-style="style">
+                    <ul >
+                        <li ng-repeat="data in metaDataList['metaInfos'] | filter:query | filter:{allparents:filter.selectedParent.section} ">
+                            <!-- <label>
+              -                    <input type="checkbox" checklist-model="searchList" checklist-value="data['name']">
+              -                  </label>              -->
+                            <a href="" ng-click="display(data)">
+                                {{data['name']}}</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+          </div>
+
+          <!--Other Content-->
+          <div  class="col-xs-6 col-md-9"  >
+              <div  class="row mainContent" resize ng-style="style2">
+                  <div class="col-xs-12 header">
+                      <h1 class="col-xs-12 col-md-8 ">NoMaD Repository Meta Info</h1>
+                      <div class="col-xs-12 col-md-4">
+                          <div >
+                              Kind: {{dataToDisplay['kindStr']}}
+                          </div>
+                          <div >
+                              Gid: {{dataToDisplay['gid']}}
+                          </div>
+                      </div>
+                  </div>
+                      <div class="col-xs-12">
+                          <h3 > Version </h3>
+                          <div >
+                              <ui-select ng-model="filter.version" ng-change="fetchVeriondata(filter.version)" theme="bootstrap" ng-disabled="disabled" close-on-select="true"  title="Select a version">
+                                  <ui-select-match placeholder="Select a version">{{$select.selected}}</ui-select-match>
+                                  <ui-select-choices repeat="version in versions | filter:$select.search">
+                                      {{version}}
+                                  </ui-select-choices>
+                              </ui-select>
+                          </div>
+                      </div>
+                  <div class="col-xs-12">
+                      <h1> {{dataToDisplay['name']}} </h1>
+                      <div class ="description"> {{dataToDisplay['description']}} </div>
+                      <h2 ng-show="dataToDisplay['units'] != null && dataToDisplay['dtypeStr'] != null && dataToDisplay['shape'] != null" >Keys</h2>
+                      <div class="indent" ng-show="dataToDisplay['units'] != null" > units: {{ dataToDisplay['units'] }}</div>
+                      <div class="indent" ng-show="dataToDisplay['dtypeStr'] != null" >dtypeStr: {{ dataToDisplay['dtypeStr'] }}</div>
+                      <div class="indent" ng-show="dataToDisplay['shape'] != null && dataToDisplay['shape'].length > 0" > shape: {{ dataToDisplay['shape'] }}</div>
+                      <div ng-show="dataToDisplay['superNames'].length">
+                          <h2>Ancestors</h2>
+                          <h3>Explicit parents</h3>
+                          <ul>
+                              <li class="indent" ng-repeat="names in dataToDisplay['superNames'] ">
+                                  <span ><a href="" ng-click="display(names)">{{names}}</a></span>
+                              </li>
+                          </ul>
+                      </div>
+                      <h2 ng-show="dataToDisplay['children'].length">DirectChildrens</h2>
+                      <ul>
+                          <li class="indent" ng-repeat="names in dataToDisplay['children'] ">
+                              <span ><a href="" ng-click="display(names)">{{names}}</a></span>
+                          </li>
+                      </ul>
+
+                      <h2>All parents by type</h2>
+                      <div class="row"></div>
+                      <div  class="col-xs-4"> <div id="circleSection"> </div> Section </div>
+                      <div  class="col-xs-4">  <div id="circleAbstractType"> </div> Abstract Type</div>
+                      <div  class="col-xs-4"> <div id="circleConcreteValue"> </div> Concete Values</div>
+                      <div class="col-xs-12" style="height:600px;" id="cy"></div>
+                  </div>
+
               </div>
           </div>
       </div>
   </div>
-    <div id="searchPanel" class="pure-g">
-      <input class="pure-u-8-24" type="text" ng-model="query"  size="30" placeholder="Search">
-    </div>
-    <div id="content" class="pure-g">  
-      <div id="menu" class="pure-u-8-24 pure-menu pure-menu-scrollable custom-restricted" >
-          <ul >
-              <li ng-repeat="data in metaDataList['metaInfos'] | filter:query ">
-              <!-- <label>
--                    <input type="checkbox" checklist-model="searchList" checklist-value="data['name']">
--                  </label>              -->
-                  <a href="" ng-click="display(data)">
-                  {{data['name']}}</a>  
-              </li>
-          </ul>
-      </div>
-      <div id="contentMore" class="pure-u-15-24">
-        <div id="tags" class="pure-g">
-                   <a class="pure-button pure-u-1 pure-u-md-1-1 pure-u-lg-11-24 button-custom" href="" ng-repeat="name in searchList" ng-click="addToList(name)">{{name}}</a>
-        </div>
-        <div class="pure-g">
-          <div class="pure-u-15-24">
-           <h1> {{dataToDisplay['name']}} </h1> 
-           <div class ="description"> {{dataToDisplay['description']}} </div>
-           <h2 ng-show="dataToDisplay['units'] != null && dataToDisplay['dtypeStr'] != null && dataToDisplay['shape'] != null" >Keys</h2>
-           <div class="indent" ng-show="dataToDisplay['units'] != null" > units: {{ dataToDisplay['units'] }}</div>
-           <div class="indent" ng-show="dataToDisplay['dtypeStr'] != null" >dtypeStr: {{ dataToDisplay['dtypeStr'] }}</div>
-           <div class="indent" ng-show="dataToDisplay['shape'] != null && dataToDisplay['shape'].length > 0" > shape: {{ dataToDisplay['shape'] }}</div>
-           <div ng-show="dataToDisplay['superNames'].length">
-           <h2>Ancestors</h2>
-             <h3>Explicit parents</h3>
-             <ul>
-              <li class="indent" ng-repeat="names in dataToDisplay['superNames'] ">
-                <span ><a href="" ng-click="display(names)">{{names}}</a></span>
-              </li>
-             </ul>
-           </div>
-           <h2 ng-show="dataToDisplay['children'].length">DirectChildrens</h2>
-           <ul>
-             <li class="indent" ng-repeat="names in dataToDisplay['children'] ">
-               <span ><a href="" ng-click="display(names)">{{names}}</a></span>
-             </li>
-           </ul>
-
-             <h2>All parents by type</h2>
-             <div  class="pure-u-7-24"> <div id="circleSection"> </div> Section </div>
-             <div  class="pure-u-7-24">  <div id="circleAbstractType"> </div> Abstract Type</div>
-             <div  class="pure-u-7-24"> <div id="circleConcreteValue"> </div> Concete Values</div>
-             <div id="cy"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
   </body>
 </html>
