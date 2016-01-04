@@ -151,6 +151,14 @@ trait OptimizedParser {
     * parserName is used to identify the parser, mainly for logging/debugging
     */ 
   def parseExternal(mainFileUri: String, mainFilePath: String, backend: ParserBackendExternal, parserName: String): ParseResult.ParseResult
+
+  /** clean up the external resources allocated by the parser
+    */
+  def cleanup(): Unit
+
+  /** if the parsing had errors
+    */
+  def hadErrors: Boolean
 }
 
 object ParserBackendBase {

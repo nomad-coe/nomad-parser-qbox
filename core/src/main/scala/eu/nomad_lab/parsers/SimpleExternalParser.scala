@@ -172,6 +172,23 @@ object SimpleExternalParser {
     type JsonScanState = Value
     val MetaOrEvents, MetaDict, BetweenObjects, EventDict, EventDictPostEvents, Events, Finished = Value
   }
+
+  /** recursive deletion of files
+    */
+  def recursiveDelete(directory: java.io.File): Boolean = {
+    if (directory.isDirectory()) {
+      val files = directory.listFiles()
+      if(files != null){
+        for (f <- files) {
+          if(f.isDirectory())
+            recursiveDelete(f)
+          else
+            f.delete()
+        }
+      }
+    }
+    directory.delete()
+  }
 }
 
 class SimpleExternalParser(
@@ -179,7 +196,8 @@ class SimpleExternalParser(
   val cmd: Seq[String],
   val cmdCwd: String,
   val cmdEnv: Map[String, String],
-  val tmpDir: Path
+  val tmpDir: Path,
+  var hadErrors: Boolean = false
 ) extends OptimizedParser with StrictLogging {
   import SimpleExternalParser.ParseStreamException
 
@@ -393,19 +411,26 @@ class SimpleExternalParser(
       pErr.close()
     }
 
-    var hadErrors: Boolean = false
+    var localHadErrors: Boolean = false
     try {
       val proc = Process(cmd, new java.io.File(cmdCwd), cmdEnv.toSeq: _*).run(new ProcessIO(sendInput _, jsonDecode _, logErrors _))
       // should switch to finite state machine and allow async interaction, for now we just block...
-      hadErrors = (proc.exitValue != 0)
+      localHadErrors = (proc.exitValue != 0)
     } catch {
       case e: Exception =>
         logger.error(s"Parser $parserName had an exception when parsing $mainFileUri")
-        hadErrors = true
+        localHadErrors = true
     }
-    if (!hadErrors)
+    if (!hadErrors && localHadErrors)
+      hadErrors = true
+    if (!localHadErrors)
       ParseResult.ParseSuccess
     else
       ParseResult.ParseFailure
+  }
+
+  def cleanup(): Unit = {
+    logger.info(s"deleting temporary directory $tmpDir")
+    SimpleExternalParser.recursiveDelete(tmpDir.toFile())
   }
 }
