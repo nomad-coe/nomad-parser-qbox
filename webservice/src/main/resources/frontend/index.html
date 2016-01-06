@@ -27,63 +27,88 @@
   <div class="container-fluid">
       <!--Main container for everything-->
       <div class="row">
+          <div master class="col-xs-12 header">
+              <h1 class="col-xs-8 col-md-10">NOMAD Meta Info</h1>
 
+                  <!--<div class="col-xs-12 col-md-4">-->
+                      <!--<div >-->
+                          <!--Kind: {{dataToDisplay['kindStr']}}-->
+                      <!--</div>-->
+                      <!--<div >-->
+                          <!--Gid: {{dataToDisplay['gid']}}-->
+                      <!--</div>-->
+                  <!--</div>-->
+                      <!--<h3 > Version </h3>-->
+              <div class="col-xs-4 col-md-2 versionBox" >
+                  <ui-select ng-model="filter.version" ng-change="fetchVeriondata(filter.version)" theme="bootstrap" ng-disabled="disabled" close-on-select="true"  title="Select a version">
+                      <ui-select-match placeholder="Select a version">{{$select.selected}}</ui-select-match>
+                      <ui-select-choices repeat="version in versions | filter:$select.search">
+                          {{version}}
+                      </ui-select-choices>
+                  </ui-select>
+              </div>
+              <div class="row">
+                  <div class="col-xs-6 col-md-3 searchBox">
+                      <input class="col-xs-12 style-1" type="text" ng-model="query" placeholder="Search">
+                  </div>
+                  <div class="col-xs-3 col-md-3">
+                      <div class="col-xs-2 "> Filter by Parent </div>
+                      <div class="col-xs-10 ">
+                          <!-- <p>Selected: {{filter.version}}</p> -->
+                          <ui-select ng-model="filter.selectedSection" theme="bootstrap" ng-disabled="disabled"  close-on-select="true" title="Filter by Parent">
+                              <ui-select-match placeholder="Select a parent in the list ">{{$select.selected.displayName}}</ui-select-match>
+                              <ui-select-choices repeat="parents in filter.Sections| filter:$select.search ">
+                                  {{parents.displayName}}
+                              </ui-select-choices>
+                          </ui-select>
+                      </div>
+                  </div>
+                  <div class="col-xs-3 col-md-3 ">
+                      <div class="col-xs-2 "> Filter by Type </div>
+                      <div class="col-xs-10 ">
+                          <!-- <p>Selected: {{filter.version}}</p> -->
+                          <ui-select ng-model="filter.selectedType" theme="bootstrap" ng-disabled="disabled"  close-on-select="true" title="Filter by Type">
+                              <ui-select-match placeholder="Select a type in the list ">{{$select.selected.displayName}}</ui-select-match>
+                              <ui-select-choices group-by="'parent'" repeat="type in filter.Types| filter:$select.search ">
+                                  {{type.displayName}}
+                              </ui-select-choices>
+                          </ui-select>
+                      </div>
+                  </div>
+                  <div class="col-xs-3 col-md-3 ">
+                      <div class="col-xs-2 "> Filter by Meta Info Type </div>
+                      <div class="col-xs-10 ">
+                          <!-- <p>Selected: {{filter.version}}</p> -->
+                          <ui-select ng-model="filter.selectedMetaInfoType" theme="bootstrap" ng-disabled="disabled"  close-on-select="true" title="Filter by Meta Info Type">
+                              <ui-select-match placeholder="Select a type in the list ">{{$select.selected.displayName}}</ui-select-match>
+                              <ui-select-choices repeat="type in filter.MetaInfoTypes| filter:$select.search ">
+                                  {{type.displayName}}
+                              </ui-select-choices>
+                          </ui-select>
+                      </div>
+                  </div>
+              </div>
+          </div>
           <!-- Search related Stuff-->
           <div class="col-xs-6 col-md-3 searchArea">
-            <div master class="row" >
-                <div class="col-xs-12 searchBox">
-                    <input class="col-xs-12" type="text" ng-model="query"  size="30" placeholder="Search">
-                </div>
-                <div class="col-xs-12"> Filter by Parent
-                        <!-- <p>Selected: {{filter.version}}</p> -->
-                        <ui-select ng-model="filter.selectedParent" theme="bootstrap" ng-disabled="disabled"  close-on-select="true" title="Filter by Parent">
-                            <ui-select-match placeholder="Select a parent in the list ">{{$select.selected.displayName}}</ui-select-match>
-                            <ui-select-choices group-by="'parent'" repeat="parents in filter.Parents| filter:$select.search ">
-                                {{parents.displayName}}
-                            </ui-select-choices>
-                        </ui-select>
-                </div>
-            </div>
             <div class="row">
                 <div class="col-xs-12 custom-restricted" id="menu" ng-style="style">
                     <ul >
-                        <li ng-repeat="data in metaDataList['metaInfos'] | filter:query | filter:{allparents:filter.selectedParent.section} ">
+                        <li ng-repeat="data in metaDataList['metaInfos'] | filter:query | filter:{allparents:filter.selectedParent.section} | orderBy:'name'">
+                        <!--<li ng-repeat="data in MDL['metaInfos'] | filter:query | filter:{allparents:filter.selectedParent.section} | orderBy:'name'">-->
                             <!-- <label>
               -                    <input type="checkbox" checklist-model="searchList" checklist-value="data['name']">
               -                  </label>              -->
-                            <a href="" ng-click="display(data)">
+                            <a href="" ng-click="display(data['name'])">
                                 {{data['name']}}</a>
                         </li>
                     </ul>
                 </div>
             </div>
           </div>
-
           <!--Other Content-->
           <div  class="col-xs-6 col-md-9"  >
-              <div  class="row mainContent" resize ng-style="style2">
-                  <div class="col-xs-12 header">
-                      <h1 class="col-xs-12 col-md-8 ">NoMaD Repository Meta Info</h1>
-                      <div class="col-xs-12 col-md-4">
-                          <div >
-                              Kind: {{dataToDisplay['kindStr']}}
-                          </div>
-                          <div >
-                              Gid: {{dataToDisplay['gid']}}
-                          </div>
-                      </div>
-                  </div>
-                      <div class="col-xs-12">
-                          <h3 > Version </h3>
-                          <div >
-                              <ui-select ng-model="filter.version" ng-change="fetchVeriondata(filter.version)" theme="bootstrap" ng-disabled="disabled" close-on-select="true"  title="Select a version">
-                                  <ui-select-match placeholder="Select a version">{{$select.selected}}</ui-select-match>
-                                  <ui-select-choices repeat="version in versions | filter:$select.search">
-                                      {{version}}
-                                  </ui-select-choices>
-                              </ui-select>
-                          </div>
-                      </div>
+              <div  class="row mainContent" ng-style="style">
                   <div class="col-xs-12">
                       <h1> {{dataToDisplay['name']}} </h1>
                       <div class ="description"> {{dataToDisplay['description']}} </div>
@@ -112,7 +137,7 @@
                       <div  class="col-xs-4"> <div id="circleSection"> </div> Section </div>
                       <div  class="col-xs-4">  <div id="circleAbstractType"> </div> Abstract Type</div>
                       <div  class="col-xs-4"> <div id="circleConcreteValue"> </div> Concete Values</div>
-                      <div class="col-xs-12" style="height:600px;" id="cy"></div>
+                      <div class="col-xs-11" style="height:600px;margin-left:-20px;" id="cy"></div>
                   </div>
 
               </div>
