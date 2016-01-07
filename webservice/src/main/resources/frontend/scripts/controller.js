@@ -149,7 +149,7 @@ app.directive('master',function ($window) { //declaration; identifier master
     function link(scope, element, attrs) { //scope we are in, element we are bound to, attrs of that element
       scope.$watch(function(){ //watch any changes to our element
         scope.style = { //scope variable style, shared with our controller
-            height: ( angular.element($window).height() - element[0].offsetHeight )+'px', //set the height in style to our elements height
+            height: ( angular.element($window).height() - element[0].offsetHeight )+'px' //set the height in style to our elements height
           };
       });
     }
@@ -162,7 +162,7 @@ app.directive('resize',function ($window) { //declaration; identifier master
     function link(scope, element, attrs) { //scope we are in, element we are bound to, attrs of that element
       scope.$watch(function(){ //watch any changes to our element
         scope.style2 = { //scope variable style, shared with our controller
-            height: angular.element($window).height() +'px', //set the height in style to our elements height
+            height: angular.element($window).height() +'px' //set the height in style to our elements height
           };
       });
     }

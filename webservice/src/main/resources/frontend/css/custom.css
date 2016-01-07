@@ -77,9 +77,9 @@ input[type="text"]:focus {
 	margin: 2px 2px 2px 5px;
 }
 #cy {
-/*    width: 800px;
+    width: 800px;
     height: 500px;
-    z-index: 999;*/
+/*    z-index: 999;*/
 }
 #circleSection {
     background-color: #EE0000;
