@@ -294,6 +294,13 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
           var allParents:List[String] = Nil
           v.metaInfoRecordForNameWithAllSuper(name, selfGid = true, superGids = false).foreach {
             (metaInfo: MetaInfoRecord) => allParents =  (metaInfo.name) :: allParents }
+          val rootSectionAncestors = v.firstAncestorsByType(name).get("type_section") match {
+            case Some((rootSections,_)) =>
+              rootSections.toSeq
+            case None =>
+              Seq()
+          }
+
           jn.JObject(jn.JField("type", "nomad_meta_versions_1_0") ::
             jn.JField("versions", version) ::
             jn.JField("name", name) ::
@@ -305,6 +312,7 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
             jn.JField("superNames", superNames) ::
             jn.JField("children", children) ::
             jn.JField("allparents", allParents ) ::
+            jn.JField("rootSectionAncestors", rootSectionAncestors ) ::
             ("shape" -> metaShape) ::
             Nil ) 
         case None => jn.JNull
@@ -654,7 +662,7 @@ table
               }
             }
           } ~
-          path("annotated.json") {
+          path("ed.json") {
             get {
               respondWithMediaType(`application/json`) {
                 complete {

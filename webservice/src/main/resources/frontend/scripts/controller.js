@@ -2,7 +2,7 @@
     app.controller('AllDataController', ['$scope', '$http', function($scope, $http) {
       $scope.searchList = [];
       $scope.filter = {};
-      $scope.filter.Types= [      {displayName:'All TYPES', name:'', parent: '' },
+      $scope.filter.Types= [      {displayName:'All Types', name:'', parent: '' },
                                   {displayName: 'energy',name:'energy', parent: 'Energy' },
                                   {displayName: 'energy_component_scf_iteration',name:'energy_component_scf_iteration', parent: 'Energy' },
                                   {displayName: 'energy_component_per_atom_scf_iteration',name:'energy_component_per_atom_scf_iteration',parent: 'Energy' },
@@ -34,21 +34,21 @@
                                   {displayName: 'time_info_run',name:'time_info_run', parent: 'Accessory Info' },
                                   {displayName: 'time_info_evaluation',name:'time_info_evaluation', parent: 'Accessory Info' },
                                   {displayName: 'time_info_scf_iteration',name:'time_info_scf_iteration', parent: 'Accessory Info' }  ];
-      $scope.filter.Sections= [  { displayName: 'ALL SECTIONS' , section:'', parent: 'ROOT' },
+      $scope.filter.Sections= [  { displayName: 'All Section' , section:'', parent: 'ROOT' },
                                 { displayName: 'section_run' , section:'section_run', parent: 'ROOT' },
                                 { displayName: 'section_method' , section:'section_method', parent: 'section_run' },
                                 { displayName: 'section_system_description' , section:'section_system_description', parent: 'section_run' },
                                 { displayName: 'section_single_configuration_calculation' , section:'section_single_configuration_calculation', parent: 'section_system_description' },
                                 { displayName: 'section_scf_iteration' , section:'section_scf_iteration', parent: 'section_run' }  ];
-      $scope.filter.MetaInfoTypes = [ {displayName: 'ALL META INFO TYPES', name: ''},
+      $scope.filter.MetaInfoTypes = [ {displayName: 'All Meta Info Types', name: ''},
                                   {displayName: 'type_document', name: 'type_document'},
                                   {displayName: 'type_dimension', name: 'type_dimension'},
                                   {displayName: 'type_section', name: 'type_section'},
                                   {displayName: 'type_document_content', name: 'type_document_content'},
                                   {displayName: 'type_abstract_document_content', name: 'type_abstract_document_content'}];
-      $scope.filter.selectedSection= { displayName: 'ALL SECTIONS' , section:'', parent: 'ROOT' } ;
-      $scope.filter.selectedType={displayName:'All TYPES', name:'', parent: 'Energy' };
-      $scope.filter.selectedMetaInfoType={displayName:'ALL META INFO TYPES', name:''};
+      $scope.filter.selectedSection= { displayName: 'All Sections' , section:'', parent: 'ROOT' } ;
+      $scope.filter.selectedType={displayName:'All Types', name:'', parent: 'Energy' };
+      $scope.filter.selectedMetaInfoType={displayName:'All Meta Info Types', name:''};
       $scope.dataToDisplay = {};
       $scope.dataToDisplay.name = 'section_single_configuration_calculation';
       $scope.filter.version = "common";
