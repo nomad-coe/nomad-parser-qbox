@@ -1,8 +1,7 @@
-    var app = angular.module('metaVisualizationApp', ['checklist-model','ngSanitize', 'ui.select','angular.filter']);
+    var app = angular.module('metaVisualizationApp', ['ngSanitize', 'ui.select','angular.filter','hc.marked']);
     app.controller('AllDataController', ['$scope', '$http', function($scope, $http) {
       $scope.searchList = [];
       $scope.filter = {};
-      $scope.partialMetaDataList = {};
       $scope.filter.Types= [      {displayName:'All TYPES', name:'', parent: '' },
                                   {displayName: 'energy',name:'energy', parent: 'Energy' },
                                   {displayName: 'energy_component_scf_iteration',name:'energy_component_scf_iteration', parent: 'Energy' },
@@ -50,19 +49,15 @@
       $scope.filter.selectedSection= { displayName: 'ALL SECTIONS' , section:'', parent: 'ROOT' } ;
       $scope.filter.selectedType={displayName:'All TYPES', name:'', parent: 'Energy' };
       $scope.filter.selectedMetaInfoType={displayName:'ALL META INFO TYPES', name:''};
+      $scope.dataToDisplay = {};
+      $scope.dataToDisplay.name = 'section_single_configuration_calculation';
       $scope.filter.version = "common";
       //TODO: Convert angular to Jquery
       $http.get('/nmi/info.json').success(function(versions) {
                     $scope.versions =  angular.fromJson(versions)['versions'];
                     $scope.versions.sort();
-                   // $scope.fetchVeriondata($scope.filter.version)
+                    $scope.fetchVeriondata($scope.filter.version)
                   })
-      $http.get('/nmi/v/common/annotatedinfo.json').success(function(data) {
-           $scope.metaDataList = angular.fromJson(data);
-           $scope.display('section_single_configuration_calculation');
-
-       })
-
       $scope.fetchVeriondata = function(version){
         $http.get('/nmi/v/'+version+'/annotatedinfo.json').success(function(data) {
               $scope.metaDataList = angular.fromJson(data);
@@ -90,23 +85,23 @@
          }
       }
 
-      $scope.addToList = function(str){
-        if ($scope.searchList.indexOf(str) >= 0) {
-          var index = $scope.searchList.indexOf(str);
-          if (index > -1) {
-           $scope.searchList.splice(index, 1);
-          }
-        }
-        else {
-          $scope.searchList.push(str);
-        }
-      };
+//      $scope.addToList = function(str){
+//        if ($scope.searchList.indexOf(str) >= 0) {
+//          var index = $scope.searchList.indexOf(str);
+//          if (index > -1) {
+//           $scope.searchList.splice(index, 1);
+//          }
+//        }
+//        else {
+//          $scope.searchList.push(str);
+//        }
+//      };
       ///////////////////////////////////////////////////////////////////////////////////
       ///       Cyptoscape Related stuff;
       //////////////////////////////////////////////////////////////////////////////////
 
 
-            var drawGraph = function(exnode,exedge){
+      var drawGraph = function(exnode,exedge){
       var cy = window.cy = cytoscape({
           container: document.getElementById('cy'),
           boxSelectionEnabled: false,
