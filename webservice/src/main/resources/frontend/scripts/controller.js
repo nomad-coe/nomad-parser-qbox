@@ -34,7 +34,7 @@
                                   {displayName: 'time_info_run',name:'time_info_run', parent: 'Accessory Info' },
                                   {displayName: 'time_info_evaluation',name:'time_info_evaluation', parent: 'Accessory Info' },
                                   {displayName: 'time_info_scf_iteration',name:'time_info_scf_iteration', parent: 'Accessory Info' }  ];
-      $scope.filter.Sections= [  { displayName: 'All Section' , section:'', parent: 'ROOT' },
+      $scope.filter.Sections= [  { displayName: 'All Sections' , section:'', parent: 'ROOT' },
                                 { displayName: 'section_run' , section:'section_run', parent: 'ROOT' },
                                 { displayName: 'section_method' , section:'section_method', parent: 'section_run' },
                                 { displayName: 'section_system_description' , section:'section_system_description', parent: 'section_run' },
