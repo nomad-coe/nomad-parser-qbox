@@ -13,13 +13,14 @@ import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JAr
 
 class ParseEventsEmitter(
   metaInfoEnv: MetaInfoEnv,
-  val eventDigester: ParseEvent => Unit
+  val mainEventDigester: ParseEvent => Unit,
+  val startStopDigester: ParseEvent => Unit
 ) extends BaseParserBackend(metaInfoEnv) with ParserBackendExternal {
 
   /** Internal callback called for all parse events
     */
   def emitEvent(event: ParseEvent): Unit = {
-    eventDigester(event)
+    mainEventDigester(event)
   }
 
   /** Started a parsing session
@@ -29,7 +30,7 @@ class ParseEventsEmitter(
     parserInfo: JValue,
     parserStatus: Option[ParseResult.Value] = None,
     parserErrors: JValue = JNothing): Unit = {
-    emitEvent(StartedParsingSession(mainFileUri, parserInfo, parserStatus, parserErrors))
+    startStopDigester(StartedParsingSession(mainFileUri, parserInfo, parserStatus, parserErrors))
   }
 
   /** finished a parsing session
@@ -39,7 +40,7 @@ class ParseEventsEmitter(
     parserErrors: JValue = JNothing,
     mainFileUri: Option[String] = None,
     parserInfo: JValue = JNothing): Unit = {
-    emitEvent(FinishedParsingSession(parserStatus, parserErrors, mainFileUri, parserInfo))
+    startStopDigester(FinishedParsingSession(parserStatus, parserErrors, mainFileUri, parserInfo))
   }
 
   /** sets info values of an open section.
