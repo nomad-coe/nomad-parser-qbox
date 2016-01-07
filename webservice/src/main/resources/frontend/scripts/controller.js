@@ -1,9 +1,9 @@
-    var app = angular.module('metaVisualizationApp', ['checklist-model','ngSanitize', 'ui.select']);
+    var app = angular.module('metaVisualizationApp', ['checklist-model','ngSanitize', 'ui.select','angular.filter']);
     app.controller('AllDataController', ['$scope', '$http', function($scope, $http) {
       $scope.searchList = [];
       $scope.filter = {};
-      $scope.MDL = {};
-      $scope.filter.Types= [      {displayName:'All TYPES', name:'', parent: 'Energy' },
+      $scope.partialMetaDataList = {};
+      $scope.filter.Types= [      {displayName:'All TYPES', name:'', parent: '' },
                                   {displayName: 'energy',name:'energy', parent: 'Energy' },
                                   {displayName: 'energy_component_scf_iteration',name:'energy_component_scf_iteration', parent: 'Energy' },
                                   {displayName: 'energy_component_per_atom_scf_iteration',name:'energy_component_per_atom_scf_iteration',parent: 'Energy' },
@@ -43,11 +43,10 @@
                                 { displayName: 'section_scf_iteration' , section:'section_scf_iteration', parent: 'section_run' }  ];
       $scope.filter.MetaInfoTypes = [ {displayName: 'ALL META INFO TYPES', name: ''},
                                   {displayName: 'type_document', name: 'type_document'},
-                                  {displayName: 'type_document', name: ' type_document'},
-                                  {displayName: 'type_dimension', name: ' type_dimension'},
-                                  {displayName: 'type_section', name: ' type_section'},
-                                  {displayName: 'type_document_content', name: ' type_document_content'},
-                                  {displayName: 'type_abstract_document_content', name: ' type_abstract_document_content'}];
+                                  {displayName: 'type_dimension', name: 'type_dimension'},
+                                  {displayName: 'type_section', name: 'type_section'},
+                                  {displayName: 'type_document_content', name: 'type_document_content'},
+                                  {displayName: 'type_abstract_document_content', name: 'type_abstract_document_content'}];
       $scope.filter.selectedSection= { displayName: 'ALL SECTIONS' , section:'', parent: 'ROOT' } ;
       $scope.filter.selectedType={displayName:'All TYPES', name:'', parent: 'Energy' };
       $scope.filter.selectedMetaInfoType={displayName:'ALL META INFO TYPES', name:''};
@@ -62,35 +61,12 @@
            $scope.metaDataList = angular.fromJson(data);
            $scope.display('section_single_configuration_calculation');
 
-           $scope.MDL = JSON.parse(JSON.stringify($scope.metaDataList))
-           for(var i=0;i<$scope.MDL.metaInfos.length;i++)
-          {
-              delete $scope.MDL.metaInfos[i].type;
-              delete $scope.MDL.metaInfos[i].versions;
-              delete $scope.MDL.metaInfos[i].gid;
-              delete $scope.MDL.metaInfos[i].kindStr;
-              delete $scope.MDL.metaInfos[i].superNames;
-              delete $scope.MDL.metaInfos[i].children;
-              delete $scope.MDL.metaInfos[i].allparents;
-          }
        })
 
       $scope.fetchVeriondata = function(version){
         $http.get('/nmi/v/'+version+'/annotatedinfo.json').success(function(data) {
               $scope.metaDataList = angular.fromJson(data);
               $scope.display($scope.dataToDisplay['name']);
-
-           $scope.MDL = JSON.parse(JSON.stringify($scope.metaDataList))
-           for(var i=0;i<$scope.MDL.metaInfos.length;i++)
-          {
-              delete $scope.MDL.metaInfos[i].type;
-              delete $scope.MDL.metaInfos[i].versions;
-              delete $scope.MDL.metaInfos[i].gid;
-              delete $scope.MDL.metaInfos[i].kindStr;
-              delete $scope.MDL.metaInfos[i].superNames;
-              delete $scope.MDL.metaInfos[i].children;
-              delete $scope.MDL.metaInfos[i].allparents;
-          }
         })
       }
       $scope.display = function(data){
