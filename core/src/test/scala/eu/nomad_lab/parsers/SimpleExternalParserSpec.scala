@@ -2,6 +2,8 @@ package eu.nomad_lab.parsers
 
 import org.specs2.mutable.Specification
 import org.{json4s => jn}
+import eu.nomad_lab.meta
+import scala.collection.mutable
 
 /** Specification (fixed tests) for SimpleExternalParser
   */
@@ -12,27 +14,81 @@ class SimpleExternalParserSpec extends Specification {
       ("b", "BX")), "${a}xy$a${c}{\\${a}${b}") must_== "AXxy$a${c}{\\AXBX"
   }
 
-  val testParser1 = new SimpleExternalParserGenerator(
-    name = "testParser1",
-    parserInfo = jn.JObject(
-      ("name" -> jn.JString("testParser")) ::
-        ("version" -> jn.JString("1.0")) :: Nil),
-    mainFileTypes = Seq("text/.*"),
-    mainFileRe = """XXX testParser1 XXX""".r,
-    cmd = Seq("/bin/sh", "${envDir}/pippo/xx/listAll.sh", "${envDir}"),
-    resList = Seq(
-      "testParser1/pippo/listAll.sh",
-      "nomad_meta_info/meta_types.nomadmetainfo.json",
-      "nomad_meta_info/common.nomadmetainfo.json"),
-    dirMap = Map(
-      "testParser1/pippo" -> "pippo/xx",
-      "nomad_meta_info" -> "nomad-meta-info/meta_info/nomad_meta_into")
-  )
-
   "testParser1" >> {
+    val testParserGen1 = new SimpleExternalParserGenerator(
+      name = "testParser1",
+      parserInfo = jn.JObject(
+        ("name" -> jn.JString("testParser")) ::
+          ("version" -> jn.JString("1.0")) :: Nil),
+      mainFileTypes = Seq("text/.*"),
+      mainFileRe = """XXX testParser1 XXX""".r,
+      cmd = Seq("/bin/sh", "${envDir}/pippo/xx/listAll.sh", "${envDir}"),
+      resList = Seq(
+        "testParser1/pippo/listAll.sh",
+        "testParser1/pippo/testParser1-1.sample",
+        "nomad_meta_info/meta_types.nomadmetainfo.json",
+        "nomad_meta_info/common.nomadmetainfo.json"),
+      dirMap = Map(
+        "testParser1/pippo" -> "pippo/xx",
+        "nomad_meta_info" -> "nomad-meta-info/meta_info/nomad_meta_into")
+    )
+
     "envSetup" >> {
-      val envF = testParser1.envDir.toFile()
+      val envF = testParserGen1.envDir.toFile()
       envF.isDirectory() must_== true
+    }
+    "testParsing1" >> {
+      val testParser1 = testParserGen1.optimizedParser(Seq()) match {
+        case p : SimpleExternalParser => p
+      }
+      val events = mutable.ListBuffer[ParseEvent]()
+      val eventStream = new ParseEventsEmitter(
+        metaInfoEnv = meta.KnownMetaInfoEnvs.last,
+        mainEventDigester = { events += _ },
+        startStopDigester = { events += _})
+      val sampleFile: String = testParser1.makeReplacements("${envDir}/pippo/xx/testParser1-1.sample")
+      val parseResult = testParser1.parseExternal(
+        mainFileUri = "file://" + sampleFile,
+        mainFilePath = sampleFile,
+        backend = eventStream,
+        parserName = testParser1.parserGenerator.name)
+      parseResult must_== ParseResult.ParseSuccess
+      events.length must_== 2
+    }
+  }
+
+  "echoParser" >> {
+    val echoParserGen = new SimpleExternalParserGenerator(
+      name = "echoParser",
+      parserInfo = jn.JObject(
+        ("name" -> jn.JString("echoParser")) ::
+          ("version" -> jn.JString("1.0")) :: Nil),
+      mainFileTypes = Seq("text/.*"),
+      mainFileRe = """XXX testParser1 XXX""".r,
+      cmd = Seq("/bin/cat", "${mainFilePath}"),
+      resList = Seq(
+        "testEventStreams/testOut0.json",
+        "testEventStreams/testOut1-openSection.json",
+        "testEventStreams/testOut2-sectionAndVal.json")
+    )
+
+    "testOut0" >> {
+      val testParser1 = echoParserGen.optimizedParser(Seq()) match {
+        case p : SimpleExternalParser => p
+      }
+      val events = mutable.ListBuffer[ParseEvent]()
+      val eventStream = new ParseEventsEmitter(
+        metaInfoEnv = meta.KnownMetaInfoEnvs.last,
+        mainEventDigester = { events += _ },
+        startStopDigester = { events += _})
+      val sampleFile: String = testParser1.makeReplacements("${envDir}/testEventStreams/testOut0.json")
+      val parseResult = testParser1.parseExternal(
+        mainFileUri = "file://" + sampleFile,
+        mainFilePath = sampleFile,
+        backend = eventStream,
+        parserName = testParser1.parserGenerator.name)
+      parseResult must_== ParseResult.ParseSuccess
+      //events.length must_== 4
     }
   }
 }

@@ -1,0 +1,23 @@
+[{
+  "type": "nomad_parse_events_1_0",
+  "mainFileUri": "",
+  "parserInfo": {
+  "version":"1.0",
+  "name":"testParser1"
+},
+  "events": [{
+  "metaName":"section_run",
+  "event":"openSection",
+  "gIndex":0
+}, {
+  "metaName":"program_version",
+  "event":"addValue",
+  "value":"081213",
+  "gIndex":-1
+}, {
+  "metaName":"section_run",
+  "event":"closeSection",
+  "gIndex":0
+}],
+  "parserStatus": "ParseSuccess"
+}]

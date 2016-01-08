@@ -105,6 +105,14 @@ trait ParserGenerator {
     * parser really skips some data.
     */
   def optimizedParser(optimizations: Seq[MetaInfoOps]): OptimizedParser
+
+  /** cleans up the resources allocaed by this parser generator
+    *
+    * All its optimized parsers should have already been cleaned and never used again
+    * because they might rely on resources allocated by this parser generator,
+    * for example files or directories.
+    */
+  def cleanup(): Unit;
 }
 
 /** Possible parse results
