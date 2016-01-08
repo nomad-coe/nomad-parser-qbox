@@ -28,7 +28,7 @@ body{
     background-color: #DADADF;
 }
 .searchBox{
-    padding-top:5px;
+   /* padding-top:5px;*/
 }
 .versionBox{
     padding-top:10px;
@@ -51,7 +51,7 @@ input[type="text"]:focus {
   outline: none;
 }
 .style-1 input[type="text"] {
-  padding: 10px;
+ /* padding: 10px;*/
   border: solid 1px #dcdcdc;
   transition: box-shadow 0.3s, border 0.3s;
 }
@@ -70,6 +70,10 @@ input[type="text"]:focus {
 .mainContent{
     overflow: auto;
 }
+
+.graphStart{
+    padding-top:5px;
+}
 .indent {
     padding-left: 15px;
 }
@@ -77,7 +81,7 @@ input[type="text"]:focus {
 	margin: 2px 2px 2px 5px;
 }
 #cy {
-    width: 800px;
+    width: 900px;
     height: 500px;
 /*    z-index: 999;*/
 }

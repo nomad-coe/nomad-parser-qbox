@@ -30,30 +30,32 @@
       <!--Main container for everything-->
       <div class="row">
           <div master class="col-xs-12 header">
-              <h2 class="col-xs-8 col-md-10">NOMAD Meta Info</h2>
+              <div class="row">
+                  <h2 class="col-xs-8 col-md-10">NOMAD Meta Info</h2>
 
-                  <!--<div class="col-xs-12 col-md-4">-->
-                      <!--<div >-->
-                          <!--Kind: {{dataToDisplay['kindStr']}}-->
+                      <!--<div class="col-xs-12 col-md-4">-->
+                          <!--<div >-->
+                              <!--Kind: {{dataToDisplay['kindStr']}}-->
+                          <!--</div>-->
+                          <!--<div >-->
+                              <!--Gid: {{dataToDisplay['gid']}}-->
+                          <!--</div>-->
                       <!--</div>-->
-                      <!--<div >-->
-                          <!--Gid: {{dataToDisplay['gid']}}-->
-                      <!--</div>-->
-                  <!--</div>-->
-                      <!--<h3 > Version </h3>-->
-              <div class="col-xs-4 col-md-2 versionBox" >
-                  <ui-select ng-model="filter.version" ng-change="fetchVeriondata(filter.version)" theme="bootstrap" ng-disabled="disabled" close-on-select="true"  title="Select a version">
-                      <ui-select-match placeholder="Select a version">{{$select.selected}}</ui-select-match>
-                      <ui-select-choices repeat="version in versions | filter:$select.search">
-                          {{version}}
-                      </ui-select-choices>
-                  </ui-select>
+                          <!--<h3 > Version </h3>-->
+                  <div class="col-xs-4 col-md-2 versionBox" >
+                      <ui-select ng-model="filter.version" ng-change="fetchVeriondata(filter.version)" theme="bootstrap" ng-disabled="disabled" close-on-select="true"  title="Select a version">
+                          <ui-select-match placeholder="Select a version">{{$select.selected}}</ui-select-match>
+                          <ui-select-choices repeat="version in versions | filter:$select.search">
+                              {{version}}
+                          </ui-select-choices>
+                      </ui-select>
+                  </div>
               </div>
               <div class="row">
-                  <div class="col-xs-6 col-md-3 searchBox">
+                  <div class="col-xs-4 col-md-3 searchBox">
                       <input class="col-xs-12 style-1" type="text" ng-model="query" placeholder="Search">
                   </div>
-                  <div class="col-xs-6 col-md-9">
+                  <div class="col-xs-8 col-md-9">
                           <div class="col-xs-6 col-md-4 ">
                               <!-- <p>Selected: {{filter.version}}</p> -->
                               <ui-select ng-model="filter.selectedSection" theme="bootstrap" ng-disabled="disabled"  close-on-select="true" title="Filter by Parent">
@@ -85,7 +87,7 @@
               </div>
           </div>
           <!-- Search related Stuff-->
-          <div class="col-xs-6 col-md-3 searchArea">
+          <div class="col-xs-4 col-md-3 searchArea">
             <div class="row">
                 <div class="col-xs-12 custom-restricted" id="menu" ng-style="style">
                     <ul >
@@ -102,7 +104,7 @@
             </div>
           </div>
           <!--Other Content-->
-          <div  class="col-xs-6 col-md-9"  >
+          <div  class="col-xs-8 col-md-9"  >
               <div  class="row mainContent" ng-style="style">
                   <div class="col-xs-12 col-md-12">
                       <h1> {{dataToDisplay['name']}} </h1>
@@ -114,10 +116,18 @@
                       <div class="indent" ng-show="dataToDisplay['shape'] != null && dataToDisplay['shape'].length > 0" > shape: {{ dataToDisplay['shape'] }}</div>
 
                       <!--<div class="row">-->
-                          <div  id="cy"></div>
+
+                      <!--<div></div>-->
+                      <div id="cy"></div>
+                      <div class="col-xs-12  col-md-8 ">
                           <div  class="col-xs-4 col-md-4"> <div id="circleSection"> </div> Section </div>
                           <div  class="col-xs-4 col-md-4">  <div id="circleAbstractType"> </div> Abstract Type</div>
                           <div  class="col-xs-4 col-md-4"> <div id="circleConcreteValue"> </div> Concete Values</div>
+                      </div>
+                      <div  class="col-xs-12 col-md-4">
+                          <button type="button" class="btn btn-primary" ng-click="zoomToggle()">{{DAG.zoomText}}</button>
+                          <button type="button" class="btn btn-primary" ng-click="reset()">Reset</button>
+                      </div>
                       <!--</div>-->
                       <div ng-show="dataToDisplay['superNames'].length">
                           <h2>Ancestors</h2>

@@ -1,5 +1,5 @@
     var app = angular.module('metaVisualizationApp', ['ngSanitize', 'ui.select','angular.filter','hc.marked']);
-    app.controller('AllDataController', ['$scope', '$http', function($scope, $http) {
+    app.controller('AllDataController', ['$scope', '$http', 'ancestorGraph' ,function($scope, $http, ancestorGraph) {
       $scope.searchList = [];
       $scope.filter = {};
       $scope.filter.Types= [      {displayName:'All Types', name:'', parent: '' },
@@ -52,6 +52,10 @@
       $scope.dataToDisplay = {};
       $scope.dataToDisplay.name = 'section_single_configuration_calculation';
       $scope.filter.version = "common";
+      $scope.DAG ={
+          zoom:false,
+          zoomText:'Enable zoom'
+      }
       //TODO: Convert angular to Jquery
       $http.get('/nmi/info.json').success(function(versions) {
                     $scope.versions =  angular.fromJson(versions)['versions'];
@@ -64,11 +68,18 @@
               $scope.display($scope.dataToDisplay['name']);
         })
       }
+      var cy;
       $scope.display = function(data){
          if(typeof data === 'object'){
             $scope.dataToDisplay = data;
             $http.get('/nmi/v/'+$scope.filter.version+'/n/' + data['name']+'/allparents.json').success(function(allparentsData) {
-                        drawGraph(allparentsData['nodes'],allparentsData['edges'])
+                            ancestorGraph( allparentsData ).then(function( ancestorCy ){
+                                cy = ancestorCy;
+                                ancestorGraph.zoomToggle( $scope.DAG.zoom); //Override the default settings
+                                $scope.cyLoaded = true;
+                                ancestorGraph.resize();
+                              });
+
                       })
          }
          else{
@@ -80,7 +91,12 @@
                }
              }
              $http.get('/nmi/v/'+$scope.filter.version+'/n/' + data+'/allparents.json').success(function(allparentsData) {
-                         drawGraph(allparentsData['nodes'],allparentsData['edges'])
+                          ancestorGraph( allparentsData ).then(function( ancestorCy ){
+                              cy = ancestorCy;
+                              ancestorGraph.zoomToggle( $scope.DAG.zoom); //Override the default settings
+                              $scope.cyLoaded = true;
+                              ancestorGraph.resize();
+                            });
                        })
          }
       }
@@ -100,51 +116,116 @@
       ///       Cyptoscape Related stuff;
       //////////////////////////////////////////////////////////////////////////////////
 
+      ancestorGraph.onClick(function(id){
+          $scope.display(id)
+          $scope.$apply();
+      });
+      $scope.reset = function(){
+         ancestorGraph.reset();
+      }
+      $scope.zoomToggle = function(){
+           if ( $scope.DAG.zoom){
+                    $scope.DAG.zoom=false;
+                    $scope.DAG.zoomText='Enable zoom';
+           }
+           else {
+                  $scope.DAG.zoom=true;
+                  $scope.DAG.zoomText='Disable zoom';
+           }
+          ancestorGraph.zoomToggle( $scope.DAG.zoom);
+      };
 
-      var drawGraph = function(exnode,exedge){
-      var cy = window.cy = cytoscape({
-          container: document.getElementById('cy'),
-          boxSelectionEnabled: false,
-          autounselectify: true,
-          zoomingEnabled: true,
-          layout: {
-            name: 'dagre',
-            rankDir: 'RL'
-          },
-          style: [
-            {
-              selector: 'node',
-              style: {
-                'content': 'data(id)',
-                'text-opacity': 0.5,
-                'text-valign': 'bottom',
-                'text-halign': 'center',
-                'background-color': '#11479e'
-              }
-            },
-            {
-              selector: 'edge',
-              style: {
-                'width': 4,
-                'target-arrow-shape': 'triangle',
-                'line-color': '#9dbaea',
-                'target-arrow-color': '#9dbaea'
-              }
-            }
-          ],
-          elements: {
-            nodes: exnode ,
-            edges: exedge
-          },
-        });
-        cy.on('click', 'node', function(evt){
-          var toDisplay = this.id()
-          
-          $scope.display(toDisplay.split(" -")[0])
-         // console.log( 'clicked ' + toDisplay.split(" -")[0] );
-        });
-    }
     }]);
+
+app.factory('ancestorGraph', [ '$q', function( $q ){
+  var cy;
+  var ancestorGraph = function(elem){
+    var deferred = $q.defer();
+    $(function(){ // on dom ready
+      cy = cytoscape({
+        container: $('#cy')[0],
+        boxSelectionEnabled: true,
+        autounselectify: true,
+        zoomingEnabled: false,
+        style: cytoscape.stylesheet()
+          .selector('node')
+            .css({
+              'content': 'data(id)',
+              'text-opacity': 0.5,
+              'text-valign': 'bottom',
+              'text-halign': 'center',
+              'background-color': '#11479e'
+             })
+          .selector('edge')
+            .css({
+              'width': 4,
+              'target-arrow-shape': 'triangle',
+              'line-color': '#9dbaea',
+              'target-arrow-color': '#9dbaea'
+            }),
+
+        layout: {
+          name: 'dagre',
+          rankDir: 'RL'
+        },
+
+        elements: elem,
+
+        ready: function(){
+          deferred.resolve( this );
+
+          this.on('click', 'node', function(evt){
+                    fire('onClick', [ this.id().split(" -")[0] ]);
+                  });
+        }
+      });
+
+    }); // on dom ready
+
+    return deferred.promise;
+  };
+
+  ancestorGraph.listeners = {};
+
+  function fire(e, args){
+    var listeners = ancestorGraph.listeners[e];
+
+    for( var i = 0; listeners && i < listeners.length; i++ ){
+      var fn = listeners[i];
+      fn.apply( fn, args );
+    }
+  }
+
+  function listen(e, fn){
+    var listeners = ancestorGraph.listeners[e] = ancestorGraph.listeners[e] || [];
+    listeners.push(fn);
+  }
+
+  ancestorGraph.setPersonWeight = function(id, weight){
+    cy.$('#' + id).data('weight', weight);
+  };
+
+  ancestorGraph.resize = function(){
+       cy.resize();
+    }
+  ancestorGraph.reset = function(){
+     var czoom = cy.zoomingEnabled();
+     cy.zoomingEnabled(true);
+     cy.reset();
+     cy.zoomingEnabled(czoom);
+  }
+  ancestorGraph.zoomToggle = function(zoom){
+//      console.log(cy);
+//      console.log(cy.zoomingEnabled());
+      cy.zoomingEnabled(zoom);
+    };
+
+  ancestorGraph.onClick = function(fn){
+    listen('onClick', fn);
+  };
+  return ancestorGraph;
+} ]);
+
 app.directive('master',function ($window) { //declaration; identifier master
     function link(scope, element, attrs) { //scope we are in, element we are bound to, attrs of that element
       scope.$watch(function(){ //watch any changes to our element
