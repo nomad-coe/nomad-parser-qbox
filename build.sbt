@@ -1,6 +1,7 @@
 /** to build the first time you need to execute
   * jooq:codegen which depends on flywayMigrate to generate the jooq db code
   */
+scalaVersion  := "2.11.7"
 
 lazy val commonSettings = Seq(
   organization  := "eu.nomad-laboratory",
@@ -231,3 +232,6 @@ lazy val treeparser = (project in file("tree-parser-worker")).
   ).
   settings(Revolver.settings: _*)
 
+lazy val root = (project in file(".")).
+  settings(commonSettings: _*).
+  aggregate(cgen, core, fhiAims, base, webservice, tool, calculationparser, normalizer, treeparser)
