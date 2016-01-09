@@ -212,8 +212,7 @@ object ParseEvent {
           case JField("parserErrors", value) =>
             parserErrors = value
           case JField(field, value) =>
-            throw new JsonUtils.UnexpectedValueError(
-              "ParseEvent", field, "Unexpected field with value ${JsonUtils.prettyStr(value)}")
+            throw new JsonUtils.UnexpectedFieldError("ParseEvent", field, value)
         }
         event match {
           case "startedParsingSession" =>

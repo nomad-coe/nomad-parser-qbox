@@ -313,11 +313,11 @@ object JsonUtils {
     *
     * Often you want to ignore such errors, think carefully before using this.
     */
-  case class UnexpectedValueError(
+  case class UnexpectedFieldError(
     val context: String,
-    val value: String,
-    val expected :String) extends Exception(
-    "invalid value in " ++ context ++ " expected " ++ expected ++ " but got " ++ value) {
+    val field: String,
+    val value: JValue) extends Exception(
+    s"Unexpected field $field in $context with value ${JsonUtils.prettyStr(value)}") {
   }
 
 }
