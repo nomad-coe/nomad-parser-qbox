@@ -148,6 +148,11 @@ trait OptimizedParser {
     */
   def parserGenerator: ParserGenerator
 
+  /** description of the data that can be extracted by this parser
+    * can also be a superset, so simply parserGenerator.parseableMetaInfo
+    */
+  def parseableMetaInfo: MetaInfoEnv
+
   /** parses the file at the given path, calling the internal backend with the parser events
     *
     * parserName is used to identify the parser, mainly for logging/debugging

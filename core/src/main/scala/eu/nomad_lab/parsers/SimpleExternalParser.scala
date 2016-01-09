@@ -584,6 +584,10 @@ class SimpleExternalParser(
     parserGenerator.ancillaryFilesPrefilter
   }
 
+  override def parseableMetaInfo: meta.MetaInfoEnv = {
+    parserGenerator.parseableMetaInfo
+  }
+
   def isAncillaryFilePathForMainFilePath(mainFilePath: String, ancillaryFile: String): Boolean = true
 
   /** parses the file at the given path, calling the internal backend with the parser events
