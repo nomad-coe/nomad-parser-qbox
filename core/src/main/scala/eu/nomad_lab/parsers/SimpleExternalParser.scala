@@ -55,7 +55,7 @@ object SimpleExternalParserGenerator extends StrictLogging {
         outF.write(buffer, 0, readBytes)
         readBytes = inF.read(buffer)
       }
-      logger.debug(s"resCopy: $inFilePath -> $outPath")
+      logger.trace(s"resCopy: $inFilePath -> $outPath")
     }
   }
 
@@ -143,9 +143,13 @@ class SimpleExternalParserGenerator(
 
   var _envDir: Path = null
   def envDir: Path = {
-    if (_envDir == null)
-      _envDir = setupEnv()
-    _envDir
+    var res: Path = null
+    this.synchronized{
+      if (_envDir == null)
+        _envDir = setupEnv()
+      res = _envDir
+    }
+    res
   }
 
   /** function that should decide if this main file can be parsed by this parser
@@ -167,6 +171,7 @@ class SimpleExternalParserGenerator(
 
   def optimizedParser(optimizations: Seq[MetaInfoOps]): OptimizedParser = {
     val tmpDir = Files.createTempDirectory(Paths.get(baseTempDir), "parserTmp")
+    logger.info(s"parser $name created tmpDir for optimized parser at $tmpDir")
     val allReplacements = extraCmdVars +
         ("envDir" -> envDir.toString()) +
         ("tmpDir" -> tmpDir.toString())
@@ -188,13 +193,15 @@ class SimpleExternalParserGenerator(
   /** deletes the environment directory that had been created
     */
   override def cleanup(): Unit = {
-    if (_envDir != null) {
-      SimpleExternalParserGenerator.recursiveDelete(_envDir.toFile())
-      logger.info(s"parser $name deleting envDir ${_envDir}")
-      // avoid? risks reallocation...
-      _envDir = null
-    } else {
-      logger.debug(s"parser $name has nothing to delete")
+    this.synchronized {
+      if (_envDir != null) {
+        SimpleExternalParserGenerator.recursiveDelete(_envDir.toFile())
+        logger.info(s"parser $name deleting envDir ${_envDir}")
+        // avoid? risks reallocation...
+        _envDir = null
+      } else {
+        logger.debug(s"parser $name has nothing to delete")
+      }
     }
   }
 }
