@@ -146,6 +146,7 @@ object ParseEvent {
         var parserInfo: JValue = JNothing;
         var parserStatus: Option[ParseResult.Value] = None;
         var parserErrors: JValue = JNothing;
+        var jsonValue: JValue = JNothing;
         obj foreach {
           case JField("event", value) =>
             value match {
@@ -169,6 +170,8 @@ object ParseEvent {
               case _                => throw new JsonUtils.InvalidValueError(
                 "gIndex", "NomadMetaInfo", JsonUtils.prettyStr(value), "a string")
             }
+          case JField("value", value) =>
+            jsonValue = value
           case JField("shape", value) =>
             if (!value.toOption.isEmpty)
               shape = Some(value.extract[Seq[Long]])
@@ -224,9 +227,9 @@ object ParseEvent {
           case "closeSection" =>
             CloseSection(metaName, gIndex)
           case "addValue" =>
-            AddValue(metaName, value, gIndex)
+            AddValue(metaName, jsonValue, gIndex)
           case "addRealValue" =>
-            value match {
+            jsonValue match {
               case JDouble(d) =>
                 AddRealValue(metaName, d, gIndex)
               case JInt(i) =>
@@ -235,7 +238,7 @@ object ParseEvent {
                 AddRealValue(metaName, d.doubleValue, gIndex)
               case _ =>
                 throw new JsonUtils.InvalidValueError(
-                  "value", "ParseEvent", JsonUtils.prettyStr(value), "addRealValue expects a real value")
+                  "value", "ParseEvent", JsonUtils.prettyStr(jsonValue), "addRealValue expects a real value")
             }
           case "addArray" =>
             shape match {
@@ -250,7 +253,7 @@ object ParseEvent {
               offset, gIndex)
           case "addArrayValues" =>
             AddArrayValues(metaName, buildArray(backend, metaName, valuesShape, flatValues), gIndex)
-          case "openSectionWithGIndex" =>
+          case "openSection" =>
             OpenSectionWithGIndex(metaName, gIndex)
         }
       }
@@ -551,7 +554,7 @@ final case class AddArrayValues(
 final case class OpenSectionWithGIndex(
   metaName: String, gIndex: Long
 ) extends ParseEvent {
-  override def eventName = "openSectionWithGIndex"
+  override def eventName = "openSection"
 
   override def toJValue: JValue = {
     import org.json4s.JsonDSL._;
