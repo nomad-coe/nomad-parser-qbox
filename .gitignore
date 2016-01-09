@@ -17,6 +17,9 @@ syntax: glob
 .manager
 .scala_dependencies
 
+.ensime
+.ensime_cache
+
 # idea
 .idea
 *.iml

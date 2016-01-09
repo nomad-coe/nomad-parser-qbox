@@ -13,6 +13,8 @@
 -.scala_dependencies
 -.idea
 -*.iml
+-.ensime
+-.ensime_cache
 -target
 -build
 -null
