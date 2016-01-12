@@ -157,7 +157,8 @@ lazy val core = (project in file("core")).
   settings(
     libraryDependencies ++= commonLibs,
     name := "nomadCore",
-    (unmanagedResourceDirectories in Compile) += (baseDirectory.value / "../nomad-meta-info/meta_info").getCanonicalFile()
+    (unmanagedResourceDirectories in Compile) += (baseDirectory.value / "../nomad-meta-info/meta_info").getCanonicalFile(),
+    (unmanagedResourceDirectories in Compile) += (baseDirectory.value / "../python-common/common").getCanonicalFile()
   )//.
   //settings(flywaySettings: _*).
   ////settings(h2Settings: _*).
