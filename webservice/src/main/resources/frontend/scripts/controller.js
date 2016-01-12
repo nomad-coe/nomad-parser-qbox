@@ -1,5 +1,18 @@
-    var app = angular.module('metaVisualizationApp', ['ngSanitize', 'ui.select','angular.filter','hc.marked']);
-    app.controller('AllDataController', ['$scope', '$http', 'ancestorGraph' ,function($scope, $http, ancestorGraph) {
+    var app = angular.module('metaVisualizationApp', ['ngRoute','ngSanitize', 'ui.select','angular.filter','hc.marked']);
+    app.config(['$routeProvider',
+      function($routeProvider) {
+        $routeProvider.
+          when('/:metaInfoId', {
+            templateUrl: 'views/metaInfo.html',
+            controller: 'AllDataController'
+          }).
+          otherwise({
+            redirectTo: '/section_single_configuration_calculation'
+          });
+      }]);
+    app.controller('AllDataController', ['$scope', '$http', 'ancestorGraph', '$routeParams',function($scope, $http, ancestorGraph,$routeParams) {
+      $scope.metaInfoId = $routeParams.metaInfoId;
+      console.log($routeParams.metaInfoId);
       $scope.searchList = [];
       $scope.filter = {};
       $scope.filter.Types= [      {displayName:'All Types', name:'', parent: '' },
@@ -49,8 +62,10 @@
       $scope.filter.selectedSection= { displayName: 'All Sections' , section:'', parent: 'ROOT' } ;
       $scope.filter.selectedType={displayName:'All Types', name:'', parent: 'Energy' };
       $scope.filter.selectedMetaInfoType={displayName:'All Meta Info Types', name:''};
+
       $scope.dataToDisplay = {};
-      $scope.dataToDisplay.name = 'section_single_configuration_calculation';
+//      $scope.dataToDisplay.name = 'section_single_configuration_calculation';
+      $scope.dataToDisplay.name = $routeParams.metaInfoId;
       $scope.filter.version = "common";
       $scope.DAG ={
           zoom:false,
@@ -226,6 +241,16 @@ app.factory('ancestorGraph', [ '$q', function( $q ){
   return ancestorGraph;
 } ]);
 
+app.service('versionService',function(){
+
+    this.allVersion = function(){
+
+    }
+    this.allVersion = function(){
+
+    }
+
+})
 app.directive('master',function ($window) { //declaration; identifier master
     function link(scope, element, attrs) { //scope we are in, element we are bound to, attrs of that element
       scope.$watch(function(){ //watch any changes to our element
