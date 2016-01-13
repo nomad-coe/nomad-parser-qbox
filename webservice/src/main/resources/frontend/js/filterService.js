@@ -53,18 +53,12 @@ filter.factory('filterService', function($http) {
         filter.selectedMetaInfoType=filter.MetaInfoTypes[0];
         var myService = {
             filter:filter,
-            setSelectedSection: function(selectedSection){
-                filter.selectedSection = selectedSection;
-                return filter.selectedSection;
-            },
-            setSelectedSection: function(selectedSection){
-                filter.selectedSection = selectedSection;
-                return filter.selectedSection;
-            },
-            setSelectedSection: function(selectedSection){
-                filter.selectedSection = selectedSection;
-                return filter.selectedSection;
-            },
+            setSelected: function(selectedValues){
+                filter.selectedSection= selectedValues.selectedSection;
+                filter.selectedType=selectedValues.selectedType;
+                filter.selectedMetaInfoType=selectedValues.selectedMetaInfoType;
+                return filter;
+            }
         };
       return myService;
     });

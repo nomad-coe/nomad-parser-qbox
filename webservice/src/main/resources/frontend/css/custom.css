@@ -64,7 +64,7 @@ input[type="text"]:focus {
         overflow: auto;
     }
 #contentMore {
-        margin-left: 0.5em;
+        padding-left: 0.5em;
     }
 
 .mainContent{
@@ -77,13 +77,15 @@ input[type="text"]:focus {
 .indent {
     padding-left: 15px;
 }
-.button-custom{
-	margin: 2px 2px 2px 5px;
-}
+
 #cy {
     width: 900px;
-    height: 500px;
+    height: 400px;
 /*    z-index: 999;*/
+}
+#circles{
+    padding-top:5px;
+    padding-bottom:4px;
 }
 #circleSection {
     background-color: #EE0000;
@@ -110,5 +112,15 @@ input[type="text"]:focus {
     -webkit-border-radius: 25px;
     -moz-border-radius: 25px;
     border-radius: 25px; 
+    float:left;
+}
+
+#circleDocument {
+    background-color: #A0A0A0;
+    width: 30px;
+    height: 30px;
+    -webkit-border-radius: 25px;
+    -moz-border-radius: 25px;
+    border-radius: 25px;
     float:left;
 }
