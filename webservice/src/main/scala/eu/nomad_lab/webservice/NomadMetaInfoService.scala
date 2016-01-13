@@ -20,8 +20,7 @@ import eu.nomad_lab.meta.MetaInfoRecord
 import eu.nomad_lab.meta.MetaInfoCollection
 import eu.nomad_lab.meta.RelativeDependencyResolver
 import eu.nomad_lab.meta.SimpleMetaInfoEnv
-import eu.nomad_lab.JsonSupport
-import eu.nomad_lab.JsonUtils
+import eu.nomad_lab.{MarkDownProcessor, JsonSupport, JsonUtils}
 import com.typesafe.scalalogging.StrictLogging
 import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JArray, JObject, JValue, JField}
 import scala.util.matching.Regex
@@ -217,172 +216,6 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
     }
   }
 
-  object MarkDownProcessorState extends Enumeration {
-    type MarkDownProcessorState = Value
-    val BetweenWords, InWord, InNonWord, InDollarMath, InSquareMath, InParentesisMath, BackSlash, InTag, InTagString = Value
-  }
-
-  def processMarkDown(text: String, keys: Set[String], keyLinkBuilder: String => String, markDownProcessor: String => String): String = {
-    import MarkDownProcessorState._
-    val escapedText = new mutable.StringBuilder()
-    var state = MarkDownProcessorState.BetweenWords
-    var i: Int = 0
-    var lastEmit: Int = 0
-    var wordStart: Int = -1
-    var mathStart: Int = -1
-    var placeholderNr: Int = 0
-    var inBacktick: Boolean = false
-    val placeholderValues = mutable.Map[String, String]()
-
-    def addMathPlaceholder(): Unit = {
-      escapedText ++= text.substring(lastEmit, mathStart)
-      var placeholder = s"XXX-$placeholderNr-XXX"
-      placeholderNr += 1
-      while (text.contains(placeholder)) {
-        var placeholder = s"XXX-$placeholderNr-XXX"
-        placeholderNr += 1
-      }
-      placeholderValues += (placeholder ->
-        text.substring(mathStart, i).replaceAll("&", "&amp;").replaceAll(">", "&gt;").replaceAll("<", "&lt;"))
-      escapedText ++= placeholder
-      lastEmit = i
-      mathStart = -1
-    }
-    while (i < text.length()) {
-      var cAtt = text.charAt(i)
-      i += 1
-      state match {
-        case BetweenWords =>
-          cAtt match {
-            case '\\' =>
-              state = BackSlash
-            case '`' =>
-              inBacktick = !inBacktick
-            case '$' =>
-              state = InDollarMath
-              mathStart = i -1
-            case '<' =>
-              state = InTag
-            case '>' =>
-              escapedText ++= text.substring(lastEmit, i - 1)
-              lastEmit = i
-              escapedText ++= "&gt;"
-            case _ if Character.isLetter(cAtt) =>
-              wordStart = i - 1
-              state = InWord
-            case _ if Character.isDigit(cAtt) || cAtt == '_' =>
-              state = InNonWord
-          }
-        case InWord =>
-          while (Character.isLetterOrDigit(cAtt) && cAtt == '_' && i < text.length()) {
-            cAtt = text.charAt(i)
-            i += 1
-          }
-          val word = text.substring(wordStart, i - 1)
-          if (keys(word)) {
-            escapedText ++= text.substring(lastEmit, wordStart)
-            escapedText ++= keyLinkBuilder(word)
-            lastEmit = i
-            wordStart = -1
-          }
-          state = BetweenWords
-        case InNonWord =>
-          while (Character.isLetterOrDigit(cAtt) && cAtt == '_' && i < text.length()) {
-            cAtt = text.charAt(i)
-            i += 1
-          }
-          state = BetweenWords
-        case InDollarMath =>
-          var escape: Boolean = false
-          var atEnd: Boolean = false
-          i -= 1
-          while (!atEnd && i < text.length()) {
-            cAtt = text.charAt(i)
-            i += 1
-            if (cAtt == '\\') {
-              escape = !escape
-            } else if (cAtt == '$') {
-              if (!escape)
-                atEnd = true
-              escape = false
-            } else {
-              escape = false
-            }
-          }
-          addMathPlaceholder()
-          state = BetweenWords
-        case InSquareMath =>
-          var escape: Boolean = false
-          var atEnd: Boolean = false
-          i -= 1
-          while (!atEnd && i < text.length()) {
-            cAtt = text.charAt(i)
-            i += 1
-            if (cAtt == '\\') {
-              escape = !escape
-            } else if (cAtt == ']') {
-              if (escape)
-                atEnd = true
-              escape = false
-            } else {
-              escape = false
-            }
-          }
-          addMathPlaceholder()
-          state = BetweenWords
-        case InParentesisMath =>
-          var escape: Boolean = false
-          var atEnd: Boolean = false
-          i -= 1
-          while (!atEnd && i < text.length()) {
-            cAtt = text.charAt(i)
-            i += 1
-            if (cAtt == '\\') {
-              escape = !escape
-            } else if (cAtt == ')') {
-              if (escape)
-                atEnd = true
-              escape = false
-            } else {
-              escape = false
-            }
-          }
-          addMathPlaceholder()
-          state = BetweenWords
-        case BackSlash =>
-          cAtt match {
-            case '$' =>
-              escapedText ++= text.substring(lastEmit, i - 1)
-              escapedText ++= "$\\$$"
-              lastEmit = i
-            case '(' =>
-              if (inBacktick) {
-                mathStart = i - 2
-                state = InParentesisMath
-              }
-            case '[' =>
-              if (inBacktick) {
-                mathStart = i - 2
-                state = InParentesisMath
-              }
-            case _ =>
-              state = BetweenWords
-          }
-        case InTag =>
-          if (cAtt == '>')
-            state = BetweenWords
-          else if (cAtt == '"')
-            state = InTagString
-        case InTagString =>
-          if (cAtt == '\\')
-            i += 1
-          else if (cAtt == '"')
-            state = InTag
-      }
-    }
-    escapedText ++= text.substring(lastEmit)
-    escapedText.toString()
-  }
 
   /** Create JSON with all meta tag. Contains complete data including ancestors and children
     */
@@ -468,11 +301,15 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
             case None =>
               Seq()
           }
+          def hrefCreate(x:String):String =  {
+            return s"""<a href="#/$version/$x"> $x </a> """
+          }
+          val descriptionHTML = MarkDownProcessor.processMarkDown(r.description,v.allNames.toSet,hrefCreate);
 
           jn.JObject(jn.JField("type", "nomad_meta_versions_1_0") ::
             jn.JField("versions", version) ::
             jn.JField("name", name) ::
-            jn.JField("description", r.description) ::
+            jn.JField("description",descriptionHTML) ::
             jn.JField("gid", r.gid) ::
             jn.JField("units", r.units) ::
             jn.JField("dtypeStr", dtypeStr) ::
@@ -597,7 +434,8 @@ table
               case "type_abstract_document_content" => "#00AAAA"
               case "type_section" => "#EE0000"
               case "type_connection" => "#AA1111"
-              case _ => "#EE00EE"
+              case "type_dimension" => "#EE00EE"
+              case _ => "#1111AA"
             })) ::
             ("shape" -> (if (metaInfo.name == name)
                jn.JString("star")

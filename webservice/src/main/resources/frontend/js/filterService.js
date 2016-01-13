@@ -43,7 +43,7 @@ filter.factory('filterService', function($http) {
             { displayName: 'section_single_configuration_calculation' , section:'section_single_configuration_calculation', parent: 'section_system_description' },
             { displayName: 'section_scf_iteration' , section:'section_scf_iteration', parent: 'section_run' }  ];
         filter.MetaInfoTypes = [ {displayName: 'All Meta Info Types', name: ''},
-            {displayName: 'type_document', name: 'type_document'},
+//            {displayName: 'type_document', name: 'type_document'},
             {displayName: 'type_dimension', name: 'type_dimension'},
             {displayName: 'type_section', name: 'type_section'},
             {displayName: 'type_document_content', name: 'type_document_content'},

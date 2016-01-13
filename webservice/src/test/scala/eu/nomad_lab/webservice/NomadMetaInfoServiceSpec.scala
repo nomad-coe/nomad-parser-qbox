@@ -12,6 +12,7 @@ import eu.nomad_lab.meta.SimpleMetaInfoEnv
 import eu.nomad_lab.meta.MetaInfoRecord
 import eu.nomad_lab.meta.MetaInfoEnv
 import eu.nomad_lab.JsonUtils
+import org.pegdown.PegDownProcessor
 
 class NomadMetaInfoServiceSpec extends Specification with Specs2RouteTest with NomadMetaInfoService {
   def actorRefFactory = system
@@ -31,6 +32,7 @@ class NomadMetaInfoServiceSpec extends Specification with Specs2RouteTest with N
       dependencies = Seq(mainEnv),
       kind = MetaInfoEnv.Kind.Version)
   }
+
 
   "NomadMetaInfoService" should {
 

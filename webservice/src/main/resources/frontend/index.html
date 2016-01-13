@@ -11,6 +11,11 @@
   <link rel="stylesheet" href="css/selectize.default.css">
   <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.css">
   <link rel="stylesheet" href="css/select.css">
+  <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+    });
+  </script>
   <script src="scripts/jquery-2.1.4.min.js"> </script>
   <script src="scripts/angular.min.js"> </script>
   <!--<script src="scripts/checklist-model.js"> </script>-->
@@ -28,7 +33,7 @@
   <script src="scripts/marked.js"></script>
   <script src="scripts/angular-marked.js"></script>    <!-- ui-select files -->
   <script src="scripts/select.js"></script>
-  <script src='https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML'></script>
+  <script async src='https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML'></script>
 </head>
   <body>
      <div ng-view></div>

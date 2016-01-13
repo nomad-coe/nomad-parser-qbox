@@ -89,8 +89,8 @@ input[type="text"]:focus {
 }
 #circleSection {
     background-color: #EE0000;
-    width: 30px;
-    height: 30px;
+    width: 20px;
+    height: 20px;
     -webkit-border-radius: 25px;
     -moz-border-radius: 25px;
     border-radius: 25px; 
@@ -98,8 +98,8 @@ input[type="text"]:focus {
 }
 #circleAbstractType {
     background-color: #00AAAA;
-    width: 30px;
-    height: 30px;
+    width: 20px;
+    height: 20px;
     -webkit-border-radius: 25px;
     -moz-border-radius: 25px;
     border-radius: 25px; 
@@ -107,18 +107,18 @@ input[type="text"]:focus {
 }
 #circleConcreteValue {
     background-color: #333333;
-    width: 30px;
-    height: 30px;
+    width: 20px;
+    height: 20px;
     -webkit-border-radius: 25px;
     -moz-border-radius: 25px;
     border-radius: 25px; 
     float:left;
 }
 
-#circleDocument {
-    background-color: #A0A0A0;
-    width: 30px;
-    height: 30px;
+#circleDimension {
+    background-color: #EE00EE;
+    width: 20px;
+    height: 20px;
     -webkit-border-radius: 25px;
     -moz-border-radius: 25px;
     border-radius: 25px;
