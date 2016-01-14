@@ -1,15 +1,21 @@
 (function() {
     'use strict';
     // to set a module
-    angular.module('metaDataApp.mainController', ['ngSanitize', 'ui.select','angular.filter','metaDataApp.metaFilter','metaDataApp.dataModule'])
+    angular.module('metaDataApp.mainController', ['ngSanitize', 'ui.select','angular.filter','metaDataApp.metaFilter','metaDataApp.dataModule','mathJaxDirective'])
     .controller('mainController', ['$scope', '$http','$location', 'ancestorGraph', '$routeParams','filterService','dataService',mainController])
     .factory('ancestorGraph', ['$q','$location','$rootScope', ancestorGraphDeclaration])
     .directive('master',masterDirective);
-//TODO: Filtering not working
+
+
+//TODO: basis_set_cell_associated_kind corner case of mathjax and markdown
     function mainController($scope, $http, $location, ancestorGraph, $routeParams,filterService,dataService){
         $scope.metaInfoName = $routeParams.metaInfoName;
         $scope.version = $routeParams.version;
         $scope.filter = filterService.filter;
+        $scope.dataToDisplay = {
+            name:'',
+            description:''
+        };
         var cy;
         $scope.DAG ={
             //zoom: Store the zoom and "pan" setting of the graph
@@ -41,11 +47,7 @@
                 }
             }
             //If metaData not found then redirect to section_single_configuration_calculation
-            if(i == -1)
-            {
-             console.log('this could not happen');
-            }
-            else if (i == $scope.metaDataList['metaInfos'].length ){
+            if (i == $scope.metaDataList['metaInfos'].length ){
                 $location.path('/'+$scope.version+'/section_single_configuration_calculation');
             }
             else{

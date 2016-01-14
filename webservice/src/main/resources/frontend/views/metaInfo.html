@@ -69,33 +69,37 @@
         <div  class="col-xs-8 col-md-9"  >
             <div  class="row mainContent" ng-style="style">
                 <div class="col-xs-12 col-md-12">
-                    <div class="col-xs-12 col-md-9">
+                    <div class="col-xs-12 col-md-8">
                         <h1> {{dataToDisplay['name']}} </h1>
                     </div>
-                    <div class="col-xs-12 col-md-3" style="text-align:right;">
-                        <div >
+                    <div class="col-xs-12 col-md-4" style="text-align:right;">
+                        <div>
                             {{dataToDisplay['gid']}}
                         </div>
                         <div >
                             {{dataToDisplay['kindStr']}}
                         </div>
                     </div>
-                    <div class="row"><div class="col-md-12"> </div></div>
-                    <!--<div>{{dataToDisplay['description']}}</div>-->
-                    <div ng-bind-html="dataToDisplay['description']"></div>
-                    <h2 ng-show="dataToDisplay['units'] != null && dataToDisplay['dtypeStr'] != null && dataToDisplay['shape'] != null" >Keys</h2>
-                    <div class="indent" ng-show="dataToDisplay['units'] != null" > units: {{ dataToDisplay['units'] }}</div>
-                    <div class="indent" ng-show="dataToDisplay['dtypeStr'] != null" >dtypeStr: {{ dataToDisplay['dtypeStr'] }}</div>
-                    <div class="indent" ng-show="dataToDisplay['shape'] != null && dataToDisplay['shape'].length > 0" > shape: {{ dataToDisplay['shape'] }}</div>
-                    <div class="col-xs-12 col-md-8 " id="circles">
-                        <div  class="col-xs-3"> <div id="circleSection"> </div> Section </div>
-                        <div  class="col-xs-3 "> <div id="circleAbstractType"> </div> Abstract Type</div>
-                        <div  class="col-xs-3 "> <div id="circleConcreteValue"> </div> Concete Values</div>
-                        <div  class="col-xs-3 "> <div id="circleDimension"> </div> Dimension</div>
-                    </div>
-                    <div  class="col-xs-12 col-md-4">
-                        <button type="button" class="btn btn-primary" ng-click="zoomToggle()">{{DAG.zoomText}}</button>
-                        <button type="button" class="btn btn-primary" ng-click="reset()">Reset</button>
+                    <div class="row">
+                        <div class="col-md-12">
+                        <!--<div>{{dataToDisplay['description']}}</div>-->
+                        <!--<div ng-bind-html="dataToDisplay['description']"></div>-->
+                        <div dynamic="dataToDisplay['description']"></div>
+                        <h2 ng-show="dataToDisplay['units'] != null && dataToDisplay['dtypeStr'] != null && dataToDisplay['shape'] != null" >Keys</h2>
+                        <div class="indent" ng-show="dataToDisplay['units'] != null" > units: {{ dataToDisplay['units'] }}</div>
+                        <div class="indent" ng-show="dataToDisplay['dtypeStr'] != null" >dtypeStr: {{ dataToDisplay['dtypeStr'] }}</div>
+                        <div class="indent" ng-show="dataToDisplay['shape'] != null && dataToDisplay['shape'].length > 0" > shape: {{ dataToDisplay['shape'] }}</div>
+                        <div class="col-xs-12 col-md-8 " id="circles">
+                            <div  class="col-xs-3"> <div id="circleSection"> </div> Section </div>
+                            <div  class="col-xs-3 "> <div id="circleAbstractType"> </div> Abstract Type</div>
+                            <div  class="col-xs-3 "> <div id="circleConcreteValue"> </div> Concete Values</div>
+                            <div  class="col-xs-3 "> <div id="circleDimension"> </div> Dimension</div>
+                        </div>
+                        <div  class="col-xs-12 col-md-4">
+                            <button type="button" class="btn btn-primary" ng-click="zoomToggle()">{{DAG.zoomText}}</button>
+                            <button type="button" class="btn btn-primary" ng-click="reset()">Reset</button>
+                        </div>
+                        </div>
                     </div>
                     <div class="row">
                         <div class="col-xs-12">
@@ -124,7 +128,6 @@
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
