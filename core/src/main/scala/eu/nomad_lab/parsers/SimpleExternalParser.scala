@@ -160,11 +160,14 @@ class SimpleExternalParserGenerator(
       case Some(str) =>
         mainFileRe.findFirstMatchIn(str) match {
           case Some(m) =>
+            logger.debug(s"$filePath matches parser $name")
             Some(ParserMatch(mainFileMatchPriority, mainFileMatchWeak))
           case None =>
+            logger.debug(s"$filePath does *NOT* match parser $name")
             None
         }
       case None =>
+        logger.warn(s"parser $name asked about $filePath which has no stringPrefix")
         None
     }
   }
@@ -536,8 +539,12 @@ class ExternalParserWrapper(
       case e: Exception =>
         hadErrors = true
         inF.close()
+        val msg = s"Error parsing output of parser $parserName (${JsonUtils.prettyStr(parserInfo, 2)}) when parsing ${mainFileUri.getOrElse("<no uri>")} at ${mainFilePath.getOrElse("<no path>")}"
         // log instad of throwing?
-        throw new ParseStreamException(s"Error parsing output of parser $parserName (${JsonUtils.prettyStr(parserInfo, 2)}) when parsing $mainFileUri at $mainFilePath", e)
+        // val s = new java.io.StringWriter()
+        // e.printStackTrace(new java.io.PrintWriter(s))
+        // logger.error(msg + e.getMessage() + s.toString())
+        throw new ParseStreamException(msg, e)
     }
   }
 
@@ -590,6 +597,7 @@ class ExternalParserWrapper(
         case Some(handler) => handler(_)
         case None => logErrors(_)
       }
+      logger.info(s"parser $parserName will run $command in $cwd with environment $env")
       val proc = Process(command, cwd, env.toSeq: _*).run(new ProcessIO(currentStdInHandler, jsonDecode _, currentStdErrHandler))
       // should switch to finite state machine and allow async interaction, for now we just block...
       hadErrors = (proc.exitValue != 0)

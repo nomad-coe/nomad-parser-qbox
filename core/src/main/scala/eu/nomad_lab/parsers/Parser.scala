@@ -380,7 +380,7 @@ class ParserCollection(
           byteBuffer, strBuf, false)
         assert(!isoDecoding.isError())
       }
-      strBuf.toString()
+      new String(strBuf.array(), 0, strBuf.position())
     }
     parsersByMimeType.foldLeft(Seq[CandidateParser]()){ case (seq, (mimeRe, parserNames)) =>
       mimeType match {

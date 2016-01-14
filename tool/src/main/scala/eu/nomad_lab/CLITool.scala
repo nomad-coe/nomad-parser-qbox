@@ -2,10 +2,9 @@ package eu.nomad_lab;
 import scala.collection.mutable.ListBuffer
 import scala.collection.breakOut
 import scala.collection.mutable
-//import eu.nomad_lab.meta
-//import eu.nomad_lab.parsers
+import com.typesafe.scalalogging.StrictLogging
 
-object CLITool {
+object CLITool extends StrictLogging {
   /** Really tries to read the whole buffer (from offest on) into buf
     *
     * gives up only if there is an error or EOF
@@ -47,6 +46,7 @@ Usage:
     [--hdf5]
     [--netcdf]
     [--json-events]
+    [--verbose]
 
 Runs the main parsing step
   """
@@ -159,25 +159,26 @@ Runs the main parsing step
         }
       }
     }
-    val backend: parsers.ParserBackendInternal = backendType match {
-      case BackendType.JsonWriter => null
-      case BackendType.Netcdf => null
-      case BackendType.JsonEventEmitter => null
-    }
-
     mainFilePath match {
       case Some(path) =>
         val uri = mainFileUri match {
           case Some(mainUri) => mainUri
           case None          => ("file://" + path)
         }
+        logger.info(s"will parse $path with uri $uri")
         val cachedOptimizedParsers: mutable.Map[String, parsers.OptimizedParser] = mutable.Map()
         val fIn = new java.io.FileInputStream(path)
         val buf = Array.fill[Byte](8*1024)(0)
         val nRead = tryRead(fIn, buf, 0)
         val minBuf = buf.dropRight(buf.size - nRead)
-        val possibleParsers = parserCollection.scanFile(path, minBuf).sorted
-        for (parsers.CandidateParser(parserMatch, parserName, parser) <- possibleParsers) {
+        var possibleParsers = parserCollection.scanFile(path, minBuf).sorted
+        if (possibleParsers.isEmpty && parserCollection.parsers.size == 1) {
+          val (pName,pAtt) = parserCollection.parsers.head
+          logger.warn(s"file $path did not match parser $pName, but as it is the sole parser available, forcing its use.")
+          possibleParsers = Seq(parsers.CandidateParser(parsers.ParserMatch(0, false), pName, pAtt))
+        }
+        if (!possibleParsers.isEmpty){
+          val parsers.CandidateParser(parserMatch, parserName, parser) = possibleParsers.head
           val optimizedParser: parsers.OptimizedParser= {
             cachedOptimizedParsers.get(parserName) match {
               case Some(oParser) =>
@@ -188,7 +189,28 @@ Runs the main parsing step
                 oParser
             }
           }
-          val parsingStatus = optimizedParser.parseInternal(uri, path, backend, parserName)
+          val stdOut = new java.io.OutputStreamWriter(System.out)
+          val intBackend: parsers.ParserBackendInternal = backendType match {
+            case BackendType.JsonWriter => null
+            case BackendType.Netcdf => null
+            case BackendType.JsonEventEmitter => null
+          }
+          val extBackend: parsers.ParserBackendExternal = backendType match {
+            case BackendType.JsonWriter =>
+              new parsers.JsonWriterBackend(optimizedParser.parseableMetaInfo,
+                sectionManagers = Map(),
+                metaDataManagers = Map(),
+                stdOut)
+            case BackendType.Netcdf => null
+            case BackendType.JsonEventEmitter =>
+              new parsers.JsonParseEventsWriterBackend(optimizedParser.parseableMetaInfo, stdOut)
+          }
+          val parsingStatus = if (intBackend != null)
+            optimizedParser.parseInternal(uri, path, intBackend, parserName)
+          else if (extBackend != null)
+            optimizedParser.parseExternal(uri, path, extBackend, parserName)
+          else
+            throw new Exception("no backend")
           parsingStatus match {
             case _ => ()
           }
