@@ -29,7 +29,7 @@
           html = html.replace(/\$([^$]+)\$/g, "<span mathjax-bind=\"$1\"></span>");
           html = html.replace(/\$\$([^$]+)\$\$/g, "<span  mathjax-bind=\"$1\"></span>");
           html = html.replace(/\\\[([^$]+)\\\]/g, "<span mathjax-bind=\"$1\"></span>");
-          console.log(html)
+//          console.log(html)
           ele.html(html);
           $compile(ele.contents())(scope);
           });

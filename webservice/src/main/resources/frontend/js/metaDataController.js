@@ -6,8 +6,6 @@
     .factory('ancestorGraph', ['$q','$location','$rootScope', ancestorGraphDeclaration])
     .directive('master',masterDirective);
 
-
-//TODO: basis_set_cell_associated_kind corner case of mathjax and markdown
     function mainController($scope, $http, $location, ancestorGraph, $routeParams,filterService,dataService){
         $scope.metaInfoName = $routeParams.metaInfoName;
         $scope.version = $routeParams.version;

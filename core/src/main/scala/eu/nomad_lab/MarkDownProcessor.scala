@@ -9,7 +9,7 @@ object MarkDownProcessor {
 
   object MarkDownProcessorState extends Enumeration {
     type MarkDownProcessorState = Value
-    val BetweenWords, InWord, InNonWord, InDollarMath, InSquareMath, InParentesisMath, BackSlash, InTag, InTagString = Value
+    val BetweenWords, InWord, InNonWord, InDollarMath, InSquareMath,InSquareBracket, InParentesisMath, BackSlash, InTag, InTagString = Value
   }
   lazy val pegDownProcessor = new org.pegdown.PegDownProcessor
 
@@ -51,6 +51,8 @@ object MarkDownProcessor {
           cAtt match {
             case '\\' =>
               state = BackSlash
+            case '[' =>
+              state = InSquareBracket
             case '`' =>
               inBacktick = !inBacktick
             case '$' =>
@@ -70,13 +72,13 @@ object MarkDownProcessor {
             case _ => ()
           }
         case InWord =>
-          while ((Character.isLetterOrDigit(cAtt) || cAtt == '_' ) && i < text.length()) { //TODO: Should be OR
+          while ((Character.isLetterOrDigit(cAtt) || cAtt == '_' || cAtt == '-') && i < text.length()) {
             cAtt = text.charAt(i)
             i += 1
           }
           val word = text.substring(wordStart, i - 1)
           if (keys(word)) {
-            escapedText ++= text.substring(lastEmit, wordStart) //TODO: Check logic at this point
+            escapedText ++= text.substring(lastEmit, wordStart)
             escapedText ++= keyLinkBuilder(word)
             lastEmit = i - 1
             wordStart = -1
@@ -169,6 +171,9 @@ object MarkDownProcessor {
             state = BetweenWords
           else if (cAtt == '"')
             state = InTagString
+        case InSquareBracket =>
+          if (cAtt == ']')
+            state = BetweenWords
         case InTagString =>
           if (cAtt == '\\')
             i += 1
