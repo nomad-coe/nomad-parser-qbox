@@ -29,7 +29,7 @@
                         </ui-select>
                     </div>
                     <div class="col-xs-6 col-md-4">
-                        <ui-select ng-model="filter.selectedType" ng-change="filterChange(filter)" theme="bootstrap" ng-disabled="disabled"  close-on-select="true" title="Filter by Type">
+                        <ui-select ng-model="filter.selectedType" ng-change="filterChange(filter)" theme="bootstrap" ng-disabled="disabled"  close-on-select="true" title="Filter by Abstract Type">
                             <ui-select-match placeholder="Select a type in the list ">{{$select.selected.displayName}}</ui-select-match>
                             <ui-select-choices group-by="'parent'" repeat="type in filter.Types| filter:$select.search ">
                                 {{type.displayName}}
@@ -125,14 +125,14 @@
                         <div class="col-xs-12">
                             <div ng-show="dataToDisplay['superNames'].length">
                                 <h2>Ancestors</h2>
-                                <h3>Explicit parents</h3>
+                                <h3>Explicit Parents</h3>
                                 <ul>
                                     <li class="indent" ng-repeat="superName in dataToDisplay['superNames'] ">
                                         <span ><a href="#/{{version}}/{{superName}}">{{superName}}</a></span>
                                     </li>
                                 </ul>
                             </div>
-                            <h2 ng-show="dataToDisplay['children'].length">DirectChildrens</h2>
+                            <h2 ng-show="dataToDisplay['children'].length">Direct Children</h2>
                             <ul>
                                 <li class="indent" ng-repeat="child in dataToDisplay['children'] ">
                                     <span ><a href="#/{{version}}/{{child}}">{{child}}</a></span>

@@ -4,7 +4,7 @@
 var filter = angular.module('metaDataApp.metaFilter', []);
 filter.factory('filterService', function($http) {
         var filter = {};
-        filter.Types= [ {displayName:'All Types', name:'', parent: '' },
+        filter.Types= [ {displayName:'Any Abstract Type', name:'', parent: '' },
             {displayName: 'energy',name:'energy', parent: 'Energy' },
             {displayName: 'energy_component_scf_iteration',name:'energy_component_scf_iteration', parent: 'Energy' },
             {displayName: 'energy_component_per_atom_scf_iteration',name:'energy_component_per_atom_scf_iteration',parent: 'Energy' },
@@ -36,13 +36,13 @@ filter.factory('filterService', function($http) {
             {displayName: 'time_info_run',name:'time_info_run', parent: 'Accessory Info' },
             {displayName: 'time_info_evaluation',name:'time_info_evaluation', parent: 'Accessory Info' },
             {displayName: 'time_info_scf_iteration',name:'time_info_scf_iteration', parent: 'Accessory Info' }  ];
-        filter.Sections= [  { displayName: 'All Sections' , section:'', parent: 'ROOT' },
+        filter.Sections= [  { displayName: 'Any Section' , section:'', parent: 'ROOT' },
             { displayName: 'section_run' , section:'section_run', parent: 'ROOT' },
             { displayName: 'section_method' , section:'section_method', parent: 'section_run' },
             { displayName: 'section_system_description' , section:'section_system_description', parent: 'section_run' },
             { displayName: 'section_single_configuration_calculation' , section:'section_single_configuration_calculation', parent: 'section_system_description' },
             { displayName: 'section_scf_iteration' , section:'section_scf_iteration', parent: 'section_run' }  ];
-        filter.MetaInfoTypes = [ {displayName: 'All Meta Info Types', name: ''},
+        filter.MetaInfoTypes = [ {displayName: 'Any Meta Info Type', name: ''},
 //            {displayName: 'type_document', name: 'type_document'},
             {displayName: 'type_dimension', name: 'type_dimension'},
             {displayName: 'type_section', name: 'type_section'},
