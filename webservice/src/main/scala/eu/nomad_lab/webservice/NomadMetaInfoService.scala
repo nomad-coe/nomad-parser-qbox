@@ -282,18 +282,20 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
           case None =>
             jn.JNothing
           }
+          def hrefCreate(x:String):String =  {
+            if(x==name)
+               s"""<em>$x</em>"""
+            else
+               s"""<a href="#/$version/$x"> $x </a> """
+          }
           val metaShape = r.shape match {
                 case None => jn.JNothing
                 case Some(s) =>
                   val listShape: List[jn.JValue] = s.map {
                     case Left(i) => jn.JInt(i)
-                    case Right(s) => jn.JString(s)
+                    case Right(s) => jn.JString(hrefCreate(s))
                   }(breakOut)
-                  val listShapeWithLink = for (x <- listShape) yield  x match {
-                    case jn.JString(o) => jn.JString( s"""<a href="#/$version/$o"> $o </a> """ )
-                    case anythingElse => anythingElse
-                  }
-                  jn.JArray(listShapeWithLink)
+                  jn.JArray(listShape)
               }
           val children = v.allDirectChildrenOf(name).toList
           var allParents:List[String] = Nil
@@ -304,12 +306,6 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
               rootSections.toSeq
             case None =>
               Seq()
-          }
-          def hrefCreate(x:String):String =  {
-            if(x==name)
-               s"""<em>$x</em>"""
-            else
-               s"""<a href="#/$version/$x"> $x </a> """
           }
           val descriptionHTML = MarkDownProcessor.processMarkDown(r.description,v.allNames.toSet,hrefCreate);
 
