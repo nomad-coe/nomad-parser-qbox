@@ -302,7 +302,10 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
               Seq()
           }
           def hrefCreate(x:String):String =  {
-            return s"""<a href="#/$version/$x"> $x </a> """
+            if(x==name)
+               s"""<em>$x</em>"""
+            else
+               s"""<a href="#/$version/$x"> $x </a> """
           }
           val descriptionHTML = MarkDownProcessor.processMarkDown(r.description,v.allNames.toSet,hrefCreate);
 

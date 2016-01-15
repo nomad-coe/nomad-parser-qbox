@@ -3,14 +3,14 @@
     <div class="row">
         <div master class="col-xs-12 header">
             <div class="row">
-                <h2 class="col-xs-8 col-md-10">NOMAD Meta Info</h2>
+                <h2 class="col-xs-8 col-md-9">NOMAD Meta Info</h2>
 
                 <!--<h3 > Version </h3>-->
-                <div class="col-xs-4 col-md-2 versionBox" >
+                <div class="col-xs-4 col-md-3 versionBox" >
                     <ui-select ng-model="version" ng-change="versionChange(version)" theme="bootstrap" ng-disabled="disabled" close-on-select="true"  title="Select a version">
                         <ui-select-match placeholder="Select a version">{{$select.selected}}</ui-select-match>
                         <ui-select-choices repeat="version in versions | filter:$select.search">
-                            {{version}}
+                            {{mappedNames.version[version]}}
                         </ui-select-choices>
                     </ui-select>
                 </div>
@@ -89,23 +89,41 @@
                         <div>
                             {{dataToDisplay['gid']}}
                         </div>
-                        <div >
-                            {{dataToDisplay['kindStr']}}
-                        </div>
+                        <!--<div >-->
+                            <!--{{dataToDisplay['kindStr']}}-->
+                        <!--</div>-->
                     </div>
                     <div class="row">
                         <div class="col-md-12">
                             <!--<div>{{dataToDisplay['description']}}</div>-->
                             <!--<div ng-bind-html="dataToDisplay['description']"></div>-->
-                            <div dynamic="dataToDisplay['description']"></div>
-                            <h2 ng-show="dataToDisplay['units'] != null && dataToDisplay['dtypeStr'] != null && dataToDisplay['shape'] != null" >Keys</h2>
-                            <div class="indent" ng-show="dataToDisplay['units'] != null" > units: {{ dataToDisplay['units'] }}</div>
-                            <div class="indent" ng-show="dataToDisplay['dtypeStr'] != null" >dtypeStr: {{ dataToDisplay['dtypeStr'] }}</div>
-                            <div class="indent" ng-show="dataToDisplay['shape'] != null && dataToDisplay['shape'].length > 0" > shape: {{ dataToDisplay['shape'] }}</div>
+                            <div class="textTag row">
+                                <div class="col-xs-3 col-md-2"> <b>Type:</b> </div>
+                                <div class="col-xs-9 col-md-10"> {{mappedNames.type[dataToDisplay['kindStr']]}}   </div>
+                            </div>
+                            <div class="textTag row">
+                                <div class="col-xs-3 col-md-2"> <b>Description:</b> </div>
+                                <div class="col-xs-9 col-md-10" dynamic="dataToDisplay['description']"> </div>
+                            </div>
+                            <div  class="textTag row" ng-show="dataToDisplay['dtypeStr'] != null">
+                                <div class=" col-xs-3 col-md-2"> <b>dtypeStr:</b> </div>
+                                <div class="col-xs-9 col-md-10"> {{ dataToDisplay['dtypeStr'] }}   </div>
+                            </div>
+                            <div  class="textTag row" ng-show="dataToDisplay['shape'] != null && dataToDisplay['shape'].length > 0">
+                                <div class="col-xs-3 col-md-2"> <b>Shape:</b> </div>
+                                <div class="col-xs-9 col-md-10"> {{ dataToDisplay['shape'] }}   </div>
+                            </div>
+                            <div class="textTag row" ng-show="dataToDisplay['units'] != null">
+                                <div class="col-xs-3 col-md-2"> <b>Units:</b> </div>
+                                <div class="col-xs-9 col-md-10"> {{ dataToDisplay['units'] }}   </div>
+                            </div>
+                            <!--<div class="InfoText" ng-show="dataToDisplay['dtypeStr'] != null" ><b> dtypeStr:</b> </div>-->
+                            <!--<div class="InfoText" ng-show="dataToDisplay['shape'] != null && dataToDisplay['shape'].length > 0" > <b>Shape:</b> {{ dataToDisplay['shape'] }}</div>-->
+                            <!--<div class="InfoText" ng-show="dataToDisplay['units'] != null" > <b>Units:</b> {{ dataToDisplay['units'] }}</div>-->
                             <div class="col-xs-12 col-md-8 " id="circles">
                                 <div  class="col-xs-3"> <div id="circleSection"> </div> Section </div>
                                 <div  class="col-xs-3 "> <div id="circleAbstractType"> </div> Abstract Type</div>
-                                <div  class="col-xs-3 "> <div id="circleConcreteValue"> </div> Concete Values</div>
+                                <div  class="col-xs-3 "> <div id="circleConcreteValue"> </div> Concrete Value</div>
                                 <div  class="col-xs-3 "> <div id="circleDimension"> </div> Dimension</div>
                             </div>
                             <div  class="col-xs-12 col-md-4">

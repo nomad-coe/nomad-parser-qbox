@@ -42,12 +42,14 @@ filter.factory('filterService', function($http) {
             { displayName: 'section_system_description' , section:'section_system_description', parent: 'section_run' },
             { displayName: 'section_single_configuration_calculation' , section:'section_single_configuration_calculation', parent: 'section_system_description' },
             { displayName: 'section_scf_iteration' , section:'section_scf_iteration', parent: 'section_run' }  ];
+
+        //Another copy of MetaInfoTypes exists in the data Services; Whenever this function is updated the data Service should also be updated
         filter.MetaInfoTypes = [ {displayName: 'Any Meta Info Type', name: ''},
 //            {displayName: 'type_document', name: 'type_document'},
-            {displayName: 'type_dimension', name: 'type_dimension'},
-            {displayName: 'type_section', name: 'type_section'},
-            {displayName: 'type_document_content', name: 'type_document_content'},
-            {displayName: 'type_abstract_document_content', name: 'type_abstract_document_content'}];
+            {displayName: 'Dimension', name: 'type_dimension'},
+            {displayName: 'Section', name: 'type_section'},
+            {displayName: 'Concrete Value', name: 'type_document_content'},
+            {displayName: 'Abstract Type', name: 'type_abstract_document_content'}];
         filter.selectedSection= filter.Sections[0] ;
         filter.selectedType=filter.Types[0];
         filter.selectedMetaInfoType=filter.MetaInfoTypes[0];

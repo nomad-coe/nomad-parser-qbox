@@ -7,6 +7,31 @@ dataModule.factory('dataService', function($http) {
     var promiseVersionList;
     var promiseMetaInfoList;
     var promiseAllParents;
+    //Add more versions here as they are available
+    var mappedNames = {
+        type:{
+            'type_dimension' : 'Dimension',
+            'type_section': 'Section',
+            'type_document_content': 'Concrete Value',
+            'type_abstract_document_content':'Abstract Type'
+        },
+        version:{
+            "castep":  "castep + common",
+            "all": "all",
+            "sample_parser":  "sample_parser + common",
+            "fhi_aims":  "fhi_aims + common",
+            "gpaw":  "gpaw + common",
+            "quantum_espresso":  "quantum_espresso + common",
+            "last": "last",
+            "exciting":  "exciting + common",
+            "lammps":  "lammps + common",
+            "cp2k":  "cp2k + common",
+            "turbomole":  "turbomole + common",
+            "common":  "only common",
+            "gaussian":  "gaussian + common",
+            "octopus":  "octopus + common"
+        }
+    };
     var myService = {
     asyncVersionList: function() {
         // $http returns a promise, which has a then function, which also returns a promise
@@ -31,7 +56,8 @@ dataModule.factory('dataService', function($http) {
             return response.data;
         });
         return promiseAllParents;
-    }
+    },
+    mappedNames: mappedNames
   };
   return myService;
 });

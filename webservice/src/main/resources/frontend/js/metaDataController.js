@@ -10,6 +10,7 @@
         $scope.metaInfoName = $routeParams.metaInfoName;
         $scope.version = $routeParams.version;
         $scope.filter = filterService.filter;
+        $scope.mappedNames = dataService.mappedNames;
         $scope.dataToDisplay = {
             name:'',
             description:''

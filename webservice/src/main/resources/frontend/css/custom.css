@@ -77,6 +77,10 @@ input[type="text"]:focus {
 .indent {
     padding-left: 15px;
 }
+.textTag{
+    padding-left: 15px;
+    padding-top:5px;
+}
 
 #cy {
     width: 900px;
@@ -84,7 +88,7 @@ input[type="text"]:focus {
 /*    z-index: 999;*/
 }
 #circles{
-    padding-top:5px;
+    padding-top:15px;
     padding-bottom:4px;
 }
 #circleSection {
