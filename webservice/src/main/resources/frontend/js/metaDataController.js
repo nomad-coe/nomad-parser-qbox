@@ -14,6 +14,8 @@
             name:'',
             description:''
         };
+        //For UI select is needs to be an array in a object.
+        $scope.combinedGraph = {selectedMetaInfos:[]}
         var cy;
         $scope.DAG ={
             //zoom: Store the zoom and "pan" setting of the graph
@@ -61,6 +63,10 @@
                     });
                 });
             }
+        }
+
+        $scope.drawGraph = function(metaInfos){
+            console.log($scope.combinedGraph.selectedMetaInfos);
         }
 
 //       Version updated; load the new version
@@ -241,8 +247,12 @@
     function masterDirective($window) { //declaration; identifier master
         function link(scope, element, attrs) { //scope we are in, element we are bound to, attrs of that element
           scope.$watch(function(){ //watch any changes to our element
+          console.log($window)
+          console.log(element)
+          console.log("Window Height: "+ angular.element($window).height()+ "  "+$window.innerHeight + "  "+$window +" Element height: " +element[0].offsetHeight  )
             scope.style = { //scope variable style, shared with our controller
-                height: ( angular.element($window).height() - element[0].offsetHeight )+'px' //set the height in style to our elements height
+//              height: ( angular.element($window).height() - element[0].offsetHeight )+'px' //set the height in style to our elements height
+              height: ( $window.innerHeight - element[0].offsetHeight )+'px' //set the height in style to our elements height
               };
           });
         }

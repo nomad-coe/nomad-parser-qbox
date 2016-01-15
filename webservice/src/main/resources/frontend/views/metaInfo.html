@@ -44,6 +44,19 @@
                             </ui-select-choices>
                         </ui-select>
                     </div>
+                    <div ng-show="false">
+                        <div class="col-xs-9 col-md-10">
+                            <ui-select multiple ng-model="combinedGraph.selectedMetaInfos" theme="bootstrap" ng-disabled="disabled" close-on-select="false" title="Choose meta data for the graph">
+                                <ui-select-match placeholder="Select metadata for the graph">{{$item.name}} </ui-select-match>
+                                <ui-select-choices repeat="metaInfo.name as metaInfo in metaDataList.metaInfos | filter: {name: $select.search}| orderBy:'name'">
+                                    {{metaInfo.name}}
+                                </ui-select-choices>
+                            </ui-select>
+                        </div>
+                        <div  class="col-xs-3 col-md-2" ng-show="true">
+                            <button type="button" class="btn btn-primary" ng-click="drawGraph(manualLayoutSelection)">Draw Graph</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -82,23 +95,23 @@
                     </div>
                     <div class="row">
                         <div class="col-md-12">
-                        <!--<div>{{dataToDisplay['description']}}</div>-->
-                        <!--<div ng-bind-html="dataToDisplay['description']"></div>-->
-                        <div dynamic="dataToDisplay['description']"></div>
-                        <h2 ng-show="dataToDisplay['units'] != null && dataToDisplay['dtypeStr'] != null && dataToDisplay['shape'] != null" >Keys</h2>
-                        <div class="indent" ng-show="dataToDisplay['units'] != null" > units: {{ dataToDisplay['units'] }}</div>
-                        <div class="indent" ng-show="dataToDisplay['dtypeStr'] != null" >dtypeStr: {{ dataToDisplay['dtypeStr'] }}</div>
-                        <div class="indent" ng-show="dataToDisplay['shape'] != null && dataToDisplay['shape'].length > 0" > shape: {{ dataToDisplay['shape'] }}</div>
-                        <div class="col-xs-12 col-md-8 " id="circles">
-                            <div  class="col-xs-3"> <div id="circleSection"> </div> Section </div>
-                            <div  class="col-xs-3 "> <div id="circleAbstractType"> </div> Abstract Type</div>
-                            <div  class="col-xs-3 "> <div id="circleConcreteValue"> </div> Concete Values</div>
-                            <div  class="col-xs-3 "> <div id="circleDimension"> </div> Dimension</div>
-                        </div>
-                        <div  class="col-xs-12 col-md-4">
-                            <button type="button" class="btn btn-primary" ng-click="zoomToggle()">{{DAG.zoomText}}</button>
-                            <button type="button" class="btn btn-primary" ng-click="reset()">Reset</button>
-                        </div>
+                            <!--<div>{{dataToDisplay['description']}}</div>-->
+                            <!--<div ng-bind-html="dataToDisplay['description']"></div>-->
+                            <div dynamic="dataToDisplay['description']"></div>
+                            <h2 ng-show="dataToDisplay['units'] != null && dataToDisplay['dtypeStr'] != null && dataToDisplay['shape'] != null" >Keys</h2>
+                            <div class="indent" ng-show="dataToDisplay['units'] != null" > units: {{ dataToDisplay['units'] }}</div>
+                            <div class="indent" ng-show="dataToDisplay['dtypeStr'] != null" >dtypeStr: {{ dataToDisplay['dtypeStr'] }}</div>
+                            <div class="indent" ng-show="dataToDisplay['shape'] != null && dataToDisplay['shape'].length > 0" > shape: {{ dataToDisplay['shape'] }}</div>
+                            <div class="col-xs-12 col-md-8 " id="circles">
+                                <div  class="col-xs-3"> <div id="circleSection"> </div> Section </div>
+                                <div  class="col-xs-3 "> <div id="circleAbstractType"> </div> Abstract Type</div>
+                                <div  class="col-xs-3 "> <div id="circleConcreteValue"> </div> Concete Values</div>
+                                <div  class="col-xs-3 "> <div id="circleDimension"> </div> Dimension</div>
+                            </div>
+                            <div  class="col-xs-12 col-md-4">
+                                <button type="button" class="btn btn-primary" ng-click="zoomToggle()">{{DAG.zoomText}}</button>
+                                <button type="button" class="btn btn-primary" ng-click="reset()">Reset</button>
+                            </div>
                         </div>
                     </div>
                     <div class="row">
