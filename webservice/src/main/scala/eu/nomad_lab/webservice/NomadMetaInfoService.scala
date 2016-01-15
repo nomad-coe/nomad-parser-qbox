@@ -289,7 +289,11 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
                     case Left(i) => jn.JInt(i)
                     case Right(s) => jn.JString(s)
                   }(breakOut)
-                  jn.JArray(listShape)
+                  val listShapeWithLink = for (x <- listShape) yield  x match {
+                    case jn.JString(o) => jn.JString( s"""<a href="#/$version/$o"> $o </a> """ )
+                    case anythingElse => anythingElse
+                  }
+                  jn.JArray(listShapeWithLink)
               }
           val children = v.allDirectChildrenOf(name).toList
           var allParents:List[String] = Nil
