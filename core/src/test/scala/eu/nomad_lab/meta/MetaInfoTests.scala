@@ -26,6 +26,7 @@ object MetaInfoJsonTests extends Properties("MetaInfoRecord") {
       10 -> None,
       1 -> Some("f"),
       1 -> Some("i"),
+      1 -> Some("r"),
       1 -> Some("f64"),
       1 -> Some("f32"),
       1 -> Some("i64"),

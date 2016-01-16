@@ -58,7 +58,7 @@ object ParseEvent {
     val newArr = dtypeStr match {
       case "i" | "i32" =>
         NArray.factory(DataType.INT, ishape)
-      case "i64" =>
+      case "i64" | "r" =>
         NArray.factory(DataType.LONG, ishape)
       case "f" | "f64" =>
         NArray.factory(DataType.DOUBLE, ishape)
@@ -79,7 +79,7 @@ object ParseEvent {
       case "i" | "i32" =>
         { (it: NIndexIterator, value: JValue) =>
           it.setIntNext(value.extract[Int]) }
-      case "i64" =>
+      case "i64" | "r" =>
         { (it: NIndexIterator, value: JValue) =>
           it.setLongNext(value.extract[Long]) }
       case "f" | "f64" =>

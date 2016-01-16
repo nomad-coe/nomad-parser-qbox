@@ -8,14 +8,14 @@ dataModule.factory('dataService', function($http) {
     var promiseMetaInfoList;
     var promiseAllParents;
     //Add more versions here as they are available
-    var mappedNames = {
-        type:{
+    var mappedNames = function(){
+        var types = {
             'type_dimension' : 'Dimension',
             'type_section': 'Section',
             'type_document_content': 'Concrete Value',
             'type_abstract_document_content':'Abstract Type'
-        },
-        version:{
+        }
+        var versions = {
             "castep":  "castep + common",
             "all": "all",
             "sample_parser":  "sample_parser + common",
@@ -31,7 +31,25 @@ dataModule.factory('dataService', function($http) {
             "gaussian":  "gaussian + common",
             "octopus":  "octopus + common"
         }
-    };
+        return {
+            'types': types,
+            'versions': versions,
+            'type': function(t) {
+                var res = types[t]
+                if (res === undefined)
+                    return t
+                else
+                    return res
+            },
+            'version': function(t) {
+                var res = versions[t]
+                if (res === undefined)
+                    return t
+                else
+                    return res
+            }
+        }
+    }();
     var myService = {
     asyncVersionList: function() {
         // $http returns a promise, which has a then function, which also returns a promise

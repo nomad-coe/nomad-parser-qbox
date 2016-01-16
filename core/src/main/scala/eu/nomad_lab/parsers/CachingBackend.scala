@@ -428,26 +428,26 @@ object CachingBackend {
     if (scalar) {
       dtypeStr match {
         case "f" | "f64" | "f32" => new CachingMetaDataManager_f(metaInfo, sectionManager)
-        case "i" | "i64" | "i32" => new CachingMetaDataManager_i(metaInfo, sectionManager)
+        case "i" | "i64" | "i32" | "r" => new CachingMetaDataManager_i(metaInfo, sectionManager)
         case "b"                 => new CachingMetaDataManager_i(metaInfo, sectionManager)
         case "B"                 => new CachingMetaDataManager_B64(metaInfo, sectionManager)
         case "C"                 => new CachingMetaDataManager_C(metaInfo, sectionManager)
         case "D"                 => new CachingMetaDataManager_D(metaInfo, sectionManager)
         case _ =>
-          throw new InvalidMetaInfoException(metaInfo, "Unknown dtypeStr, known types: f,f32,f64,i,i32,i64,b,B,C,D")
+          throw new InvalidMetaInfoException(metaInfo, "Unknown dtypeStr, known types: f,f32,f64,i,i32,i64,r,b,B,C,D")
       }
     } else {
       dtypeStr match {
         case "f" | "f64" => new CachingMetaDataManager_Af64(metaInfo, sectionManager)
         case "f32"       => new CachingMetaDataManager_Af32(metaInfo, sectionManager)
         case "i" | "i32" => new CachingMetaDataManager_Ai32(metaInfo, sectionManager)
-        case "i64"       => new CachingMetaDataManager_Ai64(metaInfo, sectionManager)
+        case "i64" | "r" => new CachingMetaDataManager_Ai64(metaInfo, sectionManager)
         case "b"         => new CachingMetaDataManager_Ab(metaInfo, sectionManager)
         case "B"         => new CachingMetaDataManager_AB64(metaInfo, sectionManager)
         case "C"         => new CachingMetaDataManager_AC(metaInfo, sectionManager)
         case "D"         => new CachingMetaDataManager_AD(metaInfo, sectionManager)
         case _ =>
-          throw new InvalidMetaInfoException(metaInfo, "Unknown dtypeStr, known types: f,f32,f64,i,i32,i64,b,B,C,D")
+          throw new InvalidMetaInfoException(metaInfo, "Unknown dtypeStr, known types: f,f32,f64,i,i32,i64,r,b,B,C,D")
       }
     }
   }

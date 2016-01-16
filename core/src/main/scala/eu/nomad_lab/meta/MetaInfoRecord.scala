@@ -20,6 +20,9 @@ case class MetaInfoRecord(
   val shape:  Option[Seq[Either[Long,String]]] = None,
   val gid:              String = "",
   val superGids:   Seq[String] = Seq(),
+  val redundant: Option[Boolean] = None,
+  val derived: Option[Boolean] = None,
+  val referencedSections: Option[Seq[String]] = None,
   val otherKeys:  List[JField] = Nil) {
 
   /** returns a JValue (json) representation of the current record
@@ -45,10 +48,13 @@ case class MetaInfoRecord(
         ("description" -> description)~
         ("superNames" -> superNames)~
         ("superGids" -> (if (superGids.isEmpty) None else Some(superGids))) ~
-        ("units", units)~
-        ("dtypeStr", dtypeStr)~
-        ("repeats", repeats)~
-        ("shape",jShape)
+        ("units"-> units)~
+        ("dtypeStr" -> dtypeStr)~
+        ("repeats" -> repeats)~
+        ("shape" -> jShape)~
+        ("redundant" -> redundant)~
+        ("referencedSections" -> referencedSections)~
+        ("derived" -> derived)
     );
     if (extraArgs) {
       if (inlineExtraArgs)
@@ -78,7 +84,7 @@ object MetaInfoRecord {
     *
     * Should probably be migrated to an Enumeration.
     */
-  final val dtypes = Seq("f", "i", "f32", "i32", "f64", "i64", "b", "B", "C", "D")
+  final val dtypes = Seq("f", "i", "f32", "i32", "f64", "i64", "b", "B", "C", "D", "r")
 }
 
 /** Json serialization to and deserialization support for MetaInfoRecord
@@ -97,6 +103,9 @@ class MetaInfoRecordSerializer extends CustomSerializer[MetaInfoRecord](format =
              var dtypeStr: Option[String] = None;
              var repeats: Option[Boolean] = None;
              var shape: Option[Seq[Either[Long,String]]] = None;
+             var redundant: Option[Boolean] = None
+             var derived: Option[Boolean] = None
+             var referencedSections: Option[Seq[String]] = None
              var otherKeys: List[JField] = Nil;
              obj foreach {
                case JField("name", value) =>
@@ -139,6 +148,9 @@ class MetaInfoRecordSerializer extends CustomSerializer[MetaInfoRecord](format =
                case JField("superNames", value) =>
                  if (!value.toOption.isEmpty)
                    superNames = value.extract[Seq[String]]
+               case JField("referencedSections", value) =>
+                 if (!value.toOption.isEmpty)
+                   referencedSections = value.extract[Option[Seq[String]]]
                case JField("superGids", value) =>
                  if (!value.toOption.isEmpty)
                    superGids = value.extract[Seq[String]]
@@ -151,6 +163,12 @@ class MetaInfoRecordSerializer extends CustomSerializer[MetaInfoRecord](format =
                case JField("repeats", value) =>
                  if (!value.toSome.isEmpty)
                    repeats = value.extract[Option[Boolean]]
+               case JField("redundant", value) =>
+                 if (!value.toSome.isEmpty)
+                   redundant = value.extract[Option[Boolean]]
+               case JField("derived", value) =>
+                 if (!value.toSome.isEmpty)
+                   derived = value.extract[Option[Boolean]]
                case JField("shape", value) =>
                  shape = value.extract[Option[Seq[Either[Long,String]]]]
                case JField(key, value) =>
@@ -165,7 +183,8 @@ class MetaInfoRecordSerializer extends CustomSerializer[MetaInfoRecord](format =
                throw new JsonUtils.InvalidValueError("superGids", "NomadMetaInfo", superGids.mkString("[",", ","]"), s"incompatible length with superNames ${superNames.mkString("[",",","]")}")
 
              new MetaInfoRecord(name, kindStr, description, superNames, units,
-               dtypeStr, repeats, shape, gid, superGids, otherKeys)
+               dtypeStr, repeats, shape, gid, superGids, redundant, derived,
+               referencedSections, otherKeys)
            }
          },
          {

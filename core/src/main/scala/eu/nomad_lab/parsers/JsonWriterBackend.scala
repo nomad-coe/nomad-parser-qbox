@@ -93,7 +93,7 @@ object JsonWriterBackend {
         { (it: NIndexIterator) => writer.write(it.getFloatNext().toString()) }
       case "i" | "i32" =>
         { (it: NIndexIterator) => writer.write(it.getIntNext().toString()) }
-      case "i64" =>
+      case "i64" | "r" =>
         { (it: NIndexIterator) => writer.write(it.getLongNext().toString()) }
       case "b" =>
         { (it: NIndexIterator) => writer.write(it.getByteNext().toString()) }

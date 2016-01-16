@@ -7,7 +7,6 @@ import MediaTypes._
 import org.{json4s => jn}
 import org.json4s.native.JsonMethods
 import org.json4s.JsonDSL._
-import org.json4s.jackson.JsonMethods._
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.{mutable, breakOut}
 import java.io.File
@@ -267,17 +266,18 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
           val dtypeStr = r.dtypeStr match {
             case Some(str) =>
             jn.JString(str match {
-            case "f" => "f (floating point value)"
-            case "i" => "i (integer value)"
-            case "f32" => "f32 (single precision float)"
-            case "i32" => "i32 (32 bit integer)"
-            case "f64" => "f64 (double precision floating point)"
-            case "i64" => "i64 (64 bit integer)"
-            case "b"   => "b (boolean value)"
-            case "B"   => "B (variable length byte array i.e. a blob)"
-            case "C"   => "C (a unicode string)"
-            case "D"   => "D (a json dictionary)"
-            case  v    => s"$v (unknown type)"
+              case "f"   => "f (floating point value)"
+              case "i"   => "i (integer value)"
+              case "f32" => "f32 (single precision float)"
+              case "i32" => "i32 (32 bit integer)"
+              case "f64" => "f64 (double precision floating point)"
+              case "i64" => "i64 (64 bit integer)"
+              case "b"   => "b (boolean value)"
+              case "B"   => "B (variable length byte array i.e. a blob)"
+              case "C"   => "C (a unicode string)"
+              case "D"   => "D (a json dictionary)"
+              case "r"   => "r (reference to a section)"
+              case  v    => s"$v (unknown type)"
           })
           case None =>
             jn.JNothing
@@ -307,6 +307,11 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
             case None =>
               Seq()
           }
+          val refSectionsWithLinks: JValue = r.referencedSections match {
+              case Some(sects) => jn.JArray(sects.map((x: String) => jn.JString(hrefCreate(x)))(breakOut))
+              case None => JNothing
+            }
+
           val descriptionHTML = MarkDownProcessor.processMarkDown(r.description,v.allNames.toSet,hrefCreate);
 
           jn.JObject(jn.JField("type", "nomad_meta_versions_1_0") ::
@@ -316,13 +321,17 @@ trait NomadMetaInfoService extends HttpService with StrictLogging {
             jn.JField("gid", r.gid) ::
             jn.JField("units", r.units) ::
             jn.JField("dtypeStr", dtypeStr) ::
+            jn.JField("repeats", r.repeats) ::
+            jn.JField("redundant", r.redundant) ::
+            jn.JField("derived", r.derived) ::
             jn.JField("kindStr", r.kindStr) ::
+            jn.JField("referencedSections", refSectionsWithLinks) ::
             jn.JField("superNames", superNames) ::
             jn.JField("children", children) ::
             jn.JField("allparents", allParents ) ::
             jn.JField("rootSectionAncestors", rootSectionAncestors ) ::
             ("shape" -> metaShape) ::
-            Nil ) 
+            r.otherKeys) 
         case None => jn.JNull
       }
     }
