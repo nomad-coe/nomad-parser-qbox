@@ -65,13 +65,8 @@
             <div class="row">
                 <div class="col-xs-12 custom-restricted" id="menu" ng-style="style">
                     <ul >
-                        <li ng-repeat="data in metaDataList['metaInfos'] | filterBy: ['name','description']: query | filter:{rootSectionAncestors:filter.selectedSection.section}| filter:{allparents:filter.selectedType.name} | filter:{kindStr:filter.selectedMetaInfoType.name} | orderBy:'name'">
-                            <!--<li ng-repeat="data in partialMetaDataList.metaInfos | filterBy: [name,description]: query | filter:{allparents:filter.selectedParent.section} ">-->
-                            <!-- <label>
-                  -                    <input type="checkbox" checklist-model="searchList" checklist-value="data['name']">
-                  -                  </label>              -->
-                            <!--<a href="" ng-click="display(data['name'])">-->
-                            <a href="#/{{version}}/{{data['name']}}">
+                        <li ng-repeat="data in metaDataList['metaInfos'] | filterBy: ['name','description']: query | filterRootAncestor:filter.selectedSection.section | filter:{allparents:filter.selectedType.name} | filter:{kindStr:filter.selectedMetaInfoType.name} | orderBy:'name'">
+                        <a href="#/{{version}}/{{data['name']}}">
                             {{data['name']}}</a>
                         </li>
                     </ul>

@@ -4,7 +4,24 @@
     angular.module('metaDataApp.mainController', ['ngSanitize', 'ui.select','angular.filter','metaDataApp.metaFilter','metaDataApp.dataModule','mathJaxDirective'])
     .controller('mainController', ['$scope', '$http','$location', 'ancestorGraph', '$routeParams','filterService','dataService',mainController])
     .factory('ancestorGraph', ['$q','$location','$rootScope', ancestorGraphDeclaration])
-    .directive('master',masterDirective);
+    .directive('master',masterDirective)
+    .filter('filterRootAncestor', function () {
+        return function (metaItems, sectionFilter) {
+            if(sectionFilter){
+                var filtered = [];
+                for (var i = 0; i < metaItems.length; i++) {
+                    var meta = metaItems[i];
+                    if(meta.rootSectionAncestors.indexOf(sectionFilter) > -1)
+                        filtered.push(meta);
+                }
+                return filtered;
+            }
+            else {
+//             console.log("sectionFilter Empty");
+            return metaItems;
+            }
+        };
+    });
 
     function mainController($scope, $http, $location, ancestorGraph, $routeParams,filterService,dataService){
         $scope.metaInfoName = $routeParams.metaInfoName;
@@ -248,9 +265,9 @@
     function masterDirective($window) { //declaration; identifier master
         function link(scope, element, attrs) { //scope we are in, element we are bound to, attrs of that element
           scope.$watch(function(){ //watch any changes to our element
-          console.log($window)
-          console.log(element)
-          console.log("Window Height: "+ angular.element($window).height()+ "  "+$window.innerHeight + "  "+$window +" Element height: " +element[0].offsetHeight  )
+//          console.log($window)
+//          console.log(element)
+//          console.log("Window Height: "+ angular.element($window).height()+ "  "+$window.innerHeight + "  "+$window +" Element height: " +element[0].offsetHeight  )
             scope.style = { //scope variable style, shared with our controller
 //              height: ( angular.element($window).height() - element[0].offsetHeight )+'px' //set the height in style to our elements height
               height: ( $window.innerHeight - element[0].offsetHeight )+'px' //set the height in style to our elements height
