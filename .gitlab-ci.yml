@@ -6,6 +6,7 @@ stages:
 compilation:
   stage: build
   script:
+    - git submodule update --init
     - sbt jooq:codegen
     - sbt compile
   only:
