@@ -181,9 +181,20 @@ lazy val fhiAims = (project in file("parsers/fhi-aims")).
   ).
   settings(Revolver.settings: _*)
 
+lazy val castep = (project in file("parsers/castep")).
+  dependsOn(core).
+  settings(commonSettings: _*).
+  settings(
+    libraryDependencies ++= commonLibs,
+    name := "castep",
+    (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
+  ).
+  settings(Revolver.settings: _*)
+
 lazy val base = (project in file("base")).
   dependsOn(core).
   dependsOn(fhiAims).
+  dependsOn(castep).
   settings(commonSettings: _*).
   settings(
     libraryDependencies ++= commonLibs,
