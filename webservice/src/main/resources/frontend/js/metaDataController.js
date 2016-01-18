@@ -5,20 +5,23 @@
     .controller('mainController', ['$scope', '$http','$location', 'ancestorGraph', '$routeParams','filterService','dataService',mainController])
     .factory('ancestorGraph', ['$q','$location','$rootScope', ancestorGraphDeclaration])
     .directive('master',masterDirective)
-    .filter('filterRootAncestor', function () {
-        return function (metaItems, sectionFilter) {
-            if(sectionFilter){
+    .filter('filterAllQueries', function () {
+        return function (metaItems, searchFilter, sectionFilter, allParentsFilter, metaInfoTypeFilter, derivedFilter ) {
+            if(!searchFilter && !sectionFilter && !allParentsFilter && !metaInfoTypeFilter && !derivedFilter ) {
+                return metaItems;
+            }
+            else  {
                 var filtered = [];
                 for (var i = 0; i < metaItems.length; i++) {
                     var meta = metaItems[i];
-                    if(meta.rootSectionAncestors.indexOf(sectionFilter) > -1)
-                        filtered.push(meta);
+                    if(!searchFilter || meta.name.indexOf(searchFilter) > -1 || meta.description.indexOf(searchFilter) > -1 )
+                        if(!sectionFilter || meta.rootSectionAncestors.indexOf(sectionFilter) > -1)
+                            if(!metaInfoTypeFilter || meta.kindStr.indexOf(metaInfoTypeFilter) > -1)
+                                if(!allParentsFilter || meta.allparents.indexOf(allParentsFilter) > -1)
+                                    if(!derivedFilter || (typeof meta.derived != 'undefined'  &&  derivedFilter ==  meta.derived))
+                                        filtered.push(meta);
                 }
                 return filtered;
-            }
-            else {
-//             console.log("sectionFilter Empty");
-            return metaItems;
             }
         };
     });
@@ -32,6 +35,7 @@
             name:'',
             description:''
         };
+        $scope.showOnlyDerived = false;
         //For UI select is needs to be an array in a object.
         $scope.combinedGraph = {selectedMetaInfos:[]}
         var cy;
