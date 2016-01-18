@@ -76,6 +76,8 @@ object MarkDownProcessor {
             cAtt = text.charAt(i)
             i += 1
           }
+          if (Character.isLetterOrDigit(cAtt) || cAtt == '_' || cAtt == '-')
+            i += 1
           val word = text.substring(wordStart, i - 1)
           if (keys(word)) {
             escapedText ++= text.substring(lastEmit, wordStart)
