@@ -107,6 +107,7 @@ class JsonParseEventsWriterBackend(
       }
     }
     outF.write("\n}")
+    outF.flush()
     this.mainFileUri = None
     this.parserInfo = JNothing
     this.parserStatus = None
@@ -192,7 +193,7 @@ class JsonParseEventsWriterBackend(
     if (it.hasNext()) {
       writer(it)
       while (it.hasNext()){
-        writeOut(JString(", "))
+        outF.write(", ")
         writer(it)
       }
     }

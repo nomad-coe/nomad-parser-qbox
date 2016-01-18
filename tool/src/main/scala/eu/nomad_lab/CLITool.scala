@@ -126,7 +126,7 @@ Runs the main parsing step
         case "--json-events" =>
           backendType = BackendType.JsonEventEmitter
         case _ =>
-          println("Error: unexpected argument $arg. $usage")
+          println(s"Error: unexpected argument $arg. $usage")
           return
       }
     }
