@@ -5,26 +5,7 @@
     .controller('mainController', ['$scope', '$http','$location', 'ancestorGraph', '$routeParams','filterService','dataService',mainController])
     .factory('ancestorGraph', ['$q','$location','$rootScope', ancestorGraphDeclaration])
     .directive('master',masterDirective)
-    .filter('filterAllQueries', function () {
-        return function (metaItems, searchFilter, sectionFilter, allParentsFilter, metaInfoTypeFilter, derivedFilter ) {
-            if(!searchFilter && !sectionFilter && !allParentsFilter && !metaInfoTypeFilter && !derivedFilter ) {
-                return metaItems;
-            }
-            else  {
-                var filtered = [];
-                for (var i = 0; i < metaItems.length; i++) {
-                    var meta = metaItems[i];
-                    if(!searchFilter || meta.name.indexOf(searchFilter) > -1 || meta.description.indexOf(searchFilter) > -1 )
-                        if(!sectionFilter || meta.rootSectionAncestors.indexOf(sectionFilter) > -1)
-                            if(!metaInfoTypeFilter || meta.kindStr.indexOf(metaInfoTypeFilter) > -1)
-                                if(!allParentsFilter || meta.allparents.indexOf(allParentsFilter) > -1)
-                                    if(!derivedFilter || (typeof meta.derived != 'undefined'  &&  derivedFilter ==  meta.derived))
-                                        filtered.push(meta);
-                }
-                return filtered;
-            }
-        };
-    });
+    .filter('filterAllQueries', queriesFilter);
 
     function mainController($scope, $http, $location, ancestorGraph, $routeParams,filterService,dataService){
         $scope.metaInfoName = $routeParams.metaInfoName;
@@ -289,4 +270,25 @@
             link: link // the function to link to our element
           };
     };
+
+    function queriesFilter() {
+            return function (metaItems, searchFilter, sectionFilter, allParentsFilter, metaInfoTypeFilter, derivedFilter ) {
+                if(!searchFilter && !sectionFilter && !allParentsFilter && !metaInfoTypeFilter && !derivedFilter ) {
+                    return metaItems;
+                }
+                else  {
+                    var filtered = [];
+                    for (var i = 0; i < metaItems.length; i++) {
+                        var meta = metaItems[i];
+                        if(!searchFilter || meta.name.indexOf(searchFilter) > -1 || meta.description.indexOf(searchFilter) > -1 )
+                            if(!sectionFilter || meta.rootSectionAncestors.indexOf(sectionFilter) > -1)
+                                if(!metaInfoTypeFilter || meta.kindStr.indexOf(metaInfoTypeFilter) > -1)
+                                    if(!allParentsFilter || meta.allparents.indexOf(allParentsFilter) > -1)
+                                        if(!derivedFilter || (typeof meta.derived != 'undefined'  &&  derivedFilter !=  meta.derived))
+                                            filtered.push(meta);
+                    }
+                    return filtered;
+                }
+            };
+        };
 })();

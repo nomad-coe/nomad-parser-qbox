@@ -5,7 +5,7 @@
             <div class="row">
                 <h2 class="col-xs-6 col-md-3">NOMAD Meta Info</h2>
                 <!--<h3 > Version </h3>-->
-                <span class="col-xs-6 col-md-3 p-x-2"> <input type="checkbox" ng-model="showOnlyDerived"> Show only derived </span>
+                <span class="col-xs-6 col-md-3 p-x-2"> <input type="checkbox" ng-model="showOnlyDerived"> Hide derived </span>
                 <div class="col-xs-6 col-md-3 col-md-offset-3 versionBox" >
                     <ui-select ng-model="version" ng-change="versionChange(version)" theme="bootstrap" ng-disabled="disabled" close-on-select="true"  title="Select a version">
                         <ui-select-match placeholder="Select a version">{{mappedNames.version($select.selected)}}</ui-select-match>
