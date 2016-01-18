@@ -60,6 +60,12 @@
             $scope.display();
         });
 
+        $scope.set_color = function (derived) {
+          if (derived) {
+            return { color: "red" }
+          }
+        }
+
         $scope.display = function(){
             var i = -1;
             for (i = 0; i < $scope.metaDataList['metaInfos'].length ; i++) {
