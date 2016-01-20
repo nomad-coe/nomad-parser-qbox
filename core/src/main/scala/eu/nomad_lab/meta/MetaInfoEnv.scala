@@ -246,26 +246,40 @@ trait MetaInfoEnv extends MetaInfoCollection {
     */
   def writeDot(s: java.io.Writer): Unit = {
     s.write("""strict digraph meta_info_env {
+  ranksep=1;
+  ratio=1.41;
   rankdir=RL;
 """)
     allNames.foreach{ name: String =>
       metaInfoRecordForName(name, false, false) match {
         case Some(m) =>
           val attributes = m.kindStr match {
-            case "type_document_content" => "[shape=box]"
-            case "type_unknown" => "[color=green]"
-            case "type_unknown_meta" => "[color=green]"
-            case "type_document" => "[color=grey]"
-            case "type_meta" => "[color=blue]"
-            case "type_abstract_document_content" => ""
-            case "type_section" => "[color=red]"
-            case "type_connection" => "[color=orange]"
-            case _ => "[color=pink]"
+            case "type_document_content" =>
+              if (m.dtypeStr == Some("r"))
+                "shape=box; color=red"
+              else
+                "shape=box"
+            case "type_unknown" => "color=green"
+            case "type_unknown_meta" => "color=green"
+            case "type_document" => "color=grey"
+            case "type_meta" => "color=blue"
+            case "type_abstract_document_content" => "color=black"
+            case "type_section" => "color=red"
+            case "type_connection" => "color=orange"
+            case _ => "color=pink"
           }
           if (!attributes.isEmpty)
-            s.write(s"  ${m.name} $attributes;\n")
+            s.write(s"""  ${m.name} [$attributes; URL="http://localhost:8081/ui/index.html#/last/${m.name}"];\n""")
           for (superN <- m.superNames)
             s.write(s"  ${m.name} -> $superN;\n")
+          if (m.dtypeStr == Some("r")) {
+            m.referencedSections match {
+              case Some (sects) =>
+                for (refSect <- sects)
+                  s.write(s"  ${m.name} -> $refSect [color=red];\n")
+              case None => ()
+            }
+          }
         case None =>
           throw new Exception(s"Could not ger meta info with name $name")
       }
