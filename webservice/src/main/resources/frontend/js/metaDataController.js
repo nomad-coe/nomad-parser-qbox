@@ -284,7 +284,7 @@
                             if(!sectionFilter || meta.rootSectionAncestors.indexOf(sectionFilter) > -1)
                                 if(!metaInfoTypeFilter || meta.kindStr.indexOf(metaInfoTypeFilter) > -1)
                                     if(!allParentsFilter || meta.allparents.indexOf(allParentsFilter) > -1)
-                                        if(!derivedFilter || (typeof meta.derived != 'undefined'  &&  derivedFilter !=  meta.derived))
+                                        if(!derivedFilter || (derivedFilter && typeof meta.derived === 'undefined' ) || (typeof meta.derived != 'undefined'  &&  derivedFilter !=  meta.derived))
                                             filtered.push(meta);
                     }
                     return filtered;
