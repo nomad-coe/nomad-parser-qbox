@@ -17,6 +17,7 @@
             description:''
         };
         $scope.showOnlyDerived = false;
+        $scope.cyLoaded = false;
         //For UI select is needs to be an array in a object.
         $scope.combinedGraph = {selectedMetaInfos:[]}
         var cy;
@@ -47,6 +48,7 @@
           }
         }
 
+
         $scope.display = function(){
             var i = -1;
             for (i = 0; i < $scope.metaDataList['metaInfos'].length ; i++) {
@@ -60,23 +62,143 @@
                 $location.path('/'+$scope.version+'/section_single_configuration_calculation');
             }
             else{
-                dataService.asyncAllParents($scope.version,$scope.metaInfoName ).then(function(allparentsData) {
+                dataService.asyncAllParentsCS($scope.version,$scope.metaInfoName ).then(function(allparentsData) {
                     ancestorGraph( allparentsData ).then(function( ancestorCy ){
                         cy = ancestorCy;
                         $scope.cyLoaded = true;
-                        ancestorGraph.fit();
-                        ancestorGraph.resize();
-                        //Nothing works if panning and zoom is disabled; since resize and fit needs to pan and zoom :P
-                        //Note: ancestorGraph functions needs pan and zoom to be enabled to operate keep that in mind
-                        ancestorGraph.zoomPanToggle( $scope.DAG.zoom); //Override the default settings
+//                        graphOptions(allparentsData);
+                        drawChildrenAsList(allparentsData);
                     });
                 });
             }
         }
 
-        $scope.drawGraph = function(metaInfos){
-            console.log($scope.combinedGraph.selectedMetaInfos);
+        var drawChildren = function(allparentsData) {
+        var cMinX = 200,
+            cMinY = 100,
+            currCol = 0,
+            currRow = 0,
+            maxRow = 7; //max rows in a coloumn
+
+        if( allparentsData.children.length > 0 ) {
+            var ele = ancestorGraph.getElementById("Children of "+$scope.metaInfoName)
+            var eleX = ele.position().x,
+                eleY = ele.position().y;
+            var childX = 0,
+                childY = 0;
+            if(allparentsData.children.length < maxRow){
+                maxRow =  allparentsData.children.length;
+            }
+            for (var i = 0; i < allparentsData.children.length; i++)
+            {
+                if(currRow >= maxRow) {
+                    currRow = 0, currCol += 1;
+                }
+                childX = eleX + currCol * cMinX + 20; //Default addition
+                childY = eleY - ((maxRow -1 )/2) *cMinY + currRow * cMinY;
+                allparentsData.children[i].position = {
+                    x: childX,
+                    y:childY
+                }
+
+
+                if(currCol % 2 == 0)
+                    allparentsData.children[i].style["text-valign"] ="top";
+                else
+                    allparentsData.children[i].style["text-valign"] ="bottom";
+                ancestorGraph.add(allparentsData.children[i])
+                currRow += 1;
+            }
         }
+        ancestorGraph.fit();
+        ancestorGraph.resize();
+        //Nothing works if panning and zoom is disabled; since resize and fit needs to pan and zoom :P
+        //Note: ancestorGraph functions needs pan and zoom to be enabled to operate keep that in mind
+        ancestorGraph.zoomPanToggle( $scope.DAG.zoom); //Override the default settings
+    }
+        var drawChildrenAsList = function(allparentsData) {
+            var cMinX = 0,
+                cMinY = 35,
+                currCol = 0,
+                currRow = 0,
+                maxRow = 15, //max rows in a coloumn
+                lastColumnX = 0;
+            var colMaxWidth = 0;
+            if( allparentsData.children.length > 0 ) {
+                var ele = ancestorGraph.getElementById("Children of "+$scope.metaInfoName)
+                var eleX = ele.position().x,
+                    eleY = ele.position().y;
+                var childX = 0,
+                    childY = 0;
+                if(allparentsData.children.length < maxRow){
+                    maxRow =  allparentsData.children.length;
+                }
+                lastColumnX = eleX;
+                for (var i = 0; i < allparentsData.children.length; i++)
+                {
+                    if(currRow >= maxRow) {
+                        currRow = 0, currCol += 1;
+                        cMinX = colMaxWidth * 7;
+//                        console.log("cMinX:", cMinX)
+//                        console.log("colMaxWidth:", colMaxWidth)
+//                        console.log("currCol:", currCol)
+                        lastColumnX = lastColumnX + cMinX ;
+                        colMaxWidth = 0;
+
+                    }
+                    childX = lastColumnX + cMinX;
+                    childY = eleY - ((maxRow -1 )/2) *cMinY + currRow * cMinY;
+                    allparentsData.children[i].position = {
+                        x: childX,
+                        y: childY
+                    }
+                    allparentsData.children[i].style["text-halign"] ="right";
+                    allparentsData.children[i].style["text-valign"] ="center";
+                    ancestorGraph.add(allparentsData.children[i])
+
+                    if(allparentsData.children[i].data.id.length > colMaxWidth){
+                        colMaxWidth = allparentsData.children[i].data.id.length;
+                    }
+                    currRow += 1;
+                }
+            }
+            ancestorGraph.fit();
+            ancestorGraph.resize();
+            //Nothing works if panning and zoom is disabled; since resize and fit needs to pan and zoom :P
+            //Note: ancestorGraph functions needs pan and zoom to be enabled to operate keep that in mind
+            ancestorGraph.zoomPanToggle( $scope.DAG.zoom); //Override the default settings
+        }
+
+//        $scope.drawGraph = function(metaInfos){
+//            console.log($scope.combinedGraph.selectedMetaInfos);
+//
+//            var allData = {
+//                nodes: [],
+//                edges: []
+//            }
+//
+//            for(var i= 0; i< metaInfos.length;i++)
+//            {
+//                dataService.asyncAllParentsCS($scope.version,metaInfos[i]).then(function(d) {
+////                        return allparentsData;
+//                allData.nodes = allData.nodes.concat(d.nodes);
+//                allData.edges = allData.edges.concat(d.edges);
+//                });
+////                allData.edges = allData.edges.concat(d.edges);
+//            }
+//            console.log(allData);
+//
+//            ancestorGraph( allData ).then(function( ancestorCy ){
+//                cy = ancestorCy;
+//                $scope.cyLoaded = true;
+//                ancestorGraph.fit();
+//                ancestorGraph.resize();
+//                //Nothing works if panning and zoom is disabled; since resize and fit needs to pan and zoom :P
+//                //Note: ancestorGraph functions needs pan and zoom to be enabled to operate keep that in mind
+//                ancestorGraph.zoomPanToggle( $scope.DAG.zoom); //Override the default settings
+//            });
+//
+//        }
 
 //       Version updated; load the new version
          $scope.versionChange = function(version){
@@ -245,11 +367,34 @@
 //            console.log(cy.zoomingEnabled());
             cy.panningEnabled(zoom);
             cy.zoomingEnabled(zoom);
+            cy.autoungrabify( zoom);
+        };
+        ancestorGraph.getElementById = function(ele){
+//        console.log(ele);
+            return cy.getElementById(ele);
+        };
+
+        ancestorGraph.zoom = function(zm){
+            if(zm)
+                return cy.zoom(zm);
+            else return cy.zoom();
+        };
+
+        ancestorGraph.outerWidth= function(ele){
+            return ele.width();
+        }
+        ancestorGraph.json = function(){
+            return cy.json();
+        };
+
+        ancestorGraph.add = function(eles){
+            cy.add(eles);
         };
 
         ancestorGraph.onClick = function(fn){
-        listen('onClick', fn);
+            listen('onClick', fn);
         };
+
         return ancestorGraph;
     };
 

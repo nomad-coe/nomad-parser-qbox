@@ -419,6 +419,104 @@ table
     JNull
   }
 
+  /** Create JSON containing information graph information, for the "name" meta tag. Contains complete data including ancestors and children
+    */
+  def metaInfoForVersionAndNameJsonWithAllParentsAndChildrenSeperated (version: String, name: String): jn.JValue =
+  {
+    val versions = metaInfoCollection.versionsWithName(version)
+    if (!versions.hasNext)
+      jn.JNull
+    else {
+      val v = versions.next
+      var nodes: List[jn.JValue] = Nil
+      var edges: List[jn.JValue] = Nil
+      var children: List[jn.JValue] = Nil
+      val prefixChildren = "Children of ";
+
+      v.metaInfoRecordForNameWithAllSuper(name, selfGid = true, superGids = false).foreach {
+        (metaInfo: MetaInfoRecord) =>
+          nodes = jn.JObject(
+            ("data" -> jn.JObject(
+              ("id" -> jn.JString(metaInfo.name)) :: Nil)) ::
+              ("style" -> JObject(
+                ("background-color" -> jn.JString(metaInfo.kindStr match {
+                  case "type_document_content" => "#333333"
+                  case "type_unknown" => "#00EE00"
+                  case "type_unknown_meta" => "#00EE00"
+                  case "type_document" => "#A0A0A0"
+                  case "type_meta" => "#0000EE"
+                  case "type_abstract_document_content" => "#00AAAA"
+                  case "type_section" => "#EE0000"
+                  case "type_connection" => "#AA1111"
+                  case "type_dimension" => "#EE00EE"
+                  case _ => "#1111AA"
+                })) ::
+                  ("shape" -> (if (metaInfo.name == name)
+                    jn.JString("star")
+                  else
+                    jn.JNothing)) :: Nil)) :: Nil) :: nodes
+          val rootsByKind = v.firstAncestorsByType(metaInfo.name)
+          rootsByKind.foreach {
+            case (kindNow, (roots, _)) =>
+              if (metaInfo.name == name || metaInfo.kindStr == kindNow) {
+                roots.foreach { (root: String) =>
+                  edges = jn.JObject(
+                    ("data" ->
+                      jn.JObject(
+                        ("source" -> jn.JString(metaInfo.name)) ::
+                          ("target" -> jn.JString(root)) :: Nil
+                      )
+                      ) :: Nil
+                  ) :: edges
+                }
+              }
+          }
+      }
+      if(v.allDirectChildrenOf(name).length>0){
+        nodes = jn.JObject(
+          ("data" -> jn.JObject(
+            ("id" -> jn.JString( prefixChildren + name)) :: Nil)) :: //String should be exactly same when drawing edge
+            ("style" -> JObject(
+              ("background-color" -> jn.JString("#FFF")) ::
+              ("border-width" -> jn.JString("1px"))::
+              ("border-style" -> jn.JString("solid"))::
+              ("border-color" -> jn.JString("#000") ):: Nil))
+             :: Nil) :: nodes
+        edges = jn.JObject(
+          ("data" ->
+            jn.JObject(
+              ("source" -> jn.JString(prefixChildren + name)) ::
+                ("target" -> jn.JString(name)) :: Nil
+            )
+            ) :: Nil
+        ) :: edges
+      }
+      val sortedChildren = v.allDirectChildrenOf(name).toList.sortWith(_ > _)
+      for (child <- sortedChildren) {
+        val metaInfo = v.metaInfoRecordForName(child).get
+          children = jn.JObject(
+            ("data" -> jn.JObject(
+              ("id" -> jn.JString(metaInfo.name)) ::
+              ("parent" -> jn.JString(prefixChildren + name)) :: Nil)) ::
+              ("style" -> JObject(
+                ("background-color" -> jn.JString(metaInfo.kindStr match {
+                  case "type_document_content" => "#333333"
+                  case "type_unknown" => "#00EE00"
+                  case "type_unknown_meta" => "#00EE00"
+                  case "type_document" => "#A0A0A0"
+                  case "type_meta" => "#0000EE"
+                  case "type_abstract_document_content" => "#00AAAA"
+                  case "type_section" => "#EE0000"
+                  case "type_connection" => "#AA1111"
+                  case _ => "#EE00EE"
+                })) :: Nil)) :: Nil) :: children
+      }
+      jn.JObject(
+        ("nodes" -> jn.JArray(nodes)) ::
+          ("edges" -> jn.JArray(edges)) ::
+          ("children" -> jn.JArray(children)) :: Nil)
+    }
+  }
 
   /** Create JSON containing information graph information, for the "name" meta tag. Contains complete data including ancestors and children
     */
@@ -694,6 +792,15 @@ table
               respondWithMediaType(`application/json`) {
                 complete {
                   JsonSupport.writePrettyStr(metaInfoForVersionAndNameJsonAllParents(version, name))                   
+                }
+              }
+            }
+          }~
+          path("allparentsCS.json") {
+            get {
+              respondWithMediaType(`application/json`) {
+                complete {
+                  JsonSupport.writePrettyStr(metaInfoForVersionAndNameJsonWithAllParentsAndChildrenSeperated(version, name))
                 }
               }
             }

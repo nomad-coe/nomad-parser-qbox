@@ -7,6 +7,7 @@ dataModule.factory('dataService', function($http) {
     var promiseVersionList;
     var promiseMetaInfoList;
     var promiseAllParents;
+    var promiseAllParentsCS;
     //Add more versions here as they are available
     var mappedNames = function(){
         var types = {
@@ -72,8 +73,15 @@ dataModule.factory('dataService', function($http) {
     asyncAllParents: function(version,metaName) {
         promiseAllParents = $http.get('/nmi/v/'+version+'/n/' + metaName+'/allparents.json',{cache: true}).then(function (response) {
             return response.data;
+//        return tempAllParents;
         });
         return promiseAllParents;
+    },
+    asyncAllParentsCS: function(version,metaName) {
+        promiseAllParentsCS = $http.get('/nmi/v/'+version+'/n/' + metaName+'/allparentsCS.json',{cache: true}).then(function (response) {
+            return response.data;
+        });
+        return promiseAllParentsCS;
     },
     mappedNames: mappedNames
   };
