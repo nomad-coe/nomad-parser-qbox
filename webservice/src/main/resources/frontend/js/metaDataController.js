@@ -71,7 +71,8 @@
                         cy = ancestorCy;
                         $scope.cyLoaded = true;
 //                        graphOptions(allparentsData);
-                        drawChildrenAsList(allparentsData);
+//                        drawChildrenAsList(allparentsData);
+                        drawChildrenCircle(allparentsData);
                     });
                 });
             }
@@ -125,6 +126,72 @@
         //Note: ancestorGraph functions needs pan and zoom to be enabled to operate keep that in mind
         ancestorGraph.zoomPanToggle( $scope.DAG.zoom); //Override the default settings
     }
+
+        function toDegrees (angle) {
+          return angle * (180 / Math.PI);
+        }
+
+        function toRadians (angle) {
+          return angle * (Math.PI / 180);
+        }
+        //Circle
+        //Remove "Children of " Node
+        //
+            var drawChildrenCircle = function(allparentsData) {
+
+                var count  = 0;
+                if( allparentsData.children.length > 0 ) {
+                    var child = ancestorGraph.getElementById("Children of "+$scope.metaInfoName);
+                    var parent = ancestorGraph.getElementById($scope.metaInfoName);
+                    var radius =  Math.max(child.position().x - parent.position().x,child.position().y - parent.position().y )
+                    var radiusFactor = 1,
+                    jumpFactor = 1;
+                    var childX = 0,
+                        childY = 0;
+
+                    var jump = 0,
+                        jumpAdd =10,
+                        sign = 1;
+                    var angle =jump;
+
+                    radiusFactor +=  0.6 * Math.floor(allparentsData.children.length/12);
+                    jumpAdd /= radiusFactor;
+                    for (var i = 0; i < allparentsData.children.length; i++)
+                    {
+                        childX = parent.position().x + radiusFactor * radius * Math.cos(toRadians(angle))
+                        childY = parent.position().y + radiusFactor * radius * Math.sin(toRadians(angle))
+                        allparentsData.children[i].position = {
+                            x: childX,
+                            y: childY
+                        }
+                        jump += jumpAdd;
+                        sign*=-1;
+                        angle += jump *sign  ;
+//                        console.log(angle);
+//                        console.log(childX);
+//                        console.log(childY);
+//                        console.log(allparentsData.children[i]);
+                        allparentsData.children[i].style["text-halign"] ="right";
+                        if(angle > 60)
+                            allparentsData.children[i].style["text-valign"] ="top";
+                        else if (angle < -60)
+                            allparentsData.children[i].style["text-valign"] ="bottom";
+                        else
+                            allparentsData.children[i].style["text-valign"] ="center";
+
+                        var edgeToParent = { group: "edges", data: { id: allparentsData.children[i].data.id + "__" + $scope.metaInfoName, source: allparentsData.children[i].data.id, target: $scope.metaInfoName } }
+                        ancestorGraph.add(allparentsData.children[i])
+                        ancestorGraph.add(edgeToParent)
+                    }
+                }
+                ancestorGraph.fit();
+                ancestorGraph.resize();
+                //Nothing works if panning and zoom is disabled; since resize and fit needs to pan and zoom :P
+                //Note: ancestorGraph functions needs pan and zoom to be enabled to operate keep that in mind
+                ancestorGraph.zoomPanToggle( $scope.DAG.zoom); //Override the default settings
+            }
+
+
         var drawChildrenAsList = function(allparentsData) {
             var cMinX = 0,
                 cMinY = 35,
@@ -170,6 +237,15 @@
                     }
                     currRow += 1;
                 }
+                var ele = ancestorGraph.getElementById('Children of section_single_configuration_calculation');
+                console.log(ele);
+                console.log(ele.off('click'));
+                console.log(ele.siblings());
+                ele.unselectify();
+                ele.off('tap');
+                ele.off('click');
+                ele.off('mousedown');
+                ele.off('touchstart');
             }
             ancestorGraph.fit();
             ancestorGraph.resize();
@@ -204,7 +280,7 @@
           scope.$watch(function(){ //watch any changes to our element
 //          console.log($window)
 //          console.log(element)
-          console.log("Window Height: "+ angular.element($window).height()+ "  "+$window.innerHeight + "  "+$window +" Element height: " +element[0].offsetHeight  )
+//          console.log("Window Height: "+ angular.element($window).height()+ "  "+$window.innerHeight + "  "+$window +" Element height: " +element[0].offsetHeight  )
             scope.style = { //scope variable style, shared with our controller
 //              height: ( angular.element($window).height() - element[0].offsetHeight )+'px' //set the height in style to our elements height
               height: ( $window.innerHeight - element[0].offsetHeight )+'px' //set the height in style to our elements height

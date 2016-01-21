@@ -497,7 +497,8 @@ table
           children = jn.JObject(
             ("data" -> jn.JObject(
               ("id" -> jn.JString(metaInfo.name)) ::
-              ("parent" -> jn.JString(prefixChildren + name)) :: Nil)) ::
+//              ("parent" -> jn.JString(prefixChildren + name)) ::
+                Nil)) ::
               ("style" -> JObject(
                 ("background-color" -> jn.JString(metaInfo.kindStr match {
                   case "type_document_content" => "#333333"
