@@ -53,6 +53,8 @@ filter.factory('filterService', function($http) {
         filter.selectedSection= filter.Sections[0] ;
         filter.selectedType=filter.Types[0];
         filter.selectedMetaInfoType=filter.MetaInfoTypes[0];
+        filter.search='';
+        filter.hideDerived = false;
         var myService = {
             filter:filter,
             setSelected: function(selectedValues){

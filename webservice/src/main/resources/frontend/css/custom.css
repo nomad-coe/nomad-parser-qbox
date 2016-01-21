@@ -95,6 +95,7 @@ input[type="text"]:focus {
 }
 
 #cy {
+/* Height and width values might be overwritten at the time of component initialization */
     width: 900px;
     height: 400px;
 /*    z-index: 999;*/

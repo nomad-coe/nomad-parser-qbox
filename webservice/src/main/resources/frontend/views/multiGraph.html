@@ -1,0 +1,41 @@
+<ng-include src="'views/header.html'"></ng-include>
+
+
+
+<div class="container-fluid">
+    <!--Main container for everything-->
+    <div class="row">
+        <div class="col-xs-12">
+            <div class="row header">
+                <div class="col-xs-9 col-md-10">
+                    <ui-select multiple ng-model="combinedGraph.selectedMetaInfos" theme="bootstrap" ng-disabled="disabled" close-on-select="false" title="Choose meta data for the graph">
+                        <ui-select-match placeholder="Select metadata for the graph">{{$item.name}} </ui-select-match>
+                        <ui-select-choices repeat="metaInfo.name as metaInfo in metaDataList.metaInfos | filter: {name: $select.search}| searchAndQueryFilter:filter.search:filter.selectedSection.section:filter.selectedType.name:filter.selectedMetaInfoType.name:filter.hideDerived | orderBy:'name'">
+                            {{metaInfo.name}}
+                        </ui-select-choices>
+                    </ui-select>
+                </div>
+                <div  class="col-xs-3 col-md-2">
+                    <button type="button" class="btn btn-primary" ng-click="drawGraph(combinedGraph.selectedMetaInfos)">Draw Graph</button>
+                </div>
+            </div>
+        </div>
+        <div class="col-xs-12 col-md-8 " id="circles">
+            <div  class="col-xs-3"> <div id="circleSection"> </div> Section </div>
+            <div  class="col-xs-3 "> <div id="circleAbstractType"> </div> Abstract Type</div>
+            <div  class="col-xs-3 "> <div id="circleConcreteValue"> </div> Concrete Value</div>
+            <div  class="col-xs-3 "> <div id="circleDimension"> </div> Dimension</div>
+        </div>
+        <div  class="col-xs-12 col-md-4">
+            <button type="button" class="btn btn-primary" ng-click="zoomToggle()">{{DAG.zoomText}}</button>
+            <button type="button" class="btn btn-primary" ng-click="reset()">Reset</button>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xs-12">
+            <div >
+                <div id="cy" style="height:1500px;width:1200px"></div>
+            </div>
+        </div>
+    </div>
+</div>

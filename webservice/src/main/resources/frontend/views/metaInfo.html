@@ -1,73 +1,17 @@
+<!-- Otherwise the directive doesn't work unless attached to a div that is not overridden by angular; Master directive sets height of other elements.-->
+<div master>
+    <div ng-include="'views/header.html'"></div>
+</div>
 <div class="container-fluid">
     <!--Main container for everything-->
     <div class="row">
-        <div master class="col-xs-12 header">
-            <div class="row">
-                <h2 class="col-xs-6 col-md-3">NOMAD Meta Info</h2>
-                <!--<h3 > Version </h3>-->
-                <span class="col-xs-6 col-md-3 p-x-2"> <input type="checkbox" ng-model="showOnlyDerived"> Hide derived </span>
-                <div class="col-xs-6 col-md-3 col-md-offset-3 versionBox" >
-                    <ui-select ng-model="version" ng-change="versionChange(version)" theme="bootstrap" ng-disabled="disabled" close-on-select="true"  title="Select a version">
-                        <ui-select-match placeholder="Select a version">{{mappedNames.version($select.selected)}}</ui-select-match>
-                        <ui-select-choices repeat="version in versions | filter:$select.search">
-                            {{mappedNames.version(version)}}
-                        </ui-select-choices>
-                    </ui-select>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-xs-4 col-md-3 searchBox">
-                    <input class="col-xs-12 style-1" type="text" ng-model="query" placeholder="Search">
-                </div>
-                <div class="col-xs-8 col-md-9">
-                    <div class="col-xs-6 col-md-4 ">
-                        <ui-select ng-model="filter.selectedSection" ng-change="filterChange(filter)" theme="bootstrap" ng-disabled="disabled"  close-on-select="true" title="Filter by Parent">
-                            <ui-select-match placeholder="Select a parent in the list ">{{$select.selected.displayName}}</ui-select-match>
-                            <ui-select-choices repeat="parents in filter.Sections| filter:$select.search ">
-                                {{parents.displayName}}
-                            </ui-select-choices>
-                        </ui-select>
-                    </div>
-                    <div class="col-xs-6 col-md-4">
-                        <ui-select ng-model="filter.selectedType" ng-change="filterChange(filter)" theme="bootstrap" ng-disabled="disabled"  close-on-select="true" title="Filter by Abstract Type">
-                            <ui-select-match placeholder="Select a type in the list ">{{$select.selected.displayName}}</ui-select-match>
-                            <ui-select-choices group-by="'parent'" repeat="type in filter.Types| filter:$select.search ">
-                                {{type.displayName}}
-                            </ui-select-choices>
-                        </ui-select>
-                    </div>
-                    <div class="col-xs-6 col-md-4 ">
-                        <ui-select ng-model="filter.selectedMetaInfoType" ng-change="filterChange(filter)" theme="bootstrap" ng-disabled="disabled"  close-on-select="true" title="Filter by Meta Info Type">
-                            <ui-select-match placeholder="Select a type in the list ">{{$select.selected.displayName}}</ui-select-match>
-                            <ui-select-choices repeat="type in filter.MetaInfoTypes| filter:$select.search ">
-                                {{type.displayName}}
-                            </ui-select-choices>
-                        </ui-select>
-                    </div>
-                    <div ng-show="false">
-                        <div class="col-xs-9 col-md-10">
-                            <ui-select multiple ng-model="combinedGraph.selectedMetaInfos" theme="bootstrap" ng-disabled="disabled" close-on-select="false" title="Choose meta data for the graph">
-                                <ui-select-match placeholder="Select metadata for the graph">{{$item.name}} </ui-select-match>
-                                <ui-select-choices repeat="metaInfo.name as metaInfo in metaDataList.metaInfos | filter: {name: $select.search}| orderBy:'name'">
-                                    {{metaInfo.name}}
-                                </ui-select-choices>
-                            </ui-select>
-                        </div>
-                        <div  class="col-xs-3 col-md-2">
-                            <button type="button" class="btn btn-primary" ng-click="drawGraph(combinedGraph.selectedMetaInfos)">Draw Graph</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
         <!-- Search related Stuff-->
         <div class="col-xs-4 col-md-3 searchArea">
             <div class="row">
                 <div class="col-xs-12 custom-restricted" id="menu" ng-style="style">
                     <ul >
                         <!--<li ng-repeat="data in metaDataList['metaInfos'] | filterBy: ['name','description']: query | filterRootAncestor:filter.selectedSection.section | filter:{allparents:filter.selectedType.name} | filter:{kindStr:filter.selectedMetaInfoType.name} | orderBy:'name'">-->
-                        <li ng-repeat="data in metaDataList['metaInfos'] | filterAllQueries:query:filter.selectedSection.section:filter.selectedType.name:filter.selectedMetaInfoType.name:showOnlyDerived | orderBy:'name'">
-
+                        <li ng-repeat="data in metaDataList['metaInfos'] | searchAndQueryFilter:filter.search:filter.selectedSection.section:filter.selectedType.name:filter.selectedMetaInfoType.name:filter.hideDerived | orderBy:'name'">
                         <a href="#/{{version}}/{{data['name']}}">
                             {{data['name']}}</a>
                         </li>
