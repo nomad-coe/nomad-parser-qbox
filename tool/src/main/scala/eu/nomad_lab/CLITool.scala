@@ -37,6 +37,11 @@ Usage:
   nomadTool [--help]
     [--main-meta-file <path to nomadmetainfo.json to load>]
     [--meta-dot-file <where to output dot file>]
+    [--meta-remove-unintresting]
+    [--meta-remove-meta]
+    [--meta-section-only]
+    [--meta-abstract-only]
+    [--meta-base-url <base url>]
     [--main-file-path <path of the main file to parse>]
     [--main-file-uri <uri of the main file to parse>]
     [--parser <parser to use>]
@@ -66,6 +71,11 @@ Runs the main parsing step
     var verbose: Boolean = false
     var listParsers: Boolean = false
     var backendType: BackendType.Enum = BackendType.JsonEventEmitter
+    var removeUnintresting: Boolean = false
+    var removeMeta: Boolean = false
+    var sectionParents: Boolean = true
+    var abstractParents: Boolean = true
+    var metaUrlBase: String = "http://localhost:8081/"
     while (!list.isEmpty) {
       val arg = list.head
       list = list.tail
@@ -86,6 +96,23 @@ Runs the main parsing step
             return
           }
           metaInfoDotFile = Some(list.head)
+          list = list.tail
+        case "--meta-remove-unintresting" =>
+          removeUnintresting = true
+        case "--meta-remove-meta" =>
+          removeMeta = true
+        case "--meta-section-only" =>
+          sectionParents = true
+          abstractParents = false
+        case "--meta-abstract-only" =>
+          sectionParents = false
+          abstractParents = true
+        case "--meta-base-url" =>
+          if (list.isEmpty) {
+            println("Error: missing meta url after --meta-base-url. $usage")
+            return
+          }
+          metaUrlBase = list.head
           list = list.tail
         case "--main-file-path" =>
           if (list.isEmpty) {
@@ -135,7 +162,12 @@ Runs the main parsing step
         val resolver = new meta.RelativeDependencyResolver
         val mainEnv = meta.SimpleMetaInfoEnv.fromFilePath(metaInfoPath, resolver)
         val w = new java.io.FileWriter(outPath)
-        mainEnv.writeDot(w)
+        mainEnv.writeDot(w, meta.MetaInfoEnv.DotParams(
+          removeUnintresting = removeUnintresting,
+          removeMeta = removeMeta,
+          sectionParents = sectionParents,
+          abstractParents = abstractParents,
+          urlBase = metaUrlBase))
         w.close()
       case None => ()
     }

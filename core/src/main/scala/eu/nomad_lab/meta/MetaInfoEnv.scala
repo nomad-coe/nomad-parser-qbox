@@ -244,7 +244,7 @@ trait MetaInfoEnv extends MetaInfoCollection {
 
   /** writes a dot format description of the graph
     */
-  def writeDot(s: java.io.Writer): Unit = {
+  def writeDot(s: java.io.Writer, params: MetaInfoEnv.DotParams = MetaInfoEnv.DotParams()): Unit = {
     s.write("""strict digraph meta_info_env {
   ranksep=1;
   ratio=1.41;
@@ -253,31 +253,53 @@ trait MetaInfoEnv extends MetaInfoCollection {
     allNames.foreach{ name: String =>
       metaInfoRecordForName(name, false, false) match {
         case Some(m) =>
-          val attributes = m.kindStr match {
-            case "type_document_content" =>
-              if (m.dtypeStr == Some("r"))
-                "shape=box; color=red"
+          var toRemove: Boolean = (
+            params.removeUnintresting && (metaInfoRecordForNameWithAllSuperNameList(name).find{
+              (n: String) => n=="time_info" || n == "parsing_message_debug" || n == "message_debug"
+            } match {
+              case Some(_) => true
+              case None => false
+            })
+              || params.removeMeta && m.kindStr == "type_meta"
+              || !params.abstractParents && m.kindStr == "type_abstract_document_content"
+              || !params.sectionParents && m.kindStr == "type_section")
+          if (!toRemove) {
+            val attributes = m.kindStr match {
+              case "type_document_content" =>
+                if (m.dtypeStr == Some("r"))
+                  "shape=box; color=red"
+                else
+                  "shape=box"
+              case "type_unknown" => "color=green"
+              case "type_unknown_meta" => "color=green"
+              case "type_document" => "color=grey"
+              case "type_meta" => "color=blue"
+              case "type_abstract_document_content" => "color=black"
+              case "type_section" => "color=red"
+              case "type_connection" => "color=orange"
+              case _ => "color=pink"
+            }
+            s.write(s"""  ${m.name} [$attributes; URL="${params.urlBase}ui/index.html#/last/${m.name}"];\n""")
+            val parents: Seq[String] = if (params.abstractParents) {
+              if (params.sectionParents)
+                m.superNames
               else
-                "shape=box"
-            case "type_unknown" => "color=green"
-            case "type_unknown_meta" => "color=green"
-            case "type_document" => "color=grey"
-            case "type_meta" => "color=blue"
-            case "type_abstract_document_content" => "color=black"
-            case "type_section" => "color=red"
-            case "type_connection" => "color=orange"
-            case _ => "color=pink"
-          }
-          if (!attributes.isEmpty)
-            s.write(s"""  ${m.name} [$attributes; URL="http://localhost:8081/ui/index.html#/last/${m.name}"];\n""")
-          for (superN <- m.superNames)
-            s.write(s"  ${m.name} -> $superN;\n")
-          if (m.dtypeStr == Some("r")) {
-            m.referencedSections match {
-              case Some (sects) =>
-                for (refSect <- sects)
-                  s.write(s"  ${m.name} -> $refSect [color=red];\n")
-              case None => ()
+                firstAncestorsByType(name).getOrElse("type_abstract_document_content", (Set[String]() ->Set()))._1.toSeq
+            } else {
+              if (params.sectionParents)
+                firstAncestorsByType(name).getOrElse("type_section", (Set() ->Set()))._1.toSeq
+              else
+                Seq()
+            }
+            for (superN <- parents)
+              s.write(s"  ${m.name} -> $superN;\n")
+            if (m.dtypeStr == Some("r") && params.sectionParents) {
+              m.referencedSections match {
+                case Some (sects) =>
+                  for (refSect <- sects)
+                    s.write(s"  ${m.name} -> $refSect [color=red];\n")
+                case None => ()
+              }
             }
           }
         case None =>
@@ -289,6 +311,16 @@ trait MetaInfoEnv extends MetaInfoCollection {
 }
 
 object MetaInfoEnv {
+  /** parameters for dot plot
+    */
+  case class DotParams(
+    removeUnintresting: Boolean = false,
+    removeMeta: Boolean = true,
+    sectionParents: Boolean = true,
+    abstractParents: Boolean = true,
+    urlBase: String = "http://localhost:8081/"
+  )
+
   /** Enum for various kinds of environment
     */
   object Kind extends Enumeration {
