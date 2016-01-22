@@ -31,46 +31,22 @@
                     },
 
                     //Initial viewport state;
-//                    zoom: 0.5,
+                    zoom: 1,
 //                    pan: { x: 0, y: 0 },,
 
                     //interaction options
+                    minZoom: 0.5, //1e-2
+                    maxZoom: 2,
                     boxSelectionEnabled: true,
                     autounselectify: true,
                     zoomingEnabled: true, //Always keep true at initialization; Call f
                     panningEnabled: true,
-//                    style: [
-//                            {
-//                              selector: 'node',
-//                              style: {
-//                                  'content': 'data(id)',
-//                                  'text-opacity': 0.5,
-//                                  'text-valign': 'bottom',
-//                                  'text-halign': 'center',
-//                                  'background-color': '#11479e'
-//                              }
-//                            },
-//                            {
-//                              selector: 'edge',
-//                              style: {
-//                                  'width': 4,
-//                                  'target-arrow-shape': 'triangle',
-//                                  'line-color': '#9dbaea',
-//                                  'target-arrow-color': '#9dbaea'
-//                              }
-//                            },
-//                            {
-//                              selector: '.top-left',
-//                              style: {
-//                                'text-valign': 'top',
-//                                'text-halign': 'left'
-//                              }
-//                            }
-//                           ]
                     style: cytoscape.stylesheet()
                         .selector('node')
                         .css({
                           'content': 'data(id)',
+                          'height': '30px',
+                          'width': '30px',
                           'text-opacity': 0.5,
                           'text-valign': 'bottom',
                           'text-halign': 'center',
@@ -185,7 +161,6 @@
             zoom:false,
             zoomText:'Enable zoom'
         }
-
         ancestorGraph.zoom = function(zm){
             if(zm)
                 return cy.zoom(zm);
@@ -193,7 +168,7 @@
         };
 
         ancestorGraph.outerWidth= function(ele){
-            return ele.width();
+            return ele.outerWidth();
         }
         ancestorGraph.json = function(){
             return cy.json();

@@ -9,6 +9,10 @@
     function mainController($scope, $http, $location, ancestorGraph, $routeParams,filterService,dataService){
         $scope.metaInfoName = $routeParams.metaInfoName;
         $scope.version = $routeParams.version;
+        $scope.cyCSS= {
+        height:"550px",
+        width:"900px"
+        }
         $scope.dataToDisplay = {
             name:'',
             description:''
@@ -67,12 +71,29 @@
             }
             else{
                 dataService.asyncAllParentsCS($scope.version,$scope.metaInfoName ).then(function(allparentsData) {
+
+                //Change the height of the element depending upon the number of children
+                if( allparentsData.children.length < 10) {
+                    $scope.cyCSS.height = "450px";
+                }
+//                else if( allparentsData.children.length > 20 ) {
+//                    $scope.cyCSS.height = "700px";
+//                }
+
                     ancestorGraph( allparentsData ).then(function( ancestorCy ){
                         cy = ancestorCy;
                         $scope.cyLoaded = true;
 //                        graphOptions(allparentsData);
                         drawChildrenAsList(allparentsData);
 //                        drawChildrenCircle(allparentsData);
+
+                        ancestorGraph.resize();
+                        ancestorGraph.reset();
+                        ancestorGraph.reset(); //Double call magically solves some formatting problems
+                        ancestorGraph.fit();
+                        //Nothing works if panning and zoom is disabled; since resize and fit needs to pan and zoom :P
+                        //Note: ancestorGraph functions needs pan and zoom to be enabled to operate keep that in mind
+                        ancestorGraph.zoomPanToggle( $scope.DAG.zoom); //Override the default settings
                     });
                 });
             }
@@ -201,7 +222,7 @@
                 cMinY = 35,
                 currCol = 0,
                 currRow = 0,
-                maxRow = 15, //max rows in a coloumn
+                maxRow = 20, //max rows in a coloumn
                 columnX = 0;
             var colMaxWidth = 0;
             if( allparentsData.children.length > 0 ) {
@@ -213,9 +234,14 @@
                 if(allparentsData.children.length < maxRow){
                     maxRow =  allparentsData.children.length;
                 }
+                else {
+                //Reset the maxRow for max fit in each row;
+                var nc = Math.ceil(allparentsData.children.length / maxRow);
+                maxRow = Math.ceil(allparentsData.children.length / nc)
+                }
                 columnX = eleX + 20;
 
-                //////////////////// Draw bracket on graph
+
 
                 var bracketContainer =  [
                                          { group: "nodes", classes: 'bracket', data: { id: "P1" }, position: {x:eleX, y:eleY }, style:{width:5,height:5} },
@@ -231,18 +257,12 @@
                                        ];
 
                 ancestorGraph.add(bracketContainer);
-                ancestorGraph.remove(ele);
-
-
-                /////////
+                ancestorGraph.remove(ele); //Remove the "Children of $" node from the graph
                 for (var i = 0; i < allparentsData.children.length; i++)
                 {
                     if(currRow >= maxRow) {
                         currRow = 0, currCol += 1;
                         cMinX = colMaxWidth * 10;
-//                        console.log("cMinX:", cMinX)
-//                        console.log("colMaxWidth:", colMaxWidth)
-//                        console.log("currCol:", currCol)
                         columnX +=  cMinX ;
                         colMaxWidth = 0;
                     }
@@ -271,11 +291,6 @@
 //                ele.off('mousedown');
 //                ele.off('touchstart');
             }
-            ancestorGraph.fit();
-            ancestorGraph.resize();
-            //Nothing works if panning and zoom is disabled; since resize and fit needs to pan and zoom :P
-            //Note: ancestorGraph functions needs pan and zoom to be enabled to operate keep that in mind
-            ancestorGraph.zoomPanToggle( $scope.DAG.zoom); //Override the default settings
         }
 
 //      More Cyptoscape Related stuff;

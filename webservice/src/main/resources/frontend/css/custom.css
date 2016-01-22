@@ -95,9 +95,9 @@ input[type="text"]:focus {
 }
 
 #cy {
-/* Height and width values might be overwritten at the time of component initialization */
+/* Height and width values might be overwritten at the time of component initialization*/
     width: 900px;
-    height: 400px;
+    height: 550px;
 /*    z-index: 999;*/
 }
 #circles{

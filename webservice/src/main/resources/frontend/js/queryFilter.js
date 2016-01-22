@@ -6,7 +6,6 @@
 
     function searchAndQueryFilter() {
         return function (metaItems, searchFilter, sectionFilter, allParentsFilter, metaInfoTypeFilter, derivedFilter ) {
-            console.log(searchFilter +sectionFilter );
             if(!searchFilter && !sectionFilter && !allParentsFilter && !metaInfoTypeFilter && !derivedFilter ) {
                 return metaItems;
             }
