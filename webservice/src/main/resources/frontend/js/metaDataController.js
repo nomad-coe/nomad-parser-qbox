@@ -71,8 +71,8 @@
                         cy = ancestorCy;
                         $scope.cyLoaded = true;
 //                        graphOptions(allparentsData);
-//                        drawChildrenAsList(allparentsData);
-                        drawChildrenCircle(allparentsData);
+                        drawChildrenAsList(allparentsData);
+//                        drawChildrenCircle(allparentsData);
                     });
                 });
             }
@@ -154,6 +154,10 @@
                         sign = 1;
                     var angle =jump;
 
+                    var rnd = { group: "nodes", data: { id: "RamDom Node" }, position: {x:parent.position().x, y:parent.position().y+50 }, style:{width:2,height:2} };
+
+                    ancestorGraph.add(rnd);
+
                     radiusFactor +=  0.6 * Math.floor(allparentsData.children.length/12);
                     jumpAdd /= radiusFactor;
                     for (var i = 0; i < allparentsData.children.length; i++)
@@ -198,7 +202,7 @@
                 currCol = 0,
                 currRow = 0,
                 maxRow = 15, //max rows in a coloumn
-                lastColumnX = 0;
+                columnX = 0;
             var colMaxWidth = 0;
             if( allparentsData.children.length > 0 ) {
                 var ele = ancestorGraph.getElementById("Children of "+$scope.metaInfoName)
@@ -209,20 +213,40 @@
                 if(allparentsData.children.length < maxRow){
                     maxRow =  allparentsData.children.length;
                 }
-                lastColumnX = eleX;
+                columnX = eleX + 20;
+
+                //////////////////// Draw bracket on graph
+
+                var bracketContainer =  [
+                                         { group: "nodes", classes: 'bracket', data: { id: "P1" }, position: {x:eleX, y:eleY }, style:{width:5,height:5} },
+                                         { group: "nodes", classes: 'bracket', data: { id: "P2" }, position: {x:eleX, y:eleY + (maxRow/2 ) * cMinY + 10 }, style:{width:5,height:5} },
+                                         { group: "nodes", classes: 'bracket', data: { id: "P3" }, position: {x:eleX, y:eleY - (maxRow/2 ) * cMinY - 10}, style:{width:5,height:5} },
+                                         { group: "nodes", classes: 'bracket', data: { id: "P4" }, position: {x:eleX + 20, y:eleY + (maxRow/2 ) * cMinY + 10}, style:{width:5,height:5} },
+                                         { group: "nodes", classes: 'bracket', data: { id: "P5" }, position: {x:eleX + 20, y:eleY - (maxRow/2 ) * cMinY - 10}, style:{width:5,height:5} },
+                                         { group: "edges", data: { id: "P1_" + $scope.metaInfoName  , source: "P1", target: $scope.metaInfoName }, style: { width: 1,  label: "Direct Children" } },
+                                         { group: "edges", data: { id: "P2_P1"  , source: "P2", target: "P1" }, style: {"curve-style": "haystack", width: 5} },
+                                         { group: "edges", data: { id: "P3_P1"  , source: "P3", target: "P1" }, style: {"curve-style": "haystack", width: 5} },
+                                         { group: "edges", data: { id: "P4_P2"  , source: "P4", target: "P2" }, style: {"curve-style": "haystack", width: 5} },
+                                         { group: "edges", data: { id: "P5_P3"  , source: "P5", target: "P3" }, style: {"curve-style": "haystack", width: 5} }
+                                       ];
+
+                ancestorGraph.add(bracketContainer);
+                ancestorGraph.remove(ele);
+
+
+                /////////
                 for (var i = 0; i < allparentsData.children.length; i++)
                 {
                     if(currRow >= maxRow) {
                         currRow = 0, currCol += 1;
-                        cMinX = colMaxWidth * 7;
+                        cMinX = colMaxWidth * 10;
 //                        console.log("cMinX:", cMinX)
 //                        console.log("colMaxWidth:", colMaxWidth)
 //                        console.log("currCol:", currCol)
-                        lastColumnX = lastColumnX + cMinX ;
+                        columnX +=  cMinX ;
                         colMaxWidth = 0;
-
                     }
-                    childX = lastColumnX + cMinX;
+                    childX = columnX;
                     childY = eleY - ((maxRow -1 )/2) *cMinY + currRow * cMinY;
                     allparentsData.children[i].position = {
                         x: childX,
@@ -237,15 +261,15 @@
                     }
                     currRow += 1;
                 }
-                var ele = ancestorGraph.getElementById('Children of section_single_configuration_calculation');
-                console.log(ele);
-                console.log(ele.off('click'));
-                console.log(ele.siblings());
-                ele.unselectify();
-                ele.off('tap');
-                ele.off('click');
-                ele.off('mousedown');
-                ele.off('touchstart');
+//                var ele = ancestorGraph.getElementById('Children of section_single_configuration_calculation');
+//                console.log(ele);
+//                console.log(ele.off('click'));
+//                console.log(ele.siblings());
+//                ele.unselectify();
+//                ele.off('tap');
+//                ele.off('click');
+//                ele.off('mousedown');
+//                ele.off('touchstart');
             }
             ancestorGraph.fit();
             ancestorGraph.resize();
