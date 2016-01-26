@@ -224,9 +224,20 @@ lazy val webservice = (project in file("webservice")).
 lazy val tool = (project in file("tool")).
   dependsOn(base).
   settings(commonSettings: _*).
+  enablePlugins(DockerPlugin).
   settings(
     libraryDependencies ++= commonLibs,
-    name := "nomadTool"
+    name := "nomadTool",
+    docker <<= (docker dependsOn assembly),
+    dockerfile in docker := {
+      val artifact = (outputPath in assembly).value
+      val artifactTargetPath = s"/app/${artifact.name}"
+      new Dockerfile {
+        from("java:7")
+        add(artifact, artifactTargetPath)
+        entryPoint("java", "-jar", artifactTargetPath)
+      }
+    }
   ).
   settings(Revolver.settings: _*)
 
