@@ -1,6 +1,7 @@
 package eu.nomad_lab.webservice
 
 import akka.actor.Actor
+import akka.actor.FSM.->
 import spray.routing._
 import spray.http._
 import MediaTypes._
@@ -9,7 +10,7 @@ import org.json4s.native.JsonMethods
 import org.json4s.JsonDSL._
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.{mutable, breakOut}
-import java.io.File
+import java.io.{Serializable, File}
 import java.nio.file.Paths
 import java.nio.file.Files
 import java.nio.charset.StandardCharsets
@@ -20,7 +21,7 @@ import eu.nomad_lab.meta.MetaInfoCollection
 import eu.nomad_lab.meta.RelativeDependencyResolver
 import eu.nomad_lab.meta.SimpleMetaInfoEnv
 import eu.nomad_lab.{MarkDownProcessor, JsonSupport, JsonUtils}
-import com.typesafe.scalalogging.StrictLogging
+import com.typesafe.scalalogging.{Logger, StrictLogging}
 import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JArray, JObject, JValue, JField}
 import scala.util.matching.Regex
 
@@ -419,6 +420,414 @@ table
     JNull
   }
 
+
+  /** Create MAP containing information graph information, for the "name" meta tag. Contains only information about ancestors
+    * Note: Does not look for referenced section
+    */
+  def metaInfoAncestorGraphMap (version: String, name: String): Map[String, Set[Tuple2[String, String]]] =
+  {
+    val versions = metaInfoCollection.versionsWithName(version)
+    if (!versions.hasNext)
+      Map()
+    else {
+      val v = versions.next
+      var nodes: Set[Tuple2[String, String]] = Set() // Can map
+//      var nodes: Set[String] = Set() // Can map
+      var edges: Set[Tuple2[String, String]] = Set()
+
+      v.metaInfoRecordForNameWithAllSuper(name, selfGid = true, superGids = false).foreach {
+        (metaInfo: MetaInfoRecord) =>
+          nodes = nodes + Tuple2(metaInfo.name, metaInfo.name)
+//          nodes = nodes +metaInfo.name
+          val rootsByKind = v.firstAncestorsByType(metaInfo.name)
+          rootsByKind.foreach {
+            case (kindNow, (roots, _)) =>
+              if (metaInfo.name == name || metaInfo.kindStr == kindNow) {
+                roots.foreach { (root: String) =>
+                  edges = edges + Tuple2(metaInfo.name, root)
+                }
+              }
+          }
+      }
+      Map( "nodes" -> nodes, "edges" -> edges )
+    }
+  }
+
+  /** Get node class depending upon its kind string
+    *
+    */
+  def nodeClassByKindStr(kindStr:String):String = {
+    kindStr match {
+      case "type_document_content" => "#333333"
+      case "type_unknown" => "#00EE00"
+      case "type_unknown_meta" => "#00EE00"
+      case "type_document" => "#A0A0A0"
+      case "type_meta" => "#0000EE"
+      case "type_abstract_document_content" => "#00AAAA"
+      case "type_section" => "#EE0000"
+      case "type_connection" => "#AA1111"
+      case "type_dimension" => "#EE00EE"
+      case _ => "#1111AA"
+    }
+  }
+
+  //TODO: Use DP
+  def getRefenceGraph(v: MetaInfoEnv, name: String):(Boolean, Set[String], Map[(String, String), String]) = {
+    val allItems = v.allNames.toList
+    var indirectChildrenBySection: Set[String] = collection.immutable.Set[String]()
+    var toAdd: Set[String] = collection.immutable.Set[String]()
+    var edgesMap = Map[(String, String),String]()
+    var usefulIndirect: Set[String] = collection.immutable.Set[String]()
+    var flag = false
+    for (i <- 0 until allItems.length) {
+      //Search can be limited to type of ref items
+      v.firstAncestorsByType(allItems(i)).get("type_section") match {
+        case Some((rootSections, _)) => if (rootSections.contains(name))  indirectChildrenBySection=indirectChildrenBySection + ((allItems(i)))
+        case _ =>
+      }
+    }
+    for(item <- indirectChildrenBySection) {
+      val metaInfoItem = v.metaInfoRecordForName(item).get
+      metaInfoItem.referencedSections match {
+        case Some(sects) =>
+          toAdd = toAdd + metaInfoItem.name // To create this separate edge to the refereced section
+          toAdd = toAdd ++ ((sects))
+          for(sec <- sects){
+            edgesMap = edgesMap + (Tuple2(metaInfoItem.name,sec) -> "refenece")
+          }
+          flag = true // To create edge to the indirect children (in case)
+        case _ =>
+      }
+    }
+    // Add node indirect children, to the to do list
+    // Add nodes referencedSections to the to do list
+    // Add edges to from this node separetely; depending upin the
+
+    Tuple3(flag, toAdd, edgesMap)
+  }
+
+  def metaInfoAncestors(v: MetaInfoEnv, toDo: mutable.ListBuffer[String], known: mutable.Set[String], nMap:Map[String,(String, String)], eMap:Map[(String, String),String]): (Map[String,(String, String)],Map[(String, String),String]) = {
+    var nodesMap = nMap  // name -> (shape, class(for color etc))
+    var edgesMap = eMap // (source, target) -> class
+
+
+    // Add element and its parents
+    val now = toDo.head
+    toDo.trimStart(1)
+    val nowR = v.metaInfoRecordForName(now)
+    if (nowR.isEmpty)
+      throw new MetaInfoEnv.DependsOnUnknownNameException(v.name, known.toString, now)
+    val metaInfo = nowR.get
+    metaInfo.superNames.foreach { superName: String =>
+      edgesMap += (Tuple2(metaInfo.name,superName) -> "casual")
+      if (!known(superName)) {
+        toDo.append(superName)
+        known += superName
+      }
+    }
+
+    val nodeShape = "circle" // Take care of it sep(metaInfo.name -> Tuple2(nodeShape,nodeClass))arately also
+    val nodeClass = nodeClassByKindStr(metaInfo.kindStr)
+    nodesMap += (metaInfo.name -> Tuple2(nodeShape,nodeClass))
+
+    //Add reference
+    val (flagRef, newNodes, refEdges) = getRefenceGraph(v, metaInfo.name)
+    if(flagRef) {
+      edgesMap ++= refEdges
+      for(nNode <- newNodes){
+        if (!known(nNode)) {
+          toDo.append(nNode)
+          known += nNode
+        }
+      }
+    }
+    if(toDo.isEmpty)
+      Tuple2(nodesMap, edgesMap)
+    else
+      metaInfoAncestors(v, toDo, known, nodesMap, edgesMap)
+  }
+
+  /** Create JSON containing information graph information, for the "name" meta tag. Contains complete data including ancestors and children
+    */
+  def metaInfoAncestorChildrenGraphJson (version: String, name: String): jn.JValue =
+  {
+    val versions = metaInfoCollection.versionsWithName(version)
+    if (!versions.hasNext)
+      jn.JNull
+    else {
+      val v = versions.next
+
+      val known = mutable.Set[String](name)
+      val toDo = mutable.ListBuffer[String](name)
+      var nMap =  Map[String,(String, String)]()  // name -> (shape, class(for color etc))
+      var eMap =  Map[(String, String),String]() // (source, target) -> class
+      val resTailResc = metaInfoAncestors(v,toDo, known,nMap, eMap )
+      val nodesMap = resTailResc._1
+      val edgesMap = resTailResc._2
+      logger.info("Nodes"+nodesMap)
+      var nodes: List[jn.JValue] = Nil
+      var edges: List[jn.JValue] = Nil
+      var children: List[jn.JValue] = Nil
+      val prefixChildren = "Children of "
+      //Add all ancestors of the current node
+
+      nodesMap foreach {case (key, value) =>
+        nodes = jn.JObject(
+          ("data" -> jn.JObject(
+            ("id" -> jn.JString(key.mkString)) :: Nil)) ::
+            ("style" -> JObject(
+              ("background-color" ->jn.JString(value._2)) ::
+                ("shape" -> jn.JString(value._1)
+                ) :: Nil)) :: Nil) :: nodes
+      }
+      edgesMap foreach {case (key, value)=>
+        edges = jn.JObject(
+          ("data" ->
+            jn.JObject(
+              ("source" -> jn.JString(key._1)) ::
+                ("target" -> jn.JString(key._2)) :: Nil
+            )
+            ) :: Nil
+        ) :: edges
+      }
+
+
+      ///// Direct Children related Stuff; Needs to be rewritten
+      if(v.allDirectChildrenOf(name).length>0){
+        nodes = jn.JObject(
+          ("data" -> jn.JObject(
+            ("id" -> jn.JString( prefixChildren + name)) :: Nil)) :: //String should be exactly same when drawing edge
+            ("style" -> JObject(
+              ("background-color" -> jn.JString("#FFF")) ::
+                ("border-width" -> jn.JString("1px"))::
+                ("border-style" -> jn.JString("solid"))::
+                ("border-color" -> jn.JString("#000") ):: Nil))
+            :: Nil) :: nodes
+        edges = jn.JObject(
+          ("data" ->
+            jn.JObject(
+              ("source" -> jn.JString(prefixChildren + name)) ::
+                ("target" -> jn.JString(name)) :: Nil
+            )
+            ) :: Nil
+        ) :: edges
+      }
+      val sortedChildren = v.allDirectChildrenOf(name).toList.sortWith(_ > _)
+      for (child <- sortedChildren) {
+        val metaInfo = v.metaInfoRecordForName(child).get
+        children = jn.JObject(
+          ("data" -> jn.JObject(
+            ("id" -> jn.JString(metaInfo.name)) ::
+              //              ("parent" -> jn.JString(prefixChildren + name)) ::
+              Nil)) ::
+            ("style" -> JObject(
+              ("background-color" -> jn.JString(metaInfo.kindStr match {
+                case "type_document_content" => "#333333"
+                case "type_unknown" => "#00EE00"
+                case "type_unknown_meta" => "#00EE00"
+                case "type_document" => "#A0A0A0"
+                case "type_meta" => "#0000EE"
+                case "type_abstract_document_content" => "#00AAAA"
+                case "type_section" => "#EE0000"
+                case "type_connection" => "#AA1111"
+                case _ => "#EE00EE"
+              })) :: Nil)) :: Nil) :: children
+      }
+
+      jn.JObject(
+        ("nodes" -> jn.JArray(nodes)) ::
+          ("edges" -> jn.JArray(edges)) ::
+          ("children" -> jn.JArray(children)) ::
+          Nil)
+    }
+  }
+  /** Create JSON containing information graph information, for the "name" meta tag. Contains complete data including ancestors and children
+    */
+  def metaInfoAncestorChildrenGraphJsonOld (version: String, name: String): jn.JValue =
+  {
+    val versions = metaInfoCollection.versionsWithName(version)
+    if (!versions.hasNext)
+      jn.JNull
+    else {
+      val v = versions.next
+      var nodes: List[jn.JValue] = Nil
+      var edges: List[jn.JValue] = Nil
+      var children: List[jn.JValue] = Nil
+      val prefixChildren = "Children of ";
+
+      v.metaInfoRecordForNameWithAllSuper(name, selfGid = true, superGids = false).foreach {
+        (metaInfo: MetaInfoRecord) =>
+          nodes = jn.JObject(
+            ("data" -> jn.JObject(
+              ("id" -> jn.JString(metaInfo.name)) :: Nil)) ::
+              ("style" -> JObject(
+                ("background-color" -> jn.JString(metaInfo.kindStr match {
+                  case "type_document_content" => "#333333"
+                  case "type_unknown" => "#00EE00"
+                  case "type_unknown_meta" => "#00EE00"
+                  case "type_document" => "#A0A0A0"
+                  case "type_meta" => "#0000EE"
+                  case "type_abstract_document_content" => "#00AAAA"
+                  case "type_section" => "#EE0000"
+                  case "type_connection" => "#AA1111"
+                  case "type_dimension" => "#EE00EE"
+                  case _ => "#1111AA"
+                })) ::
+                  ("shape" -> (if (metaInfo.name == name)
+                    jn.JString("star")
+                  else
+                    jn.JNothing)) :: Nil)) :: Nil) :: nodes
+          val rootsByKind = v.firstAncestorsByType(metaInfo.name)
+          rootsByKind.foreach {
+            case (kindNow, (roots, _)) =>
+              if (metaInfo.name == name || metaInfo.kindStr == kindNow) {
+                roots.foreach { (root: String) =>
+                  edges = jn.JObject(
+                    ("data" ->
+                      jn.JObject(
+                        ("source" -> jn.JString(metaInfo.name)) ::
+                          ("target" -> jn.JString(root)) :: Nil
+                      )
+                      ) :: Nil
+                  ) :: edges
+                }
+              }
+          }
+      }
+
+      //Get all elemets
+      //Loop over the elements to nodes and edges data
+      // Remove redundant data
+
+
+      val itemList = v.allNames.toList
+      var refList: Set[String] = collection.immutable.Set[String]()
+      var finalList: Set[String] = collection.immutable.Set[String]()
+
+        for (i <- 0 until itemList.length) {
+          //Search can be limited to type of ref items
+          v.firstAncestorsByType(itemList(i)).get("type_section") match {
+            case Some((rootSections, _)) => if (rootSections.contains(name) )  refList=refList + ((itemList(i)))
+            case _ =>
+          }
+        }
+        for(item <- refList){
+          val metaInfoItem = v.metaInfoRecordForName(item).get
+          metaInfoItem.referencedSections match {
+              case Some(sects) =>
+                finalList=finalList ++ ((sects))
+                nodes = jn.JObject(
+                  ("data" -> jn.JObject(
+                    ("id" -> jn.JString(metaInfoItem.name)) :: Nil)) ::
+                    ("style" -> JObject(
+                      ("background-color" -> jn.JString(metaInfoItem.kindStr match {
+                        case "type_document_content" => "#333333"
+                        case "type_unknown" => "#00EE00"
+                        case "type_unknown_meta" => "#00EE00"
+                        case "type_document" => "#A0A0A0"
+                        case "type_meta" => "#0000EE"
+                        case "type_abstract_document_content" => "#00AAAA"
+                        case "type_section" => "#EE0000"
+                        case "type_connection" => "#AA1111"
+                        case "type_dimension" => "#EE00EE"
+                        case _ => "#1111AA"
+                      }))  :: Nil)) :: Nil) :: nodes
+                      for(sect <- sects){
+                        edges = jn.JObject(
+                          ("data" ->
+                            jn.JObject(
+                              ("source" -> jn.JString(metaInfoItem.name)) ::
+                                ("target" -> jn.JString(sect)) :: Nil
+                            )
+                            ) :: Nil
+                        ) :: edges
+                      }
+              case None =>
+            }
+        }
+      logger.info("Final list of indirect children"+finalList);
+      for(item <- finalList){
+        val itemMap = metaInfoAncestorGraphMap(version,item)
+        val n = itemMap("nodes")
+        for(Tuple2(a:String,b:String) <- n) {
+          val d = v.metaInfoRecordForName(a).get
+          nodes = jn.JObject(
+            ("data" -> jn.JObject(
+              ("id" -> jn.JString(d.name)) :: Nil)) ::
+              ("style" -> JObject(
+                ("background-color" -> jn.JString(d.kindStr match {
+                  case "type_document_content" => "#333333"
+                  case "type_unknown" => "#00EE00"
+                  case "type_unknown_meta" => "#00EE00"
+                  case "type_document" => "#A0A0A0"
+                  case "type_meta" => "#0000EE"
+                  case "type_abstract_document_content" => "#00AAAA"
+                  case "type_section" => "#EE0000"
+                  case "type_connection" => "#AA1111"
+                  case "type_dimension" => "#EE00EE"
+                  case _ => "#1111AA"
+                }))  :: Nil)) :: Nil) :: nodes
+        }
+        val ed = itemMap("edges")
+        for(Tuple2(a:String,b:String) <- ed) {
+          edges = jn.JObject(
+            ("data" ->
+              jn.JObject(
+                ("source" -> jn.JString(a)) ::
+                  ("target" -> jn.JString(b)) :: Nil
+              )
+              ) :: Nil
+          ) :: edges
+        }
+      }
+      if(v.allDirectChildrenOf(name).length>0){
+        nodes = jn.JObject(
+          ("data" -> jn.JObject(
+            ("id" -> jn.JString( prefixChildren + name)) :: Nil)) :: //String should be exactly same when drawing edge
+            ("style" -> JObject(
+              ("background-color" -> jn.JString("#FFF")) ::
+                ("border-width" -> jn.JString("1px"))::
+                ("border-style" -> jn.JString("solid"))::
+                ("border-color" -> jn.JString("#000") ):: Nil))
+            :: Nil) :: nodes
+        edges = jn.JObject(
+          ("data" ->
+            jn.JObject(
+              ("source" -> jn.JString(prefixChildren + name)) ::
+                ("target" -> jn.JString(name)) :: Nil
+            )
+            ) :: Nil
+        ) :: edges
+      }
+      val sortedChildren = v.allDirectChildrenOf(name).toList.sortWith(_ > _)
+      for (child <- sortedChildren) {
+        val metaInfo = v.metaInfoRecordForName(child).get
+        children = jn.JObject(
+          ("data" -> jn.JObject(
+            ("id" -> jn.JString(metaInfo.name)) ::
+              //              ("parent" -> jn.JString(prefixChildren + name)) ::
+              Nil)) ::
+            ("style" -> JObject(
+              ("background-color" -> jn.JString(metaInfo.kindStr match {
+                case "type_document_content" => "#333333"
+                case "type_unknown" => "#00EE00"
+                case "type_unknown_meta" => "#00EE00"
+                case "type_document" => "#A0A0A0"
+                case "type_meta" => "#0000EE"
+                case "type_abstract_document_content" => "#00AAAA"
+                case "type_section" => "#EE0000"
+                case "type_connection" => "#AA1111"
+                case _ => "#EE00EE"
+              })) :: Nil)) :: Nil) :: children
+      }
+      jn.JObject(
+        ("nodes" -> jn.JArray(nodes)) ::
+          ("edges" -> jn.JArray(edges)) ::
+          ("children" -> jn.JArray(children)) :: Nil)
+    }
+  }
+
+
   /** Create JSON containing information graph information, for the "name" meta tag. Contains complete data including ancestors and children
     */
   def metaInfoForVersionAndNameJsonWithAllParentsAndChildrenSeperated (version: String, name: String): jn.JValue =
@@ -801,7 +1210,9 @@ table
             get {
               respondWithMediaType(`application/json`) {
                 complete {
-                  JsonSupport.writePrettyStr(metaInfoForVersionAndNameJsonWithAllParentsAndChildrenSeperated(version, name))
+
+                  JsonSupport.writePrettyStr(metaInfoAncestorChildrenGraphJson(version, name))
+//                  JsonSupport.writePrettyStr(metaInfoForVersionAndNameJsonWithAllParentsAndChildrenSeperated(version, name))
                 }
               }
             }
