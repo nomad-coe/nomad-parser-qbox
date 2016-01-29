@@ -191,10 +191,21 @@ lazy val castep = (project in file("parsers/castep")).
   ).
   settings(Revolver.settings: _*)
 
+lazy val dlPoly = (project in file("parsers/dl-poly")).
+  dependsOn(core).
+  settings(commonSettings: _*).
+  settings(
+    libraryDependencies ++= commonLibs,
+    name := "dlPoly",
+    (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
+  ).
+  settings(Revolver.settings: _*)
+
 lazy val base = (project in file("base")).
   dependsOn(core).
   dependsOn(fhiAims).
   dependsOn(castep).
+  dependsOn(dlPoly).
   settings(commonSettings: _*).
   settings(
     libraryDependencies ++= commonLibs,

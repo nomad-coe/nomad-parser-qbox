@@ -37,3 +37,6 @@
 [submodule "parsers/castep"]
 	path = parsers/castep
 	url = ../parser-castep.git
+[submodule "parsers/dl-poly"]
+	path = parsers/dl-poly
+	url = ../parser-dl-poly.git

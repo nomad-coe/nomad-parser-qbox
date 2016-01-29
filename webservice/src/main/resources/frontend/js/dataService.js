@@ -30,7 +30,8 @@ dataModule.factory('dataService', function($http) {
             "turbomole":  "turbomole + common",
             "common":  "only common",
             "gaussian":  "gaussian + common",
-            "octopus":  "octopus + common"
+            "octopus":  "octopus + common",
+			"dl_poly": "dl_poly + common"
         }
         return {
             'types': types,

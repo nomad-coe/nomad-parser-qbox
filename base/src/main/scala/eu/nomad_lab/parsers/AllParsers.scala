@@ -10,7 +10,8 @@ object AllParsers {
   val knownParsers: Map[String, ParserGenerator] = {
     val parserList: Seq[ParserGenerator] = Seq(
       FhiAimsParser,
-      CastepParser
+      CastepParser,
+      DlPolyParser
     )
 
     val res: Map[String, ParserGenerator] = parserList.map { (pg: ParserGenerator) =>

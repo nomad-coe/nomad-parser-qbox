@@ -108,6 +108,10 @@ object KnownMetaInfoEnvs extends MetaInfoCollection with StrictLogging {
     loadMetaEnv("nomad_meta_info/castep.nomadmetainfo.json",
     description = "CASTEP meta info and its dependencies")
   }
+  val dlPoly = {
+    loadMetaEnv("nomad_meta_info/dl_poly.nomadmetainfo.json",
+    description = "DL_POLY meta info and its dependencies")
+  }
 
   /** returns all versions defined (might contain duplicates!)
     */
