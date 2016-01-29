@@ -227,7 +227,7 @@
             var colMaxWidth = 0;
             if( allparentsData.children.length > 0 ) {
                 var ele = ancestorGraph.getElementById("Children of "+$scope.metaInfoName)
-                var eleX = ele.position().x,
+                var eleX = ele.position().x + 200, // move the node to make space for other children
                     eleY = ele.position().y;
                 var childX = 0,
                     childY = 0;

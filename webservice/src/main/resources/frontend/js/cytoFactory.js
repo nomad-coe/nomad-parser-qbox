@@ -63,6 +63,16 @@
                           'line-color': '#9dbaea',
                           'target-arrow-color': '#9dbaea'
                         })
+                        .selector('.casual')
+                        .css({
+                            'line-style':'solid'
+                        })
+                        .selector('.reference')
+                        .css({
+                          'line-color': '#FF0000',
+                          'target-arrow-color': '#FF0000',
+                          'line-style':'solid'
+                        })
                 });
             }); // on dom ready
             return deferred.promise;

@@ -493,7 +493,7 @@ table
           toAdd = toAdd + metaInfoItem.name // To create this separate edge to the refereced section
           toAdd = toAdd ++ ((sects))
           for(sec <- sects){
-            edgesMap = edgesMap + (Tuple2(metaInfoItem.name,sec) -> "refenece")
+            edgesMap = edgesMap + (Tuple2(metaInfoItem.name,sec) -> "reference")
           }
           flag = true // To create edge to the indirect children (in case)
         case _ =>
@@ -526,7 +526,7 @@ table
       }
     }
 
-    val nodeShape = "circle" // Take care of it sep(metaInfo.name -> Tuple2(nodeShape,nodeClass))arately also
+    val nodeShape = "circle" // Take care of it separately also
     val nodeClass = nodeClassByKindStr(metaInfo.kindStr)
     nodesMap += (metaInfo.name -> Tuple2(nodeShape,nodeClass))
 
@@ -559,61 +559,65 @@ table
 
       val known = mutable.Set[String](name)
       val toDo = mutable.ListBuffer[String](name)
-      var nMap =  Map[String,(String, String)]()  // name -> (shape, class(for color etc))
-      var eMap =  Map[(String, String),String]() // (source, target) -> class
-      val resTailResc = metaInfoAncestors(v,toDo, known,nMap, eMap )
-      val nodesMap = resTailResc._1
-      val edgesMap = resTailResc._2
-      logger.info("Nodes"+nodesMap)
+      var nMap = Map[String, (String, String)]() // name -> (shape, class(for color etc))
+      var eMap = Map[(String, String), String]() // (source, target) -> class
+      var (nodesMap, edgesMap) = metaInfoAncestors(v, toDo, known, nMap, eMap) //Traverse the graph using tail recursion
+      //      logger.info("Nodes"+nodesMap)
       var nodes: List[jn.JValue] = Nil
       var edges: List[jn.JValue] = Nil
       var children: List[jn.JValue] = Nil
       val prefixChildren = "Children of "
       //Add all ancestors of the current node
 
-      nodesMap foreach {case (key, value) =>
+      val currNode = nodesMap(name); // Change the shape of the current node. This can be handled by the metaInfoAncestors but then we need
+      // to add another variable to it then
+      nodesMap += (name -> Tuple2("star", currNode._2))
+
+      nodesMap foreach { case (key, value) =>
         nodes = jn.JObject(
           ("data" -> jn.JObject(
             ("id" -> jn.JString(key.mkString)) :: Nil)) ::
-            ("style" -> JObject(
-              ("background-color" ->jn.JString(value._2)) ::
-                ("shape" -> jn.JString(value._1)
-                ) :: Nil)) :: Nil) :: nodes
+          ("style" -> JObject(
+            ("background-color" -> jn.JString(value._2)) ::
+            ("shape" -> jn.JString(value._1))
+              :: Nil)) :: Nil) :: nodes
       }
-      edgesMap foreach {case (key, value)=>
+      edgesMap foreach { case (key, value) =>
         edges = jn.JObject(
           ("data" ->
             jn.JObject(
               ("source" -> jn.JString(key._1)) ::
-                ("target" -> jn.JString(key._2)) :: Nil
-            )
-            ) :: Nil
-        ) :: edges
+              ("target" -> jn.JString(key._2)) ::
+              ("type" -> jn.JString(value)):: Nil)) ::
+          ("classes" -> jn.JString(value)) :: Nil) :: edges
       }
 
 
-      ///// Direct Children related Stuff; Needs to be rewritten
-      if(v.allDirectChildrenOf(name).length>0){
+      ///// Direct Children related Stuff;
+      if (v.allDirectChildrenOf(name).length > 0) {
+
+        //This node is only used for the position of the other node; can be removed
         nodes = jn.JObject(
           ("data" -> jn.JObject(
-            ("id" -> jn.JString( prefixChildren + name)) :: Nil)) :: //String should be exactly same when drawing edge
+            ("id" -> jn.JString(prefixChildren + name)) :: Nil)) :: //String should be exactly same when drawing edge
             ("style" -> JObject(
               ("background-color" -> jn.JString("#FFF")) ::
-                ("border-width" -> jn.JString("1px"))::
-                ("border-style" -> jn.JString("solid"))::
-                ("border-color" -> jn.JString("#000") ):: Nil))
+                ("border-width" -> jn.JString("1px")) ::
+                ("border-style" -> jn.JString("solid")) ::
+                ("border-color" -> jn.JString("#000")) :: Nil))
             :: Nil) :: nodes
         edges = jn.JObject(
           ("data" ->
             jn.JObject(
               ("source" -> jn.JString(prefixChildren + name)) ::
-                ("target" -> jn.JString(name)) :: Nil
+              ("target" -> jn.JString(name)) :: Nil
             )
             ) :: Nil
         ) :: edges
       }
       val sortedChildren = v.allDirectChildrenOf(name).toList.sortWith(_ > _)
       for (child <- sortedChildren) {
+        if (!nodesMap.contains(child)){ // Add only if the child has not been traversed
         val metaInfo = v.metaInfoRecordForName(child).get
         children = jn.JObject(
           ("data" -> jn.JObject(
@@ -621,17 +625,9 @@ table
               //              ("parent" -> jn.JString(prefixChildren + name)) ::
               Nil)) ::
             ("style" -> JObject(
-              ("background-color" -> jn.JString(metaInfo.kindStr match {
-                case "type_document_content" => "#333333"
-                case "type_unknown" => "#00EE00"
-                case "type_unknown_meta" => "#00EE00"
-                case "type_document" => "#A0A0A0"
-                case "type_meta" => "#0000EE"
-                case "type_abstract_document_content" => "#00AAAA"
-                case "type_section" => "#EE0000"
-                case "type_connection" => "#AA1111"
-                case _ => "#EE00EE"
-              })) :: Nil)) :: Nil) :: children
+              ("background-color" -> jn.JString(nodeClassByKindStr(metaInfo.kindStr)
+              )) :: Nil)) :: Nil) :: children
+        }
       }
 
       jn.JObject(
