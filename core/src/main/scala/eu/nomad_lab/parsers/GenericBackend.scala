@@ -250,6 +250,71 @@ object GenericBackend {
 
   }
 
+  /** Manager for data values that should be first forwarded to a superBackend, and then handled by dataManager (if given)
+    */
+  class ForwardDataManager(
+    metaInfo: MetaInfoRecord,
+    val sectionManager: SectionManager,
+    val superBackend: ParserBackendBase,
+    val dataManager: Option[MetaDataManager] = None
+  ) extends MetaDataManager(metaInfo) {
+
+    /** adds a json value
+      */
+    def addValue(value: org.json4s.JValue, gIndex: Long): Unit = {
+      superBackend.addValue(metaInfo.name, value, gIndex)
+      dataManager match {
+        case Some(manager) =>
+          manager.addValue(value, gIndex)
+        case None => ()
+      }
+    }
+
+    /** Adds a floating point value
+      */
+    override def addRealValue(value: Double, gIndex: Long = -1): Unit = {
+      superBackend.addRealValue(metaInfo.name, value, gIndex)
+      dataManager match {
+        case Some(manager) =>
+          manager.addRealValue(value, gIndex)
+        case None => ()
+      }
+    }
+
+    /** Adds a new array of the given size
+      */
+    override def addArray(shape: Seq[Long], gIndex: Long = -1): Unit = {
+      superBackend.addArray(metaInfo.name, shape, gIndex)
+      dataManager match {
+        case Some(manager) =>
+          manager.addArray(shape, gIndex)
+        case None => ()
+      }
+    }
+
+    /** Adds values to the last array added
+      */
+    override def setArrayValues(values: NArray, offset: Option[Seq[Long]] = None, gIndex: Long = -1): Unit = {
+      superBackend.setArrayValues(metaInfo.name, values, offset, gIndex)
+      dataManager match {
+        case Some(manager) =>
+          manager.setArrayValues(values, offset, gIndex)
+        case None => ()
+      }
+    }
+
+    /** Adds a new array with the given values
+      */
+    override def addArrayValues(values: NArray, gIndex: Long = -1): Unit = {
+      superBackend.addArrayValues(metaInfo.name, values, gIndex)
+      dataManager match {
+        case Some(manager) =>
+          manager.addArrayValues(values, gIndex)
+        case None => ()
+      }
+    }
+  }
+
   /** abstact class to handle integer scalar values
     */
   abstract class MetaDataManager_i(
@@ -1015,13 +1080,7 @@ object GenericBackend {
     * of metaName
     */
   def firstSuperSections(metaEnv: MetaInfoEnv, metaName: String): Array[String] = {
-    val allAnchestors = metaEnv.firstAncestorsByType(metaName)
-    allAnchestors.get("type_section") match {
-      case Some(anc) =>
-        anc._1.toArray.sorted
-      case None =>
-        Array()
-    }
+    metaEnv.rootAnchestorsOfType("type_section", metaName).toArray.sorted
   }
 
   class UnexpectedDataOutputException(

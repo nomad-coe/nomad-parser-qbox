@@ -10,33 +10,7 @@ import eu.nomad_lab.meta.MetaInfoRecord
 import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JArray, JObject, JValue, JField}
 
 object CachingBackend {
-
-  /** root object representing a parsing session
-    */
-  class CachingParsingSession (
-    mainFileUri: Option[String],
-    parserInfo: JValue,
-    parserStatus: Option[ParseResult.Value] = None,
-    parserErrors: JValue = JNothing,
-    subsections: Map[String, Seq[CachingSection]] = Map()
-  ) extends GenericBackend.ParsingSession(mainFileUri, parserInfo, parserStatus, parserErrors) {
-    val cachedSubsections: mutable.Map[String, ListBuffer[CachingSection]] =
-      subsections.map { case (metaName, subs) =>
-        metaName -> ListBuffer(subs: _*)
-      }(breakOut)
-
-    /** Caches a subsection of metaInfo here
-      */
-    def addSubsection(metaInfo: MetaInfoRecord, value: CachingSection) {
-      cachedSubsections.get(metaInfo.name) match {
-        case Some(vals) =>
-          vals.append(value)
-        case None =>
-          cachedSubsections += (metaInfo.name -> ListBuffer(value))
-      }
-    }
-
-  }
+    type SectionCallback = (CachingBackend, CachingSectionManager, Long, Option[CachingSection]) => Unit
 
   /** represents a section within a section manager, and can cache some values
     */
@@ -60,7 +34,7 @@ object CachingBackend {
 
     /** Caches the json value passed in associating it with the given metaInfo
       */
-    def addValue(metaInfo: MetaInfoRecord, value: JValue) {
+    def addValue(metaInfo: MetaInfoRecord, value: JValue): Unit = {
       cachedSimpleValues.get(metaInfo.name) match {
         case Some(vals) =>
           vals.append(value)
@@ -71,7 +45,7 @@ object CachingBackend {
 
     /** Sets values on an array (the latest) of metaInfo that should already be cached here
       */
-    def setArrayValues[T](metaInfo: MetaInfoRecord, values: NArray, offset: Option[Seq[Long]]) {
+    def setArrayValues[T](metaInfo: MetaInfoRecord, values: NArray, offset: Option[Seq[Long]]): Unit = {
       cachedArrayValues.get(metaInfo.name) match {
         case Some(vals) =>
           val arr = vals.last
@@ -91,7 +65,7 @@ object CachingBackend {
 
     /** Caches in this section the given array for the given metaInfo
       */
-    def addArrayValues(metaInfo: MetaInfoRecord, values: NArray) {
+    def addArrayValues(metaInfo: MetaInfoRecord, values: NArray): Unit = {
         cachedArrayValues.get(metaInfo.name) match {
         case Some(vals) =>
           vals.append(values)
@@ -102,7 +76,7 @@ object CachingBackend {
 
     /** Caches a subsection of metaInfo here
       */
-    def addSubsection(metaInfo: MetaInfoRecord, value: CachingSection) {
+    def addSubsection(metaInfo: MetaInfoRecord, value: CachingSection): Unit = {
       cachedSubSections.get(metaInfo.name) match {
         case Some(vals) =>
           vals.append(value)
@@ -117,10 +91,17 @@ object CachingBackend {
   class CachingSectionManager(
     val metaInfo: MetaInfoRecord,
     val parentSectionNames: Array[String],
+    val superBackend: Option[ParserBackendExternal] = None,
+    val isCaching: Boolean = true,
+    val storeInSuper: Boolean = false,
+    onOpenCallbacks0: Seq[CachingBackend.SectionCallback] = Seq(),
+    onCloseCallbacks0: Seq[CachingBackend.SectionCallback] = Seq(),
     lastSectionGIndex0: Long = -1,
     openSections0: Map[Long, CachingSection] = Map()
   ) extends GenericBackend.SectionManager {
 
+    val onOpenCallbacks = mutable.ListBuffer[CachingBackend.SectionCallback](onOpenCallbacks0: _*)
+    val onCloseCallbacks = mutable.ListBuffer[CachingBackend.SectionCallback](onCloseCallbacks0: _*)
     val openSections = mutable.Map[Long, CachingSection]()
     openSections ++= openSections0.iterator
 
@@ -139,7 +120,8 @@ object CachingBackend {
       * references should be references to gIndex of the root sections this section refers to.
       */
     def setSectionInfo(gIndex: Long, references: Map[String, Long]): Unit = {
-      openSections(gIndex).references = parentSectionNames.map(references(_))
+      if (isCaching)
+        openSections(gIndex).references = parentSectionNames.map(references(_))
     }
 
     /** returns the gIndex of a newly opened section
@@ -152,51 +134,65 @@ object CachingBackend {
 
     def openSectionWithGIndex(gBackend: GenericBackend, gIndex: Long): Unit = {
       _lastSectionGIndex = gIndex
-      openSections += (gIndex -> new CachingSection(
-        gIndex,
-        references = parentSectionNames.map{ parentName: String =>
-          gBackend match {
-            case backend: CachingBackend =>
-              backend.sectionManagers.get(parentName) match {
-                case Some(parentManager) =>
-                  parentManager.lastSectionGIndex
-                case None =>
-                  -1
-              }
-          }
-        }))
+      val backend = gBackend match {
+        case b: CachingBackend => b
+      }
+      var sect: Option[CachingSection] = None
+      if (isCaching) {
+        val newSect = new CachingSection(
+          gIndex,
+          references = parentSectionNames.map{ parentName: String =>
+            backend.sectionManagers.get(parentName) match {
+              case Some(parentManager) =>
+                parentManager.lastSectionGIndex
+              case None =>
+                -1
+            }
+          },
+          storeInSuper = storeInSuper)
+        openSections += (gIndex -> newSect)
+        var sect = Some(newSect)
+      }
+      superBackend match {
+        case Some(backend) =>
+          backend.openSectionWithGIndex(metaInfo.name, gIndex)
+        case None => ()
+      }
+      for (callback <- onOpenCallbacks) {
+        callback(backend, this, gIndex, sect)
+      }
     }
 
 
     /** closes the given section
       */
     def closeSection(gBackend: GenericBackend, gIndex: Long) = {
-      val toClose = openSections(gIndex)
+      val toClose = openSections.get(gIndex)
       gBackend match {
         case backend: CachingBackend =>
           onClose(backend, gIndex, toClose)
-          if (toClose.storeInSuper) {
-            for ((superName, superGIndex) <- parentSectionNames.zip(toClose.references)) {
-              backend.sectionManagers(superName).openSections.get(superGIndex) match {
-                case Some(superSect) =>
-                  superSect.addSubsection(metaInfo, toClose)
-                case None =>
-                  backend.storeToClosedSuper(superName, superGIndex, metaInfo, toClose)
-              }
-            }
-            if (toClose.references.isEmpty) {
-              backend.parsingSession match {
-                case Some(pSession) =>
-                  pSession match {
-                    case session: CachingBackend.CachingParsingSession =>
-                      session.addSubsection(metaInfo, toClose)
-                    case _ =>
-                      throw new GenericBackend.InternalErrorException("Caching backend expects a CachingParsingSession")
+          superBackend match {
+            case Some(backend) =>
+              backend.closeSection(metaInfo.name, gIndex)
+            case None => ()
+          }
+          toClose match {
+            case Some(sectionToClose) =>
+              if (sectionToClose.storeInSuper) {
+                for ((superName, superGIndex) <- parentSectionNames.zip(sectionToClose.references)) {
+                  backend.sectionManagers(superName).openSections.get(superGIndex) match {
+                    case Some(superSect) =>
+                      superSect.addSubsection(metaInfo, sectionToClose)
+                    case None =>
+                      backend.storeToClosedSuper(superName, superGIndex, metaInfo, sectionToClose)
                   }
-                case None =>
-                  throw new ParserBackendBase.InvalidCallSequenceException("close section called without open parsing session!")
+                }
+                if (sectionToClose.references.isEmpty)
+                  backend.addSubsection(metaInfo, sectionToClose)
               }
-            }
+            case None =>
+              if (isCaching)
+                throw new CloseNonOpenSectionException(metaInfo, gIndex)
           }
       }
       openSections -= gIndex
@@ -204,7 +200,10 @@ object CachingBackend {
 
     /** callback on close (place to override to add specific actions)
       */
-    def onClose(gBackend: GenericBackend, gIndex: Long, section: CachingSection): Unit = {
+    def onClose(gBackend: CachingBackend, gIndex: Long, section: Option[CachingSection]): Unit = {
+      onCloseCallbacks.foreach { (callback: CachingBackend.SectionCallback) =>
+        callback(gBackend, this, gIndex, section)
+      }
     }
 
     /** Information on an open section
@@ -405,9 +404,16 @@ object CachingBackend {
     metaInfo: MetaInfoRecord, msg: String
   ) extends Exception(s"Error while compiling meta info ${metaInfo.name}: $msg, metaInfo: ${JsonUtils.prettyStr(metaInfo.toJValue())}") {}
 
+  /** Closing a section that is not open
+    */
+  class CloseNonOpenSectionException(
+    metaInfo: MetaInfoRecord,
+    gIndex: Long
+  ) extends Exception(s"Close called on non open section ${metaInfo.name}, gIndex: $gIndex")
+
   /** manager for the given meta info
     */
-  def cachingDataManager(metaInfo: MetaInfoRecord, sectionManager: CachingSectionManager): GenericBackend.MetaDataManager = {
+  def cachingDataManager(metaInfo: MetaInfoRecord, sectionManager: CachingSectionManager, forward: Boolean = true): GenericBackend.MetaDataManager = {
     if (metaInfo.kindStr != "type_document_content")
       throw new MetaCompilationException(metaInfo, "caching data manager can be instantiated only for conrete data (kindStr = type_document_content)")
     val scalar = metaInfo.shape match {
@@ -425,7 +431,7 @@ object CachingBackend {
       case None =>
         throw new InvalidMetaInfoException(metaInfo, "concrete meta info should have a specific dtypeStr")
     }
-    if (scalar) {
+    val cachingManager = if (scalar) {
       dtypeStr match {
         case "f" | "f64" | "f32" => new CachingMetaDataManager_f(metaInfo, sectionManager)
         case "i" | "i64" | "i32" | "r" => new CachingMetaDataManager_i(metaInfo, sectionManager)
@@ -450,32 +456,116 @@ object CachingBackend {
           throw new InvalidMetaInfoException(metaInfo, "Unknown dtypeStr, known types: f,f32,f64,i,i32,i64,r,b,B,C,D")
       }
     }
+    if (forward) {
+      sectionManager.superBackend match {
+        case Some(backend) =>
+          new GenericBackend.ForwardDataManager(metaInfo, sectionManager, backend, Some(cachingManager))
+        case None =>
+          cachingManager
+      }
+    } else {
+      cachingManager
+    }
   }
 
-  /** Factory method creating caching sections
+  /** Enumeration to specify caching
+    */
+  object CachingLevel extends Enumeration {
+    val Forward, Cache, CacheSubvalues, ForwardAndCache, Ignore = Value
+  }
+
+  /** Method to create a factory that creates caching sections
+    *
+    * Sections are stored in the super section by default for caching level or ForwardAndCache.
+    * For Forward or CacheSubvalues the section is not stored in super (but a caching section is created),
+    * whereas for Ignore no caching section is created at all.
+    *
+    * Open and close events of the section are sent to the superBackend with Forward and ForwardAndCache.
+    * With other settings unless one sends open and close events through another route,
+    * no contained value or section should be emitted to the superBackend (i.e all contained
+    * values and sections should also be Cache, CachesSubvalues or Ignore.
     */
   def cachingSectionFactory(
-    metaEnv: MetaInfoEnv, metaInfo: MetaInfoRecord, superSectionNames: Array[String]
-  ): CachingBackend.CachingSectionManager = {
-    new CachingBackend.CachingSectionManager(metaInfo, superSectionNames)
+    cachingLevelForMetaName: Map[String, CachingLevel.Value],
+    defaultSectionCachingLevel: CachingLevel.Value = CachingLevel.Forward,
+    superBackend: Option[ParserBackendExternal] = None,
+    onCloseCallbacks: Map[String, Seq[CachingBackend.SectionCallback]] = Map()
+  ): (MetaInfoEnv, MetaInfoRecord, Array[String]) => CachingBackend.CachingSectionManager = {
+    (metaEnv: MetaInfoEnv, metaInfo: MetaInfoRecord, superSectionNames: Array[String]) =>
+    val callbacks = onCloseCallbacks.getOrElse(metaInfo.name, Seq())
+    cachingLevelForMetaName.getOrElse(metaInfo.name, defaultSectionCachingLevel) match {
+      case CachingLevel.Forward =>
+        new CachingSectionManager(metaInfo, superSectionNames,
+          superBackend = superBackend,
+          isCaching = true,
+          storeInSuper = false,
+          onCloseCallbacks0 = callbacks)
+      case CachingLevel.Cache =>
+        new CachingSectionManager(metaInfo, superSectionNames,
+          superBackend = None,
+          isCaching = true,
+          storeInSuper = true,
+          onCloseCallbacks0 = callbacks)
+      case CachingLevel.CacheSubvalues =>
+        new CachingSectionManager(metaInfo, superSectionNames,
+          superBackend = None,
+          isCaching = true,
+          storeInSuper = false,
+          onCloseCallbacks0 = callbacks)
+      case CachingLevel.ForwardAndCache =>
+        new CachingSectionManager(metaInfo, superSectionNames,
+          superBackend = superBackend,
+          isCaching = true,
+          storeInSuper = true,
+          onCloseCallbacks0 = callbacks)
+      case CachingLevel.Ignore =>
+        new CachingSectionManager(metaInfo, superSectionNames,
+          superBackend = None,
+          isCaching = false,
+          onCloseCallbacks0 = callbacks)
+    }
   }
 
-  /** Factory method creating caching data managers
+  /** Method to create a factory that creates caching data
+    *
+    * Sections are stored in the super section by default for caching level Cache or ForwardAndCache.
+    * For Forward the section is not stored in super (but a caching section is created),
+    * whereas for Ignore no caching section is created at all.
+    *
+    * Open and close events of the section are sent to the superSection.superBackend
+    * with Forward and ForwardAndCache.
+    * With other settings unless one sends open and close events through another route,
+    * no contained value or section should be emitted to the superBackend (i.e all contained
+    * values and sections should also be Cache or ForwardAndCache.
     */
-  def cachingDataFactory(toIgnore: Set[String]): (MetaInfoEnv, MetaInfoRecord, CachingSectionManager) => GenericBackend.MetaDataManager = {
+  def cachingDataFactory(
+    cachingLevelForMetaName: Map[String, CachingLevel.Value],
+    defaultDataCachingLevel: CachingLevel.Value = CachingLevel.Forward
+  ): (MetaInfoEnv, MetaInfoRecord, CachingSectionManager) => GenericBackend.MetaDataManager = {
     (metaEnv: MetaInfoEnv, metaInfo: MetaInfoRecord, superSection: CachingSectionManager) =>
-    if (!toIgnore(metaInfo.name))
-      cachingDataManager(metaInfo, superSection)
-    else
-      new GenericBackend.DummyMetaDataManager(metaInfo, superSection)
+    cachingLevelForMetaName.getOrElse(metaInfo.name, defaultDataCachingLevel) match {
+      case CachingLevel.Forward =>
+        superSection.superBackend match {
+          case Some(backend) =>
+            new GenericBackend.ForwardDataManager(metaInfo, superSection, backend)
+          case None =>
+            new GenericBackend.DummyMetaDataManager(metaInfo, superSection)
+        }
+      case CachingLevel.Cache | CachingLevel.CacheSubvalues =>
+        cachingDataManager(metaInfo, superSection, forward = false)
+      case CachingLevel.ForwardAndCache =>
+        cachingDataManager(metaInfo, superSection, forward = true)
+      case CachingLevel.Ignore =>
+        new GenericBackend.DummyMetaDataManager(metaInfo, superSection)
+    }
   }
 
-  /** Using the given factory methods to intantiate the section and data managers
+  /** Uses the given factory methods to instantiate the section and data managers
     */
   def instantiateManagers[T, U](
     metaEnv: MetaInfoEnv,
-    sectionFactory: (MetaInfoEnv, MetaInfoRecord, Array[String]) => T = cachingSectionFactory _,
-    dataFactory: (MetaInfoEnv, MetaInfoRecord, T) => U = cachingDataFactory(Set())
+    sectionFactory: (MetaInfoEnv, MetaInfoRecord, Array[String]) => T,
+    dataFactory: (MetaInfoEnv, MetaInfoRecord, T) => U
   ): Tuple2[Map[String, T], Map[String, U]] = {
     // sections
     val allNames: Set[String] = metaEnv.allNames.toSet
@@ -506,11 +596,16 @@ object CachingBackend {
 
   def apply(
     metaEnv: MetaInfoEnv,
-    sectionFactory: (MetaInfoEnv, MetaInfoRecord, Array[String]) => CachingBackend.CachingSectionManager = cachingSectionFactory,
-    dataFactory: (MetaInfoEnv, MetaInfoRecord, CachingBackend.CachingSectionManager) => GenericBackend.MetaDataManager = cachingDataFactory(Set())
+    cachingLevelForMetaName: Map[String, CachingLevel.Value] = Map(),
+    defaultSectionCachingLevel: CachingLevel.Value = CachingLevel.Forward,
+    defaultDataCachingLevel: CachingLevel.Value = CachingLevel.ForwardAndCache,
+    superBackend: Option[ParserBackendExternal] = None,
+    onCloseCallbacks: Map[String, Seq[CachingBackend.SectionCallback]] = Map(),
+    onOpenCallbacks: Map[String, Seq[CachingBackend.SectionCallback]] = Map()
   ): CachingBackend = {
+    val sectionFactory = cachingSectionFactory(cachingLevelForMetaName, defaultSectionCachingLevel, superBackend, onCloseCallbacks)
+    val dataFactory = cachingDataFactory(cachingLevelForMetaName, defaultDataCachingLevel)
     val (sectionManagers, metaDataManagers) = instantiateManagers(metaEnv, sectionFactory, dataFactory)
-
     new CachingBackend(metaEnv, sectionManagers, metaDataManagers)
   }
 
@@ -521,8 +616,21 @@ object CachingBackend {
 class CachingBackend(
   metaInfoEnv: MetaInfoEnv,
   val sectionManagers: Map[String, CachingBackend.CachingSectionManager],
-  val metaDataManagers: Map[String, GenericBackend.MetaDataManager]
+  val metaDataManagers: Map[String, GenericBackend.MetaDataManager],
+  val superBackend: Option[ParserBackendExternal] = None
 ) extends GenericBackend(metaInfoEnv) with ParserBackendExternal with ParserBackendInternal {
+  val cachedSubsections: mutable.Map[String, ListBuffer[CachingBackend.CachingSection]] = mutable.Map()
+
+  /** Caches a subsection of metaInfo here
+    */
+  def addSubsection(metaInfo: MetaInfoRecord, value: CachingBackend.CachingSection): Unit = {
+    cachedSubsections.get(metaInfo.name) match {
+      case Some(vals) =>
+        vals.append(value)
+      case None =>
+        cachedSubsections += (metaInfo.name -> ListBuffer(value))
+    }
+  }
 
   /** Started a parsing session
     */
@@ -530,8 +638,10 @@ class CachingBackend(
     mainFileUri: Option[String],
     parserInfo: JValue,
     parserStatus: Option[ParseResult.Value] = None,
-    parserErrors: JValue = JNothing): Unit = {
-    _parsingSession = Some(new CachingBackend.CachingParsingSession(mainFileUri, parserInfo, parserStatus, parserErrors))
+    parserErrors: JValue = JNothing
+  ): Unit = {
+    cachedSubsections.clear()
+    super.startedParsingSession(mainFileUri, parserInfo, parserStatus, parserErrors)
   }
 
   /** Callback when a section should be stored in a closed super section

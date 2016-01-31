@@ -229,10 +229,7 @@ Runs the main parsing step
           }
           val extBackend: parsers.ParserBackendExternal = backendType match {
             case BackendType.JsonWriter =>
-              new parsers.JsonWriterBackend(optimizedParser.parseableMetaInfo,
-                sectionManagers = Map(),
-                metaDataManagers = Map(),
-                stdOut)
+              new parsers.JsonWriterBackend(optimizedParser.parseableMetaInfo, stdOut)
             case BackendType.Netcdf => null
             case BackendType.JsonEventEmitter =>
               new parsers.JsonParseEventsWriterBackend(optimizedParser.parseableMetaInfo, stdOut)

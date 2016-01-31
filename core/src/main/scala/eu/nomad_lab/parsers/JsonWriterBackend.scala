@@ -4,6 +4,7 @@ import ucar.ma2.{IndexIterator => NIndexIterator}
 import ucar.ma2.DataType
 import ucar.ma2.ArrayString
 import scala.collection.mutable
+import scala.collection.breakOut
 import scala.collection.mutable.ListBuffer
 import eu.nomad_lab.JsonUtils
 import eu.nomad_lab.meta.MetaInfoEnv
@@ -12,37 +13,6 @@ import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JAr
 import java.io.Writer
 
 object JsonWriterBackend {
-  /** section that writes all its values as a single json dictionary
-    *
-    * If standalone it will wite out the values immediately, otherwise tries to be
-    * outputted with its parent
-    */
-  class JsonWriterSectionManager(
-    metaInfo: MetaInfoRecord,
-    parentSectionNames: Array[String],
-    lastSectionGIndex0: Long = -1,
-    openSections0: Map[Long, CachingBackend.CachingSection] = Map(),
-    standalone: Boolean = true
-  ) extends CachingBackend.CachingSectionManager(
-    metaInfo, parentSectionNames, lastSectionGIndex0, openSections0
-  ) {
-    override def onClose(gBackend: GenericBackend, gIndex: Long, section: CachingBackend.CachingSection): Unit = {
-      val backend = gBackend match {
-        case b: JsonWriterBackend => b
-        case _ => throw new GenericBackend.InternalErrorException("expected JsonWriterBackend")
-      }
-      if (!standalone && section.references.size == 1) {
-        backend.sectionManagers(parentSectionNames(0)).openSections.get(section.references(0)) match {
-          case Some(openS) =>
-            openS.addSubsection(metaInfo, section)
-            return
-          case None => ()
-        }
-      }
-      backend.writeOut(metaInfo.name, section)
-    }
-  }
-
   /** Utility function to write a NArray to a writer
     */
   def writeNArray(array: NArray, writeNextEl: NIndexIterator => Unit, writer: Writer): Unit = {
@@ -103,29 +73,86 @@ object JsonWriterBackend {
     writeNArray(array, writeEl, writer)
   }
 
-  def apply(
+  /*def apply(
     metaEnv: MetaInfoEnv,
-    sectionFactory: (MetaInfoEnv, MetaInfoRecord, Array[String]) => CachingBackend.CachingSectionManager = CachingBackend.cachingSectionFactory,
-    dataFactory: (MetaInfoEnv, MetaInfoRecord, CachingBackend.CachingSectionManager) => GenericBackend.MetaDataManager = CachingBackend.cachingDataFactory(Set()),
     outF: Writer
   ): JsonWriterBackend = {
-    val (sectionManagers, metaDataManagers) = CachingBackend.instantiateManagers(metaEnv, sectionFactory, dataFactory)
+    //val (sectionManagers, metaDataManagers) = CachingBackend
 
-    new JsonWriterBackend(metaEnv, sectionManagers, metaDataManagers, outF)
+    //new JsonWriterBackend(metaEnv, sectionManagers, metaDataManagers, outF)
+  }*/
+
+  object WritingStatus extends Enumeration {
+    type WritingStatus = Value
+    val WrittenNone, WrittenHeader, InTopSectionList, WrittenRootSectionHeader, InRootSectionSections, AtEnd = Value
   }
+
+  class JsonWriterException(
+    msg: String, what: Throwable = null
+  ) extends Exception(msg, what)
 
 }
 
 /** Backend that outputs the parsed data as nomadinfo.json
   */
 class JsonWriterBackend(
-  metaInfoEnv: MetaInfoEnv,
-  sectionManagers: Map[String, CachingBackend.CachingSectionManager],
-  metaDataManagers: Map[String, GenericBackend.MetaDataManager],
-  val outF: java.io.Writer
-) extends CachingBackend(metaInfoEnv, sectionManagers, metaDataManagers) {
+  val metaInfoEnv: MetaInfoEnv,
+  val outF: java.io.Writer,
+  rootSections: Set[String] = Set("section_run"),
+  unbundleFirstLevel: Boolean = true
+) extends ParserBackendExternal {
+  import JsonWriterBackend.WritingStatus._
+  import JsonWriterBackend.JsonWriterException
 
-  var writeComma: Boolean = false
+  var mainFileUri: Option[String] = None
+  var parserInfo: JValue = JNothing
+  var parserStatus: Option[ParseResult.Value] = None
+  var parserErrors: JValue = JNothing
+
+  var openRootSectionName: String = ""
+  var openRootSectionGIndex: Long = -1
+  var openRootSection: Option[CachingBackend.CachingSection] = None
+  var rootSectionValuesWritten: Set[String] = Set()
+  var writingStatus: WritingStatus = WrittenNone
+
+  val standaloneSections: Set[String] = if (unbundleFirstLevel) {
+    metaInfoEnv.allNames.filter{(name: String) =>
+      rootSections.contains(metaInfoEnv.metaInfoRecordForName(name).get.kindStr) &&
+      rootSections.intersect(metaInfoEnv.rootAnchestorsOfType("type_section", name)).isEmpty
+    }.toSet
+  } else {
+    Set()
+  }
+
+  val onCloseCallbacks: Map[String,Seq[CachingBackend.SectionCallback]] = if (rootSections.isEmpty) {
+    metaInfoEnv.allNames.toSet.filter{ (name: String) =>
+      metaInfoEnv.metaInfoRecordForName(name).get.kindStr == "type_section"
+    }.map{ (name: String) =>
+      name -> Seq(this.onCloseStandaloneSection _)
+    }(breakOut)
+  } else {
+    standaloneSections.map{ (name: String) =>
+      name -> Seq(this.onCloseStandaloneSection _)}.toMap ++ rootSections.map{ (name: String) =>
+      if (standaloneSections.isEmpty)
+        name -> Seq(this.onCloseStandaloneSection _)
+      else
+        name -> Seq(this.onCloseRootSection _)
+    }.toMap
+  }
+
+  val cachingBackend = CachingBackend(metaInfoEnv,
+    cachingLevelForMetaName = rootSections.union(standaloneSections).map(_ -> CachingBackend.CachingLevel.CacheSubvalues)(breakOut),
+    defaultSectionCachingLevel = if (rootSections.isEmpty) CachingBackend.CachingLevel.CacheSubvalues else CachingBackend.CachingLevel.Cache,
+    defaultDataCachingLevel = CachingBackend.CachingLevel.Cache,
+    superBackend = None,
+    onCloseCallbacks = onCloseCallbacks,
+    onOpenCallbacks = if (standaloneSections.isEmpty)
+      Map()
+    else
+      rootSections.map{ (name: String) =>
+        name -> Seq(onOpenRootSection _)
+      }(breakOut)
+  )
 
   /** Started a parsing session
     */
@@ -133,8 +160,19 @@ class JsonWriterBackend(
     mainFileUri: Option[String],
     parserInfo: JValue,
     parserStatus: Option[ParseResult.Value] = None,
-    parserErrors: JValue = JNothing): Unit = {
-    super.startedParsingSession(mainFileUri, parserInfo, parserStatus, parserErrors)
+    parserErrors: JValue = JNothing
+  ): Unit = {
+    this.mainFileUri = mainFileUri
+    this.parserInfo = parserInfo
+    this.parserStatus = parserStatus
+    this.parserErrors = parserErrors
+
+    writingStatus match {
+      case WrittenNone => ()
+      case AtEnd => outF.write(", ")
+      case _ =>
+        throw new JsonWriterException(s"unexpected state $writingStatus in JsonWriter")
+    }
     outF.write("""{
   "type": "nomad_info_1_0""")
     mainFileUri match {
@@ -168,6 +206,101 @@ class JsonWriterBackend(
     outF.write(""",
   "sections": [
     """)
+    writingStatus = WrittenHeader
+  }
+
+  /** Opens a root section (i.e. a section that contains unbundled sections)
+    */
+  def onOpenRootSection(gBackend: CachingBackend, sectionManager: CachingBackend.CachingSectionManager, gIndex: Long, section: Option[CachingBackend.CachingSection]): Unit = {
+    section match {
+      case Some(s) => ()
+      case None =>
+        throw new JsonWriterException(s"Internal error: open of non cached root section ${sectionManager.metaInfo.name} $gIndex")
+    }
+    writingStatus match {
+      case WrittenHeader => ()
+      case InTopSectionList =>
+        outF.write(", ")
+      case WrittenRootSectionHeader | InRootSectionSections =>
+        throw new JsonWriterException(s"nested root sections are not supported when unbundling first level, detected nesting of ${sectionManager.metaInfo.name} in $openRootSectionName $openRootSectionGIndex")
+      case WrittenNone | AtEnd =>
+        throw new JsonWriterException(s"nested root sections are not supported when unbundling first level, detected nesting of ${sectionManager.metaInfo.name} in $openRootSectionName $openRootSectionGIndex")
+    }
+    openRootSectionName = sectionManager.metaInfo.name
+    openRootSectionGIndex = gIndex
+    openRootSection = section
+    outF.write(s"""{
+    "type": "nomad_section_1_0",
+    "gIndex": $gIndex,
+    "name": "${sectionManager.metaInfo.name}"""")
+    writingStatus = WrittenRootSectionHeader
+  }
+
+  /** Close a standalone section (i.e. a section that should be written out
+    * and not cached in its supersection)
+    */
+  def onCloseRootSection(gBackend: CachingBackend, sectionManager: CachingBackend.CachingSectionManager, gIndex: Long, section: Option[CachingBackend.CachingSection]): Unit = {
+    writingStatus match {
+      case WrittenRootSectionHeader =>
+      case InRootSectionSections =>
+        outF.write("]")
+      case _ =>
+        throw new JsonWriterException(s"close of root section ${sectionManager.metaInfo.name} while in writingStatus $writingStatus")
+    }
+    if (sectionManager.metaInfo.name != openRootSectionName || gIndex != openRootSectionGIndex)
+      throw new JsonWriterException(s"overlapping root sections are not supported when unbundling first level, detected overlap of ${sectionManager.metaInfo.name} $gIndex in $openRootSectionName $openRootSectionGIndex")
+    section match {
+      case Some(sect) =>
+        writeOutSubvalues(
+          section = sect,
+          indent = 4,
+          excludeMetaNames = rootSectionValuesWritten)
+        outF.write("\n  }")
+      case None =>
+        throw new JsonWriterException(s"supressed root section ${sectionManager.metaInfo.name}, either unsuppress (CacheLevel.CacheSubvalues), or remove from root sections")
+    }
+    openRootSectionName = ""
+    openRootSectionGIndex = -1
+    openRootSection = None
+    writingStatus = InTopSectionList
+  }
+
+  /** Close a standalone section (i.e. a section that should be written out
+    * and not cached in its supersection)
+    */
+  def onCloseStandaloneSection(gBackend: CachingBackend, sectionManager: CachingBackend.CachingSectionManager, gIndex: Long, section: Option[CachingBackend.CachingSection]): Unit = {
+    val sect: CachingBackend.CachingSection = section match {
+      case Some(s) => s
+      case None    => return ()
+    }
+    var indent: Int = 4
+    writingStatus match {
+      case WrittenHeader =>
+        writingStatus = InTopSectionList
+      case InTopSectionList =>
+        outF.write(", ")
+      case WrittenRootSectionHeader =>
+        val parents = metaInfoEnv.rootAnchestorsOfType("type_section", sectionManager.metaInfo.name)
+        if (parents != Set(openRootSectionName))
+          throw new JsonWriterException(s"overlapping root sections are not supported when unbundling first level, detected emit of ${sectionManager.metaInfo.name} inheriting from $parents in $openRootSectionName")
+        openRootSection match {
+          case Some(rootSect) =>
+            val toExclude: Set[String] = rootSect.cachedSubSections.map{ case (k, _) => k }(breakOut)
+            writeOutSubvalues(rootSect, indent = 4, excludeMetaNames = toExclude)
+            outF.write(",\n    \"sections\": [")
+          case None =>
+            throw new JsonWriterException("no openRootSection when writingStatus is WrittenRootSectionHeader")
+        }
+        indent = 6
+        writingStatus = InRootSectionSections
+      case InRootSectionSections =>
+        val parents = metaInfoEnv.rootAnchestorsOfType("type_section", sectionManager.metaInfo.name)
+        if (parents != Set(openRootSectionName))
+          throw new JsonWriterException(s"overlapping root sections are not supported when unbundling first level, detected emit of ${sectionManager.metaInfo.name} inheriting from $parents in $openRootSectionName")
+        outF.write(", ")
+        indent = 6
+    }
+    writeOutSection(sectionManager.metaInfo.name, sect, indent)
   }
 
   /** Finished a parsing session
@@ -177,19 +310,11 @@ class JsonWriterBackend(
     parserErrors: JValue = JNothing,
     mainFileUri: Option[String] = None,
     parserInfo: JValue = JNothing): Unit = {
-    val session = parsingSession match {
-      case Some(pSession) => pSession
-      case None => throw new GenericBackend.InternalErrorException(s"Mismatched finished parsing of $mainFileUri while no parsing session were open")
-    }
-    val mainFileUriNotWritten = session.mainFileUri.isEmpty
-    val parserInfoNotWritten = session.parserInfo.toSome.isEmpty
-    val parserStatusNotWritten = session.parserStatus.isEmpty
-    val parserErrorsNotWritten = session.parserErrors.toSome.isEmpty
 
-    super.finishedParsingSession(parserStatus, parserErrors, mainFileUri, parserInfo)
     outF.write("]")
 
-    if (mainFileUriNotWritten) {
+    if (this.mainFileUri.isEmpty) {
+      this.mainFileUri = mainFileUri
       mainFileUri match {
         case Some(uri) =>
           outF.write(""",
@@ -198,7 +323,8 @@ class JsonWriterBackend(
         case None => ()
       }
     }
-    if (parserInfoNotWritten) {
+    if (this.parserInfo.toSome.isEmpty) {
+      this.parserInfo = parserInfo
       parserInfo match {
         case JNothing => ()
         case _ =>
@@ -207,7 +333,8 @@ class JsonWriterBackend(
           JsonUtils.prettyWriter(parserInfo, outF, 2)
       }
     }
-    if (parserStatusNotWritten) {
+    if (this.parserStatus.isEmpty) {
+      this.parserStatus = parserStatus
       parserStatus match {
         case Some(status) =>
           outF.write(""",
@@ -216,7 +343,8 @@ class JsonWriterBackend(
         case None => ()
       }
     }
-    if (parserErrorsNotWritten) {
+    if (this.parserErrors.toSome.isEmpty) {
+      this.parserErrors = parserErrors
       parserErrors match {
         case JNothing => ()
         case _ =>
@@ -229,15 +357,7 @@ class JsonWriterBackend(
 }""")
   }
 
-  def writeOut(metaName: String, section: CachingBackend.CachingSection): Unit = {
-    if (writeComma)
-      outF.write(", ")
-    else
-      writeComma = true
-    writeOutBase(metaName, section, 4)
-  }
-
-  def writeOutBase(metaName: String, section: CachingBackend.CachingSection, indent: Int): Unit = {
+  def writeOutSection(metaName: String, section: CachingBackend.CachingSection, indent: Int): Unit = {
     val baseIndenter = new JsonUtils.ExtraIndenter(indent, outF)
     baseIndenter.write(s"""{
   "type": "nomad_section_1_0",
@@ -252,24 +372,40 @@ class JsonWriterBackend(
       baseIndenter.write("""
     "$sectionName": $gIndex""")
     }
-    outF.write("]")
-    for ((metaName, vals) <- section.cachedSimpleValues) {
-      baseIndenter.write(""",
-"$metaName": """)
+    outF.write("}")
+    writeOutSubvalues(section, indent + 2, Set())
+    baseIndenter.write("\n}")
+  }
+
+    /** writes out the values stored in section (inserting commas, finishing without comma)
+      */
+  def writeOutSubvalues(section: CachingBackend.CachingSection, indent: Int, excludeMetaNames: Set[String]): Unit = {
+    val baseIndenter = new JsonUtils.ExtraIndenter(indent, outF)
+    for ((metaName, vals) <- section.cachedSimpleValues.filter{case (k, _) => !excludeMetaNames(k)}) {
       val repeats: Boolean = metaInfoEnv.metaInfoRecordForName(metaName).get.repeats.getOrElse(false)
-      if (repeats)
-        JsonUtils.prettyWriter(JArray(vals.toList), outF, indent + 2)
-      else if (vals.size != 1)
-        throw new JsonUtils.InvalidValueError(metaName, "JsonWriterBackend", JsonUtils.prettyStr(JArray(vals.toList)), "Non repeating value should have one value")
-      else
-        JsonUtils.prettyWriter(vals(0), outF, indent + 2)
-    }
-    for ((metaName, vals) <- section.cachedArrayValues) {
-      baseIndenter.write(""",
+      if (repeats) {
+        baseIndenter.write(""",
 "$metaName": """)
+        JsonUtils.prettyWriter(JArray(vals.toList), outF, indent + 2)
+      } else if (vals.size == 1) {
+        vals.head match {
+          case JNothing =>
+            ()
+          case _ =>
+            baseIndenter.write(""",
+"$metaName": """)
+            JsonUtils.prettyWriter(vals.head, outF, indent + 2)
+        }
+      } else if (vals.size != 0) {
+        throw new JsonUtils.InvalidValueError(metaName, "JsonWriterBackend", JsonUtils.prettyStr(JArray(vals.toList)), "Non repeating value should have one value")
+      }
+    }
+    for ((metaName, vals) <- section.cachedArrayValues.filter{case (k, _) => !excludeMetaNames(k)}) {
       val metaInfo = metaInfoEnv.metaInfoRecordForName(metaName).get
       val repeats: Boolean = metaInfo.repeats.getOrElse(false)
       if (repeats) {
+        baseIndenter.write(""",
+"$metaName": """)
         val innerIndenter = new JsonUtils.ExtraIndenter(indent + 4, outF)
         outF.write("[")
         var arrComma: Boolean = false
@@ -282,27 +418,73 @@ class JsonWriterBackend(
           JsonWriterBackend.writeNArrayWithDtypeStr(value, metaInfo.dtypeStr.get, innerIndenter)
         }
         baseIndenter.write("\n    ]")
-      } else if (vals.size != 1) {
-        throw new JsonUtils.InvalidValueError(metaName, "JsonWriterBackend", s"#${vals.size}", "Non repeating value should have one value")
-      } else {
+      } else if (vals.size == 1) {
+        baseIndenter.write(""",
+"$metaName": """)
         val innerIndenter = new JsonUtils.ExtraIndenter(indent + 2, outF)
         JsonWriterBackend.writeNArrayWithDtypeStr(vals(0), metaInfo.dtypeStr.get, innerIndenter)
+      } else if (vals.size != 0) {
+        throw new JsonUtils.InvalidValueError(metaName, "JsonWriterBackend", s"#${vals.size}", "Non repeating value should have one value, either make it repeating or ensure it does not repeat.")
       }
     }
-    for ((metaName, vals) <- section.cachedSubSections) {
-      baseIndenter.write(""",
+    for ((metaName, vals) <- section.cachedSubSections.filter{case (k, _) => !excludeMetaNames(k)}) {
+      val metaInfo = metaInfoEnv.metaInfoRecordForName(metaName).get
+      val repeats: Boolean = metaInfo.repeats.getOrElse(true)
+      if (repeats) {
+        baseIndenter.write(""",
 "$metaName": [""")
-      var sectComma: Boolean = false
-      for (value <- vals) {
-        if (sectComma)
-          outF.write(",")
-        else
-          sectComma = true
-        writeOutBase(metaName, value, indent + 4)
+        var sectComma: Boolean = false
+        for (value <- vals) {
+          if (sectComma)
+            outF.write(",")
+          else
+            sectComma = true
+          writeOutSection(metaName, value, indent + 4)
+        }
+        outF.write("]")
+      } else if (vals.size == 1) {
+        baseIndenter.write(""",
+"$metaName": """)
+        writeOutSection(metaName, vals.head, indent + 2)
+      } else if (vals.size != 0) {
+        throw new JsonUtils.InvalidValueError(metaName, "JsonWriterBackend", s"#${vals.size}", "Non repeating value should have one value, either make it repeating or ensure it does not repeat.")
       }
-      outF.write("]")
     }
-    baseIndenter.write("\n}")
   }
 
+  def addArray(metaName: String,shape: Seq[Long],gIndex: Long): Unit = {
+    cachingBackend.addArray(metaName, shape, gIndex)
+  }
+
+  def addRealValue(metaName: String,value: Double,gIndex: Long): Unit = {
+    cachingBackend.addRealValue(metaName, value, gIndex)
+  }
+
+  def addValue(metaName: String,value: org.json4s.JValue,gIndex: Long): Unit = {
+    cachingBackend.addValue(metaName, value, gIndex)
+  }
+
+  def closeSection(metaName: String,gIndex: Long): Unit = {
+    cachingBackend.closeSection(metaName, gIndex)
+  }
+
+  def openSections(): Iterator[(String, Long)] = {
+    cachingBackend.openSections
+  }
+
+  def sectionInfo(metaName: String,gIndex: Long): String = {
+    cachingBackend.sectionInfo(metaName, gIndex)
+  }
+
+  def setArrayValues(metaName: String,values: ucar.ma2.Array,offset: Option[Seq[Long]],gIndex: Long): Unit = {
+    cachingBackend.setArrayValues(metaName, values, offset, gIndex)
+  }
+
+  def setSectionInfo(metaName: String,gIndex: Long,references: Map[String,Long]): Unit = {
+    cachingBackend.setSectionInfo(metaName, gIndex, references)
+  }
+
+  def openSectionWithGIndex(metaName: String,gIndex: Long): Unit = {
+    cachingBackend.openSectionWithGIndex(metaName, gIndex)
+  }
 }
