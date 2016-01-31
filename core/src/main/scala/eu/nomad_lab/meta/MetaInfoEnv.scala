@@ -219,6 +219,17 @@ trait MetaInfoEnv extends MetaInfoCollection {
     }(breakOut): Map[String,Tuple2[Set[String],Set[String]]]
   }
 
+  /** returns the rootAnchestors of the given type
+    */
+  def rootAnchestorsOfType(kindStr: String, metaName: String): Set[String] = {
+    firstAncestorsByType(kindStr).get(metaName) match {
+      case Some((roots, _)) =>
+        roots
+      case None =>
+        Set()
+    }
+  }
+
   /** Returns the names of the direct children of the metaInfo with the given name
     *
     * Direct children are those that have name in superNames.
