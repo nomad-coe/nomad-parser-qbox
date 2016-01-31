@@ -20,7 +20,7 @@ case class MetaInfoRecord(
   val shape:  Option[Seq[Either[Long,String]]] = None,
   val gid:              String = "",
   val superGids:   Seq[String] = Seq(),
-  val redundant: Option[Boolean] = None,
+  val redundant: Option[Seq[String]] = None,
   val derived: Option[Boolean] = None,
   val referencedSections: Option[Seq[String]] = None,
   val otherKeys:  List[JField] = Nil) {
@@ -103,7 +103,7 @@ class MetaInfoRecordSerializer extends CustomSerializer[MetaInfoRecord](format =
              var dtypeStr: Option[String] = None;
              var repeats: Option[Boolean] = None;
              var shape: Option[Seq[Either[Long,String]]] = None;
-             var redundant: Option[Boolean] = None
+             var redundant: Option[Seq[String]] = None
              var derived: Option[Boolean] = None
              var referencedSections: Option[Seq[String]] = None
              var otherKeys: List[JField] = Nil;
@@ -165,7 +165,7 @@ class MetaInfoRecordSerializer extends CustomSerializer[MetaInfoRecord](format =
                    repeats = value.extract[Option[Boolean]]
                case JField("redundant", value) =>
                  if (!value.toSome.isEmpty)
-                   redundant = value.extract[Option[Boolean]]
+                   redundant = value.extract[Option[Seq[String]]]
                case JField("derived", value) =>
                  if (!value.toSome.isEmpty)
                    derived = value.extract[Option[Boolean]]
