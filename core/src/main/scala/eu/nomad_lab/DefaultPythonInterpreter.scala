@@ -34,7 +34,6 @@ object DefaultPythonInterpreter extends StrictLogging {
   def defaultSettings(): Settings = {
     DefaultPythonInterpreter.synchronized {
       if (privateDefaultSettings == null) {
-        logger.info("eu.nomad_lab.DefaultPythonInterpreter creating default settings")
         privateDefaultSettings = new Settings(config.ConfigFactory.load())
       }
       privateDefaultSettings
