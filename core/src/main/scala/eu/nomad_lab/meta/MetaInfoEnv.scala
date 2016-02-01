@@ -222,7 +222,7 @@ trait MetaInfoEnv extends MetaInfoCollection {
   /** returns the rootAnchestors of the given type
     */
   def rootAnchestorsOfType(kindStr: String, metaName: String): Set[String] = {
-    firstAncestorsByType(kindStr).get(metaName) match {
+    firstAncestorsByType(metaName).get(kindStr) match {
       case Some((roots, _)) =>
         roots
       case None =>

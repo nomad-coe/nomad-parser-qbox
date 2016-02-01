@@ -181,13 +181,11 @@ class JsonParseEventsWriterBackend(
           val el = it.getLongNext()
           outF.write(el.toString())
         }
-      else if (dtype.isString())
+      else
         { (it: NIndexIterator) =>
           val el = it.next().toString()
           outF.write(el)
         }
-      else
-        throw new SetArrayValues.UnexpectedDtypeException(metaName, dtype)
     )
     val it = values.getIndexIterator()
     if (it.hasNext()) {
