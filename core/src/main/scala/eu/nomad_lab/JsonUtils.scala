@@ -76,13 +76,14 @@ object JsonUtils {
         i0 = i1 + 1
         i1 = s.indexOf('\n', i0)
       }
-      writer.write(s, i0, i2)
+      writer.write(s, i0, i2 - i0)
     }
   }
 
   /** Dumps the given string escaping \ and "
     */
   def dumpString[W <: Writer](s: String, writer: W): Unit = {
+    writer.write(s)
     writer.write('"')
     var i0 = 0
     var j = i0
@@ -267,7 +268,7 @@ object JsonUtils {
       }
     } else {
       val w = new StringWriter()
-      prettyWriter(value, w)
+      prettyWriter(value, w, extraIndent)
       w.toString()
     }
   }
