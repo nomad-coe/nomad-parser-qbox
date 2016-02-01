@@ -469,7 +469,7 @@ object SetArrayValues {
   class UnexpectedDtypeException(
     metaName: String,
     dtype: DataType
-  ) extends Exception(s"Unexpected type $dtype in $metaName") { }
+  ) extends Exception(s"Unexpected data type $dtype in $metaName") { }
 
 
   def flatValues(metaName: String, values: NArray): JArray = {
@@ -484,8 +484,8 @@ object SetArrayValues {
       else if (dtype.isString())
         { (it: NIndexIterator) =>
           JString(it.next().toString()) }
-      else
-        throw new UnexpectedDtypeException(metaName, dtype)
+      else { (it: NIndexIterator) =>
+          JString(it.next().toString()) }
     )
     val it = values.getIndexIterator()
 
