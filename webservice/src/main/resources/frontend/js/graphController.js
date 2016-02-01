@@ -6,14 +6,17 @@
 //    .factory('ancestorGraph', ['$q','$location','$rootScope', ancestorGraphDeclaration])
 
     function graphController($scope, $http, $location, ancestorGraph, $routeParams,filterService,dataService){
-        console.log("New controller!");
+
         $scope.filter = filterService.filter;
         $scope.version = 'common';
+        $scope.combinedGraph = {};
+        $scope.combinedGraph.selectedMetaInfos = [];
 
-        //Header related declarations
+        //header related declarations; filter are part of the header
         $scope.mappedNames = dataService.mappedNames;
         $scope.filter = filterService.filter;
-        //       Version updated; load the new version
+
+        //Version updated; load the new version
         $scope.versionChange = function(version){
             getVersion(version);
         }
@@ -44,39 +47,34 @@
                 $scope.metaDataList = angular.fromJson(metaData);
             });
         }
-
+        var cy;
         $scope.DAG = ancestorGraph.zoomButtonSettings;
 
         $scope.drawGraph = function(metaInfos){
-            console.log($scope.combinedGraph.selectedMetaInfos);
-            $scope.combinedGraph = {
-                selectedMetaInfos:[]
-            }
-            var allData = {
-                nodes: [],
-                edges: []
-            }
-            for(var i= 0; i< metaInfos.length;i++)
-            {
-                dataService.asyncAllParentsCS($scope.version,metaInfos[i]).then(function(d) {
-//                        return allparentsData;
-                allData.nodes = allData.nodes.concat(d.nodes);
-                allData.edges = allData.edges.concat(d.edges);
+            dataService.asyncMetaInfoListGraph($scope.version,metaInfos).then(function(graphData) {
+                ancestorGraph( graphData ).then(function( ancestorCy ){
+                    cy = ancestorCy;
+                    $scope.cyLoaded = true;
+                    ancestorGraph.resize();
+                    ancestorGraph.reset();
+                    ancestorGraph.reset(); //Double call magically solves some formatting problems
+                    ancestorGraph.fit();
+                    //Nothing works if panning and zoom is disabled; since resize and fit needs to pan and zoom :P
+                    //Note: ancestorGraph functions needs pan and zoom to be enabled to operate keep that in mind
+                    ancestorGraph.zoomPanToggle( $scope.DAG.zoom); //Override the default settings
                 });
-//                allData.edges = allData.edges.concat(d.edges);
-            }
-            console.log(allData);
-
-            ancestorGraph( allData ).then(function( ancestorCy ){
-                cy = ancestorCy;
-                $scope.cyLoaded = true;
-                ancestorGraph.fit();
-                ancestorGraph.resize();
-                //Nothing works if panning and zoom is disabled; since resize and fit needs to pan and zoom :P
-                //Note: ancestorGraph functions needs pan and zoom to be enabled to operate keep that in mind
-                ancestorGraph.zoomPanToggle( $scope.DAG.zoom); //Override the default settings
             });
-
         }
+        $scope.zoomToggle = function(){
+           if ( $scope.DAG.zoom){
+                    $scope.DAG.zoom=false;
+                    $scope.DAG.zoomText='Enable zoom';
+           }
+           else {
+                  $scope.DAG.zoom=true;
+                  $scope.DAG.zoomText='Disable zoom';
+           }
+           ancestorGraph.zoomPanToggle($scope.DAG.zoom);
+        };
     }
 })();

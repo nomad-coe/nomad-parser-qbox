@@ -70,7 +70,7 @@
                 $location.path('/'+$scope.version+'/section_single_configuration_calculation');
             }
             else{
-                dataService.asyncAllParentsCS($scope.version,$scope.metaInfoName ).then(function(allparentsData) {
+                dataService.asyncMetaInfoAncestorChildrenGraph($scope.version,$scope.metaInfoName ).then(function(allparentsData) {
 
                 //Change the height of the element depending upon the number of children
                 if( allparentsData.children.length < 10) {
@@ -83,10 +83,7 @@
                     ancestorGraph( allparentsData ).then(function( ancestorCy ){
                         cy = ancestorCy;
                         $scope.cyLoaded = true;
-//                        graphOptions(allparentsData);
                         drawChildrenAsList(allparentsData);
-//                        drawChildrenCircle(allparentsData);
-
                         ancestorGraph.resize();
                         ancestorGraph.reset();
                         ancestorGraph.reset(); //Double call magically solves some formatting problems
@@ -104,49 +101,6 @@
         $scope.cyLoaded = false; //Not used at the moment
         var cy;
         $scope.DAG = ancestorGraph.zoomButtonSettings;
-        var drawChildren = function(allparentsData) {
-        var cMinX = 200,
-            cMinY = 100,
-            currCol = 0,
-            currRow = 0,
-            maxRow = 7; //max rows in a coloumn
-
-        if( allparentsData.children.length > 0 ) {
-            var ele = ancestorGraph.getElementById("Children of "+$scope.metaInfoName)
-            var eleX = ele.position().x,
-                eleY = ele.position().y;
-            var childX = 0,
-                childY = 0;
-            if(allparentsData.children.length < maxRow){
-                maxRow =  allparentsData.children.length;
-            }
-            for (var i = 0; i < allparentsData.children.length; i++)
-            {
-                if(currRow >= maxRow) {
-                    currRow = 0, currCol += 1;
-                }
-                childX = eleX + currCol * cMinX + 20; //Default addition
-                childY = eleY - ((maxRow -1 )/2) *cMinY + currRow * cMinY;
-                allparentsData.children[i].position = {
-                    x: childX,
-                    y:childY
-                }
-
-
-                if(currCol % 2 == 0)
-                    allparentsData.children[i].style["text-valign"] ="top";
-                else
-                    allparentsData.children[i].style["text-valign"] ="bottom";
-                ancestorGraph.add(allparentsData.children[i])
-                currRow += 1;
-            }
-        }
-        ancestorGraph.fit();
-        ancestorGraph.resize();
-        //Nothing works if panning and zoom is disabled; since resize and fit needs to pan and zoom :P
-        //Note: ancestorGraph functions needs pan and zoom to be enabled to operate keep that in mind
-        ancestorGraph.zoomPanToggle( $scope.DAG.zoom); //Override the default settings
-    }
 
         function toDegrees (angle) {
           return angle * (180 / Math.PI);
@@ -155,66 +109,60 @@
         function toRadians (angle) {
           return angle * (Math.PI / 180);
         }
-        //Circle
-        //Remove "Children of " Node
-        //
-            var drawChildrenCircle = function(allparentsData) {
 
-                var count  = 0;
-                if( allparentsData.children.length > 0 ) {
-                    var child = ancestorGraph.getElementById("Children of "+$scope.metaInfoName);
-                    var parent = ancestorGraph.getElementById($scope.metaInfoName);
-                    var radius =  Math.max(child.position().x - parent.position().x,child.position().y - parent.position().y )
-                    var radiusFactor = 1,
-                    jumpFactor = 1;
-                    var childX = 0,
-                        childY = 0;
+        var drawChildrenCircle = function(allparentsData) {
 
-                    var jump = 0,
-                        jumpAdd =10,
-                        sign = 1;
-                    var angle =jump;
+            var count  = 0;
+            if( allparentsData.children.length > 0 ) {
+                var child = ancestorGraph.getElementById("Children of "+$scope.metaInfoName);
+                var parent = ancestorGraph.getElementById($scope.metaInfoName);
+                var radius =  Math.max(child.position().x - parent.position().x,child.position().y - parent.position().y )
+                var radiusFactor = 1,
+                jumpFactor = 1;
+                var childX = 0,
+                    childY = 0;
 
-                    var rnd = { group: "nodes", data: { id: "RamDom Node" }, position: {x:parent.position().x, y:parent.position().y+50 }, style:{width:2,height:2} };
+                var jump = 0,
+                    jumpAdd =10,
+                    sign = 1;
+                var angle =jump;
 
-                    ancestorGraph.add(rnd);
+                var rnd = { group: "nodes", data: { id: "RamDom Node" }, position: {x:parent.position().x, y:parent.position().y+50 }, style:{width:2,height:2} };
 
-                    radiusFactor +=  0.6 * Math.floor(allparentsData.children.length/12);
-                    jumpAdd /= radiusFactor;
-                    for (var i = 0; i < allparentsData.children.length; i++)
-                    {
-                        childX = parent.position().x + radiusFactor * radius * Math.cos(toRadians(angle))
-                        childY = parent.position().y + radiusFactor * radius * Math.sin(toRadians(angle))
-                        allparentsData.children[i].position = {
-                            x: childX,
-                            y: childY
-                        }
-                        jump += jumpAdd;
-                        sign*=-1;
-                        angle += jump *sign  ;
-//                        console.log(angle);
-//                        console.log(childX);
-//                        console.log(childY);
-//                        console.log(allparentsData.children[i]);
-                        allparentsData.children[i].style["text-halign"] ="right";
-                        if(angle > 60)
-                            allparentsData.children[i].style["text-valign"] ="top";
-                        else if (angle < -60)
-                            allparentsData.children[i].style["text-valign"] ="bottom";
-                        else
-                            allparentsData.children[i].style["text-valign"] ="center";
+                ancestorGraph.add(rnd);
 
-                        var edgeToParent = { group: "edges", data: { id: allparentsData.children[i].data.id + "__" + $scope.metaInfoName, source: allparentsData.children[i].data.id, target: $scope.metaInfoName } }
-                        ancestorGraph.add(allparentsData.children[i])
-                        ancestorGraph.add(edgeToParent)
+                radiusFactor +=  0.6 * Math.floor(allparentsData.children.length/12);
+                jumpAdd /= radiusFactor;
+                for (var i = 0; i < allparentsData.children.length; i++)
+                {
+                    childX = parent.position().x + radiusFactor * radius * Math.cos(toRadians(angle))
+                    childY = parent.position().y + radiusFactor * radius * Math.sin(toRadians(angle))
+                    allparentsData.children[i].position = {
+                        x: childX,
+                        y: childY
                     }
+                    jump += jumpAdd;
+                    sign*=-1;
+                    angle += jump *sign  ;
+                    allparentsData.children[i].style["text-halign"] ="right";
+                    if(angle > 60)
+                        allparentsData.children[i].style["text-valign"] ="top";
+                    else if (angle < -60)
+                        allparentsData.children[i].style["text-valign"] ="bottom";
+                    else
+                        allparentsData.children[i].style["text-valign"] ="center";
+
+                    var edgeToParent = { group: "edges", data: { id: allparentsData.children[i].data.id + "__" + $scope.metaInfoName, source: allparentsData.children[i].data.id, target: $scope.metaInfoName } }
+                    ancestorGraph.add(allparentsData.children[i])
+                    ancestorGraph.add(edgeToParent)
                 }
-                ancestorGraph.fit();
-                ancestorGraph.resize();
-                //Nothing works if panning and zoom is disabled; since resize and fit needs to pan and zoom :P
-                //Note: ancestorGraph functions needs pan and zoom to be enabled to operate keep that in mind
-                ancestorGraph.zoomPanToggle( $scope.DAG.zoom); //Override the default settings
             }
+            ancestorGraph.fit();
+            ancestorGraph.resize();
+            //Nothing works if panning and zoom is disabled; since resize and fit needs to pan and zoom :P
+            //Note: ancestorGraph functions needs pan and zoom to be enabled to operate keep that in mind
+            ancestorGraph.zoomPanToggle( $scope.DAG.zoom); //Override the default settings
+        }
 
 
         var drawChildrenAsList = function(allparentsData) {
@@ -240,8 +188,6 @@
                 maxRow = Math.ceil(allparentsData.children.length / nc)
                 }
                 columnX = eleX + 20;
-
-
 
                 var bracketContainer =  [
                                          { group: "nodes", classes: 'bracket', data: { id: "P1" }, position: {x:eleX, y:eleY }, style:{width:5,height:5} },
@@ -281,15 +227,6 @@
                     }
                     currRow += 1;
                 }
-//                var ele = ancestorGraph.getElementById('Children of section_single_configuration_calculation');
-//                console.log(ele);
-//                console.log(ele.off('click'));
-//                console.log(ele.siblings());
-//                ele.unselectify();
-//                ele.off('tap');
-//                ele.off('click');
-//                ele.off('mousedown');
-//                ele.off('touchstart');
             }
         }
 

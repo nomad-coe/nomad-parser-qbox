@@ -6,8 +6,8 @@ var dataModule = angular.module('metaDataApp.dataModule', []);
 dataModule.factory('dataService', function($http) {
     var promiseVersionList;
     var promiseMetaInfoList;
-    var promiseAllParents;
-    var promiseAllParentsCS;
+    var promiseMetaAllParentGraph;
+    var promiseMetaInfoListGraph;
     //Add more versions here as they are available
     var mappedNames = function(){
         var types = {
@@ -71,18 +71,22 @@ dataModule.factory('dataService', function($http) {
         });
         return promiseMetaInfoList;
     },
-    asyncAllParents: function(version,metaName) {
-        promiseAllParents = $http.get('/nmi/v/'+version+'/n/' + metaName+'/allparents.json',{cache: true}).then(function (response) {
+    asyncMetaInfoAncestorChildrenGraph: function(version,metaName) {
+        promiseMetaAllParentGraph = $http.get('/nmi/v/'+version+'/n/' + metaName+'/metainfograph.json',{cache: true}).then(function (response) {
             return response.data;
 //        return tempAllParents;
         });
-        return promiseAllParents;
+        return promiseMetaAllParentGraph;
     },
-    asyncAllParentsCS: function(version,metaName) {
-        promiseAllParentsCS = $http.get('/nmi/v/'+version+'/n/' + metaName+'/allparentsCS.json',{cache: true}).then(function (response) {
+    asyncMetaInfoListGraph: function(version,metaNames) {
+        promiseMetaInfoListGraph = $http({
+                                     url: '/nmi/v/'+version+'/multiplemetainfograph.json/',
+                                     method: "GET",
+                                     params: {"metaInfoList":metaNames.toString()}
+                                   }).then(function (response) {
             return response.data;
         });
-        return promiseAllParentsCS;
+        return promiseMetaInfoListGraph;
     },
     mappedNames: mappedNames
   };
@@ -90,3 +94,4 @@ dataModule.factory('dataService', function($http) {
 });
 
 })();
+
