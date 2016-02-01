@@ -1,10 +1,12 @@
 package eu.nomad_lab.webservice
 
 import akka.actor.Actor
+import akka.actor.FSM.->
 import spray.routing._
 import spray.http._
 import MediaTypes._
 import org.json4s.JsonDSL._
+import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.{mutable, breakOut}
 import java.nio.file.Paths
@@ -464,7 +466,11 @@ table
     }
   }
 
+
   //TODO: Use DP
+  // Add node indirect children, to the to do list
+  // Add nodes referencedSections to the to do list
+  // Add edges to from this node to toDo List
   def getRefenceGraph(v: MetaInfoEnv, name: String):(Boolean, Set[String], Map[(String, String), String]) = {
     val allItems = v.allNames.toList
     var indirectChildrenBySection: Set[String] = collection.immutable.Set[String]()
@@ -485,20 +491,23 @@ table
           toAdd = toAdd + metaInfoItem.name // To create this separate edge to the refereced section
           toAdd = toAdd ++ sects
           for(sec <- sects){
-            edgesMap = edgesMap + (Tuple2(metaInfoItem.name,sec) -> "reference")
+            if(metaInfoItem.superNames.contains(sec)){
+//              logger.info("Self reference sects: " + metaInfoItem.name)
+              edgesMap = edgesMap + (Tuple2(metaInfoItem.name,sec) -> "Self_Reference")
+            }
+            else{
+//              logger.info("Not a Self reference sects: " + metaInfoItem.name)
+              edgesMap = edgesMap + (Tuple2(metaInfoItem.name,sec) -> "reference")
+            }
           }
           flag = true // To create edge to the indirect children (in case)
         case _ =>
       }
     }
-    // Add node indirect children, to the to do list
-    // Add nodes referencedSections to the to do list
-    // Add edges to from this node separetely; depending upin the
-
     Tuple3(flag, toAdd, edgesMap)
   }
 
-  def metaInfoAncestors(v: MetaInfoEnv, toDo: mutable.ListBuffer[String], known: mutable.Set[String], nMap:Map[String,(String, String)], eMap:Map[(String, String),String]): (Map[String,(String, String)],Map[(String, String),String]) = {
+  @tailrec final def metaInfoAncestors(v: MetaInfoEnv, toDo: mutable.ListBuffer[String], known: mutable.Set[String], nMap:Map[String,(String, String)], eMap:Map[(String, String),String]): (Map[String,(String, String)],Map[(String, String),String]) = {
     var nodesMap = nMap  // name -> (shape, class(for color etc))
     var edgesMap = eMap // (source, target) -> class
     // Add element and its parents
@@ -512,7 +521,8 @@ table
         throw new MetaInfoEnv.DependsOnUnknownNameException(v.name, known.toString, now)
       val metaInfo = nowR.get
       metaInfo.superNames.foreach { superName: String =>
-        edgesMap += (Tuple2(metaInfo.name,superName) -> "casual")
+        if(!edgesMap.contains(Tuple2(metaInfo.name,superName))) //This is needed to prevent overriding of the "Self_Reference"
+          edgesMap += (Tuple2(metaInfo.name,superName) -> "casual")
         if (!known(superName)) {
           toDo.append(superName)
           known += superName
@@ -538,6 +548,53 @@ table
     }
   }
 
+  def createGraphJson(nodesMap: Map[String, (String, String)], edgesMap: Map[(String, String), String]): (List[JValue], List[JValue])  =
+  {
+    var nodes: List[JValue] = Nil
+    var edges: List[JValue] = Nil
+    var selfRefEdges = Map[(String, String), String]()
+    nodesMap foreach { case (key, value) =>
+      nodes = JObject(
+        ("data" -> JObject(
+          ("id" -> JString(key.mkString)) :: Nil)) ::
+          ("style" -> JObject(
+            ("background-color" -> JString(value._2)) ::
+              ("shape" -> JString(value._1))
+              :: Nil)) :: Nil) :: nodes
+    }
+    edgesMap foreach { case (key, value) =>
+      if (value == "Self_Reference")
+        selfRefEdges += (key -> value)
+      else
+      edges = JObject(
+        ("data" ->
+          JObject(
+            ("source" -> JString(key._1)) ::
+            ("target" -> JString(key._2)) ::
+              Nil)) ::
+          ("classes" -> JString(value)) :: Nil) :: edges
+    }
+
+    //Add self reference edge twice;
+    selfRefEdges foreach { case (key, value) =>
+      edges = JObject(
+        ("data" ->
+          JObject(
+            ("source" -> JString(key._1)) ::
+            ("target" -> JString(key._2)) ::
+              Nil)) ::
+          ("classes" -> JString("reference")) :: Nil) ::
+        JObject(
+          ("data" ->
+            JObject(
+              ("source" -> JString(key._1)) ::
+              ("target" -> JString(key._2)) ::
+                Nil)) ::
+            ("classes" -> JString("casual")) :: Nil) :: edges
+    }
+    Tuple2(nodes,edges)
+  }
+
   /** Create JSON containing information graph information about multiple MetaInfos, for the metaInfoList. Contains information only about the ancestors
     */
   def multipleMetaInfoGraph(version: String, metaInfoList: String): JValue = {
@@ -555,15 +612,14 @@ table
         val toDo = mutable.ListBuffer[String]()
         val nMap = Map[String, (String, String)]() // name -> (shape, class(for color etc))
         val eMap = Map[(String, String), String]() // (source, target) -> class
-        var nodes: List[JValue] = Nil
-        var edges: List[JValue] = Nil
+
         for(i <- metaInfos ){
           if(allMetaInfo.contains(i)){
             known += i
             toDo += i
           }
         }
-
+//      Main function to calculate the graph
         var (nodesMap, edgesMap) = metaInfoAncestors(v, toDo, known, nMap, eMap) //Traverse the graph using tail recursion
 
         for(i <- metaInfos){
@@ -573,24 +629,8 @@ table
             nodesMap += (i -> Tuple2("star", currNode._2))
           }
         }
-        nodesMap foreach { case (key, value) =>
-          nodes = JObject(
-            ("data" -> JObject(
-              ("id" -> JString(key.mkString)) :: Nil)) ::
-              ("style" -> JObject(
-                ("background-color" -> JString(value._2)) ::
-                  ("shape" -> JString(value._1))
-                  :: Nil)) :: Nil) :: nodes
-        }
-        edgesMap foreach { case (key, value) =>
-          edges = JObject(
-            ("data" ->
-              JObject(
-                ("source" -> JString(key._1)) ::
-                  ("target" -> JString(key._2)) ::
-                  ("type" -> JString(value)):: Nil)) ::
-              ("classes" -> JString(value)) :: Nil) :: edges
-        }
+        val (nodes, edges) = createGraphJson(nodesMap,edgesMap)
+
         JObject(
           ("nodes" -> JArray(nodes)) ::
           ("edges" -> JArray(edges)) ::
@@ -617,9 +657,6 @@ table
         val nMap = Map[String, (String, String)]() // name -> (shape, class(for color etc))
         val eMap = Map[(String, String), String]() // (source, target) -> class
         var (nodesMap, edgesMap) = metaInfoAncestors(v, toDo, known, nMap, eMap) //Traverse the graph using tail recursion
-        //      logger.info("Nodes"+nodesMap)
-        var nodes: List[JValue] = Nil
-        var edges: List[JValue] = Nil
         var children: List[JValue] = Nil
         val prefixChildren = "Children of "
         //Add all ancestors of the current node
@@ -628,25 +665,7 @@ table
         // to add another variable to it then
         nodesMap += (name -> Tuple2("star", currNode._2))
 
-        nodesMap foreach { case (key, value) =>
-          nodes = JObject(
-            ("data" -> JObject(
-              ("id" -> JString(key.mkString)) :: Nil)) ::
-              ("style" -> JObject(
-                ("background-color" -> JString(value._2)) ::
-                  ("shape" -> JString(value._1))
-                  :: Nil)) :: Nil) :: nodes
-        }
-        edgesMap foreach { case (key, value) =>
-          edges = JObject(
-            ("data" ->
-              JObject(
-                ("source" -> JString(key._1)) ::
-                  ("target" -> JString(key._2)) ::
-                  ("type" -> JString(value)) :: Nil)) ::
-              ("classes" -> JString(value)) :: Nil) :: edges
-        }
-
+        var (nodes, edges) = createGraphJson(nodesMap,edgesMap)
 
         ///// Direct Children related Stuff;
         if (v.allDirectChildrenOf(name).nonEmpty) {
