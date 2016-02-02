@@ -1,0 +1,24 @@
+<div class="col-xs-6 col-md-4 ">
+    <ui-select ng-model="filter.selectedSection" ng-change="filterChange(filter)" theme="bootstrap" ng-disabled="disabled"  close-on-select="true" title="Filter by Parent">
+        <ui-select-match placeholder="Select a parent in the list ">{{$select.selected.displayName}}</ui-select-match>
+        <ui-select-choices repeat="parents in filter.Sections| filter:$select.search ">
+            {{parents.displayName}}
+        </ui-select-choices>
+    </ui-select>
+</div>
+<div class="col-xs-6 col-md-4">
+    <ui-select ng-model="filter.selectedType" ng-change="filterChange(filter)" theme="bootstrap" ng-disabled="disabled"  close-on-select="true" title="Filter by Abstract Type">
+        <ui-select-match placeholder="Select a type in the list ">{{$select.selected.displayName}}</ui-select-match>
+        <ui-select-choices group-by="'parent'" repeat="type in filter.Types| filter:$select.search ">
+            {{type.displayName}}
+        </ui-select-choices>
+    </ui-select>
+</div>
+<div class="col-xs-6 col-md-4 ">
+    <ui-select ng-model="filter.selectedMetaInfoType" ng-change="filterChange(filter)" theme="bootstrap" ng-disabled="disabled"  close-on-select="true" title="Filter by Meta Info Type">
+        <ui-select-match placeholder="Select a type in the list ">{{$select.selected.displayName}}</ui-select-match>
+        <ui-select-choices repeat="type in filter.MetaInfoTypes| filter:$select.search ">
+            {{type.displayName}}
+        </ui-select-choices>
+    </ui-select>
+</div>

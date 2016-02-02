@@ -74,7 +74,6 @@ dataModule.factory('dataService', function($http) {
     asyncMetaInfoAncestorChildrenGraph: function(version,metaName) {
         promiseMetaAllParentGraph = $http.get('/nmi/v/'+version+'/n/' + metaName+'/metainfograph.json',{cache: true}).then(function (response) {
             return response.data;
-//        return tempAllParents;
         });
         return promiseMetaAllParentGraph;
     },

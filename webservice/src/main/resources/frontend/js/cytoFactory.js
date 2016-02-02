@@ -23,8 +23,13 @@
                         this.on('click', 'node', function(evt){
                             //console.log($location.path());
                             var path = angular.copy($location.path());
-                            var splitPath = path.split("/");
-                            $location.path(splitPath.slice(0, splitPath.length - 1).join("/") + "/" + this.id());
+                            if(path == "/graph"){
+                                $location.path("/common/" + this.id());
+                            }
+                            else{
+                                var splitPath = path.split("/");
+                                $location.path(splitPath.slice(0, splitPath.length - 1).join("/") + "/" + this.id());
+                            }
                             $rootScope.$apply();
                             //                        fire('onClick', [ this.id().split(" -")[0] ]);
                         });

@@ -1,6 +1,16 @@
 <!-- Otherwise the directive doesn't work unless attached to a div that is not overridden by angular; Master directive sets height of other elements.-->
 <div master>
     <div ng-include="'views/header.html'"></div>
+    <div class="container-fluid">
+        <div class="row header">
+            <div class="col-xs-4 col-md-3 searchBox">
+                <input class="col-xs-12 style-1" type="text" ng-model="filter.search" placeholder="Search">
+            </div>
+            <div class="col-xs-8 col-md-9">
+                <div ng-include="'views/filterBar.html'"></div>
+            </div>
+        </div>
+    </div>
 </div>
 <div class="container-fluid">
     <!--Main container for everything-->
