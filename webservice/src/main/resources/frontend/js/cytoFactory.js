@@ -35,7 +35,7 @@
 //                    pan: { x: 0, y: 0 },,
 
                     //interaction options
-                    minZoom: 0.5, //1e-2
+                    minZoom: 0.3, //1e-2
                     maxZoom: 2,
                     boxSelectionEnabled: true,
                     autounselectify: true,

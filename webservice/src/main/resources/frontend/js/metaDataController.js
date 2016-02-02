@@ -174,9 +174,14 @@
                 columnX = 0;
             var colMaxWidth = 0;
             if( allparentsData.children.length > 0 ) {
-                var ele = ancestorGraph.getElementById("Children of "+$scope.metaInfoName)
-                var eleX = ele.position().x + 200, // move the node to make space for other children
+                var ele = ancestorGraph.getElementById($scope.metaInfoName);
+                var eleX = ele.position().x + 250, // move the node to make space for other children
                     eleY = ele.position().y;
+
+                var numberDesc =  ele.predecessors();
+
+                if(numberDesc.length > 0)
+                    eleX += 400;
                 var childX = 0,
                     childY = 0;
                 if(allparentsData.children.length < maxRow){
@@ -195,7 +200,8 @@
                                          { group: "nodes", classes: 'bracket', data: { id: "P3" }, position: {x:eleX, y:eleY - (maxRow/2 ) * cMinY - 10}, style:{width:5,height:5} },
                                          { group: "nodes", classes: 'bracket', data: { id: "P4" }, position: {x:eleX + 20, y:eleY + (maxRow/2 ) * cMinY + 10}, style:{width:5,height:5} },
                                          { group: "nodes", classes: 'bracket', data: { id: "P5" }, position: {x:eleX + 20, y:eleY - (maxRow/2 ) * cMinY - 10}, style:{width:5,height:5} },
-                                         { group: "edges", data: { id: "P1_" + $scope.metaInfoName  , source: "P1", target: $scope.metaInfoName }, style: { width: 1,  label: "Direct Children" } },
+                                         { group: "nodes", data: { id: "Direct Children" }, position: {x:eleX + 20, y:eleY + (maxRow/2 ) * cMinY + 30}, style:{width:0,height:0} },
+//                                         { group: "edges", data: { id: "P1_" + $scope.metaInfoName  , source: "P1", target: $scope.metaInfoName }, style: { width: 1,  label: "Direct Children" } },
                                          { group: "edges", data: { id: "P2_P1"  , source: "P2", target: "P1" }, style: {"curve-style": "haystack", width: 5} },
                                          { group: "edges", data: { id: "P3_P1"  , source: "P3", target: "P1" }, style: {"curve-style": "haystack", width: 5} },
                                          { group: "edges", data: { id: "P4_P2"  , source: "P4", target: "P2" }, style: {"curve-style": "haystack", width: 5} },
@@ -203,7 +209,6 @@
                                        ];
 
                 ancestorGraph.add(bracketContainer);
-                ancestorGraph.remove(ele); //Remove the "Children of $" node from the graph
                 for (var i = 0; i < allparentsData.children.length; i++)
                 {
                     if(currRow >= maxRow) {
@@ -254,9 +259,6 @@
     function masterDirective($window) { //declaration; identifier master
         function link(scope, element, attrs) { //scope we are in, element we are bound to, attrs of that element
           scope.$watch(function(){ //watch any changes to our element
-//          console.log($window)
-//          console.log(element)
-//          console.log("Window Height: "+ angular.element($window).height()+ "  "+$window.innerHeight + "  "+$window +" Element height: " +element[0].offsetHeight  )
             scope.style = { //scope variable style, shared with our controller
 //              height: ( angular.element($window).height() - element[0].offsetHeight )+'px' //set the height in style to our elements height
               height: ( $window.innerHeight - element[0].offsetHeight )+'px' //set the height in style to our elements height

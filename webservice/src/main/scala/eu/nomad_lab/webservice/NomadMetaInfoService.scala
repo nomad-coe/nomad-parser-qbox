@@ -665,30 +665,9 @@ table
         // to add another variable to it then
         nodesMap += (name -> Tuple2("star", currNode._2))
 
-        var (nodes, edges) = createGraphJson(nodesMap,edgesMap)
+        val (nodes, edges) = createGraphJson(nodesMap,edgesMap)
 
         ///// Direct Children related Stuff;
-        if (v.allDirectChildrenOf(name).nonEmpty) {
-
-          //This node is only used for the position of the other node; can be removed
-          nodes = JObject(
-            ("data" -> JObject(
-              ("id" -> JString(prefixChildren + name)) :: Nil)) :: //String should be exactly same when drawing edge
-              ("style" -> JObject(
-                ("background-color" -> JString("#FFF")) ::
-                  ("border-width" -> JString("1px")) ::
-                  ("border-style" -> JString("solid")) ::
-                  ("border-color" -> JString("#000")) :: Nil))
-              :: Nil) :: nodes
-          edges = JObject(
-            ("data" ->
-              JObject(
-                ("source" -> JString(prefixChildren + name)) ::
-                  ("target" -> JString(name)) :: Nil
-              )
-              ) :: Nil
-          ) :: edges
-        }
         val sortedChildren = v.allDirectChildrenOf(name).toList.sortWith(_ > _)
         for (child <- sortedChildren) {
           if (!nodesMap.contains(child)) {
@@ -697,7 +676,6 @@ table
             children = JObject(
               ("data" -> JObject(
                 ("id" -> JString(metaInfo.name)) ::
-                  //              ("parent" -> JString(prefixChildren + name)) ::
                   Nil)) ::
                 ("style" -> JObject(
                   ("background-color" -> JString(nodeClassByKindStr(metaInfo.kindStr)
