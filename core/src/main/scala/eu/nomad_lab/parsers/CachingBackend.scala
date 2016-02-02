@@ -423,7 +423,7 @@ object CachingBackend {
         else
           false
       case None =>
-        throw new InvalidMetaInfoException(metaInfo, "concrete meta info should have a shape ([] for scalar values)")
+        true
     }
     val dtypeStr = metaInfo.dtypeStr match {
       case Some(s) =>
