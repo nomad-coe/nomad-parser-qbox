@@ -24,30 +24,31 @@ object JsonWriterBackend {
       writer.write("]" * shape.size)
     } else {
       var comma: Boolean = false
-      while (idx(0) == shape(0)) {
-        if (comma)
-          writer.write(", ")
-        else
-          comma = true
-        writeNextEl(it)
+      while (it.hasNext()) {
         var ii: Int = shape.size - 1
+        // inner write
+        for (i <- 0.until(shape(ii))) {
+          if (comma)
+            writer.write(", ")
+          else
+            comma = true
+          writeNextEl(it)
+        }
+        idx(ii) = shape(ii)
         var toClose: Int = 0
-        idx(ii) += 1
         while (ii > 0 && idx(ii) == shape(ii)) {
           idx(ii) = 0
           ii -= 1
           idx(ii) += 1
           toClose += 1
         }
-        if (toClose > 0) {
-          writer.write("]" * toClose)
-          if (it.hasNext()) {
-            writer.write(",\n")
-            writer.write(" " * (shape.size - toClose))
-            writer.write("[" * toClose)
-          }
-          comma = false
+        writer.write("]" * toClose)
+        if (it.hasNext()) {
+          writer.write(",\n")
+          writer.write(" " * (shape.size - toClose))
+          writer.write("[" * toClose)
         }
+        comma = false
       }
       writer.write("]")
     }
