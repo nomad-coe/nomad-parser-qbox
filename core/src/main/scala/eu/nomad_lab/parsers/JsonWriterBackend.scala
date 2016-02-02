@@ -59,7 +59,10 @@ object JsonWriterBackend {
   def writeNArrayWithDtypeStr(array: NArray, dtypeStr: String, writer: Writer): Unit = {
     val writeEl = dtypeStr match {
       case "f" | "f64" =>
-        { (it: NIndexIterator) => writer.write(it.getDoubleNext().toString()) }
+        { (it: NIndexIterator) =>
+          val elStr = it.getDoubleNext().toString()
+          writer.write(elStr)
+        }
       case "f32" =>
         { (it: NIndexIterator) => writer.write(it.getFloatNext().toString()) }
       case "i" | "i32" =>
@@ -118,8 +121,8 @@ class JsonWriterBackend(
 
   val standaloneSections: Set[String] = if (unbundleFirstLevel) {
     metaInfoEnv.allNames.filter{(name: String) =>
-      rootSections.contains(metaInfoEnv.metaInfoRecordForName(name).get.kindStr) &&
-      rootSections.intersect(metaInfoEnv.rootAnchestorsOfType("type_section", name)).isEmpty
+      metaInfoEnv.metaInfoRecordForName(name).get.kindStr == "type_section" &&
+      !rootSections.intersect(metaInfoEnv.rootAnchestorsOfType("type_section", name)).isEmpty
     }.toSet
   } else {
     Set()
@@ -141,18 +144,19 @@ class JsonWriterBackend(
     }.toMap
   }
 
+  val onOpenCallbacks: Map[String,Seq[CachingBackend.SectionCallback]] = {
+    rootSections.map{ (name: String) =>
+      name -> Seq(this.onOpenRootSection _)
+    }(breakOut)
+  }
+
   val cachingBackend = CachingBackend(metaInfoEnv,
     cachingLevelForMetaName = rootSections.union(standaloneSections).map(_ -> CachingBackend.CachingLevel.CacheSubvalues)(breakOut),
     defaultSectionCachingLevel = if (rootSections.isEmpty) CachingBackend.CachingLevel.CacheSubvalues else CachingBackend.CachingLevel.Cache,
     defaultDataCachingLevel = CachingBackend.CachingLevel.Cache,
     superBackend = None,
     onCloseCallbacks = onCloseCallbacks,
-    onOpenCallbacks = if (standaloneSections.isEmpty)
-      Map()
-    else
-      rootSections.map{ (name: String) =>
-        name -> Seq(onOpenRootSection _)
-      }(breakOut)
+    onOpenCallbacks = onOpenCallbacks
   )
 
   /** Started a parsing session
@@ -194,7 +198,7 @@ class JsonWriterBackend(
       case Some(status) =>
         outF.write(""",
   "parserStatus": """)
-        JsonUtils.dumpString(parserStatus.toString(), outF)
+        JsonUtils.dumpString(status.toString(), outF)
       case None => ()
     }
     parserErrors match {
@@ -340,7 +344,7 @@ class JsonWriterBackend(
         case Some(status) =>
           outF.write(""",
   "parserStatus": """)
-          JsonUtils.dumpString(parserStatus.toString(), outF)
+          JsonUtils.dumpString(status.toString(), outF)
         case None => ()
       }
     }
@@ -356,12 +360,14 @@ class JsonWriterBackend(
     }
     outF.write("""
 }""")
+    outF.flush()
   }
 
   def writeOutSection(metaName: String, section: CachingBackend.CachingSection, indent: Int): Unit = {
     val baseIndenter = new JsonUtils.ExtraIndenter(indent, outF)
     baseIndenter.write(s"""{
   "type": "nomad_section_1_0",
+  "name": "$metaName",
   "gIndex": ${section.gIndex},
   "references": {""")
     var refComma = false
@@ -370,8 +376,8 @@ class JsonWriterBackend(
         outF.write(", ")
       else
         refComma = true
-      baseIndenter.write("""
-    "$sectionName": $gIndex""")
+      baseIndenter.write(s"""
+    "$sectionName": $gId""")
     }
     outF.write("}")
     writeOutSubvalues(section, indent + 2, Set())
@@ -385,7 +391,7 @@ class JsonWriterBackend(
     for ((metaName, vals) <- section.cachedSimpleValues.filter{case (k, _) => !excludeMetaNames(k)}) {
       val repeats: Boolean = metaInfoEnv.metaInfoRecordForName(metaName).get.repeats.getOrElse(false)
       if (repeats) {
-        baseIndenter.write(""",
+        baseIndenter.write(s""",
 "$metaName": """)
         JsonUtils.prettyWriter(JArray(vals.toList), outF, indent + 2)
       } else if (vals.size == 1) {
@@ -393,7 +399,7 @@ class JsonWriterBackend(
           case JNothing =>
             ()
           case _ =>
-            baseIndenter.write(""",
+            baseIndenter.write(s""",
 "$metaName": """)
             JsonUtils.prettyWriter(vals.head, outF, indent + 2)
         }
@@ -405,7 +411,7 @@ class JsonWriterBackend(
       val metaInfo = metaInfoEnv.metaInfoRecordForName(metaName).get
       val repeats: Boolean = metaInfo.repeats.getOrElse(false)
       if (repeats) {
-        baseIndenter.write(""",
+        baseIndenter.write(s""",
 "$metaName": """)
         val innerIndenter = new JsonUtils.ExtraIndenter(indent + 4, outF)
         outF.write("[")
@@ -420,7 +426,7 @@ class JsonWriterBackend(
         }
         baseIndenter.write("\n    ]")
       } else if (vals.size == 1) {
-        baseIndenter.write(""",
+        baseIndenter.write(s""",
 "$metaName": """)
         val innerIndenter = new JsonUtils.ExtraIndenter(indent + 2, outF)
         JsonWriterBackend.writeNArrayWithDtypeStr(vals(0), metaInfo.dtypeStr.get, innerIndenter)
@@ -432,7 +438,7 @@ class JsonWriterBackend(
       val metaInfo = metaInfoEnv.metaInfoRecordForName(metaName).get
       val repeats: Boolean = metaInfo.repeats.getOrElse(true)
       if (repeats) {
-        baseIndenter.write(""",
+        baseIndenter.write(s""",
 "$metaName": [""")
         var sectComma: Boolean = false
         for (value <- vals) {
@@ -444,7 +450,7 @@ class JsonWriterBackend(
         }
         outF.write("]")
       } else if (vals.size == 1) {
-        baseIndenter.write(""",
+        baseIndenter.write(s""",
 "$metaName": """)
         writeOutSection(metaName, vals.head, indent + 2)
       } else if (vals.size != 0) {
@@ -479,6 +485,10 @@ class JsonWriterBackend(
 
   def setArrayValues(metaName: String,values: ucar.ma2.Array,offset: Option[Seq[Long]],gIndex: Long): Unit = {
     cachingBackend.setArrayValues(metaName, values, offset, gIndex)
+  }
+
+  override def addArrayValues(metaName: String,values: ucar.ma2.Array, gIndex: Long): Unit = {
+    cachingBackend.addArrayValues(metaName, values, gIndex)
   }
 
   def setSectionInfo(metaName: String,gIndex: Long,references: Map[String,Long]): Unit = {
