@@ -489,41 +489,50 @@ object CachingBackend {
     cachingLevelForMetaName: Map[String, CachingLevel.Value],
     defaultSectionCachingLevel: CachingLevel.Value = CachingLevel.Forward,
     superBackend: Option[ParserBackendExternal] = None,
+    onOpenCallbacks: Map[String, Seq[CachingBackend.SectionCallback]] = Map(),
     onCloseCallbacks: Map[String, Seq[CachingBackend.SectionCallback]] = Map()
   ): (MetaInfoEnv, MetaInfoRecord, Array[String]) => CachingBackend.CachingSectionManager = {
     (metaEnv: MetaInfoEnv, metaInfo: MetaInfoRecord, superSectionNames: Array[String]) =>
     val callbacks = onCloseCallbacks.getOrElse(metaInfo.name, Seq())
-    cachingLevelForMetaName.getOrElse(metaInfo.name, defaultSectionCachingLevel) match {
+
+    case class Flags(
+      superBackend: Option[ParserBackendExternal],
+      isCaching: Boolean,
+      storeInSuper: Boolean)
+
+    val flags = cachingLevelForMetaName.getOrElse(metaInfo.name, defaultSectionCachingLevel) match {
       case CachingLevel.Forward =>
-        new CachingSectionManager(metaInfo, superSectionNames,
+        Flags(
           superBackend = superBackend,
           isCaching = true,
-          storeInSuper = false,
-          onCloseCallbacks0 = callbacks)
+          storeInSuper = false)
       case CachingLevel.Cache =>
-        new CachingSectionManager(metaInfo, superSectionNames,
+        Flags(
           superBackend = None,
           isCaching = true,
-          storeInSuper = true,
-          onCloseCallbacks0 = callbacks)
+          storeInSuper = true)
       case CachingLevel.CacheSubvalues =>
-        new CachingSectionManager(metaInfo, superSectionNames,
+        Flags(
           superBackend = None,
           isCaching = true,
-          storeInSuper = false,
-          onCloseCallbacks0 = callbacks)
+          storeInSuper = false)
       case CachingLevel.ForwardAndCache =>
-        new CachingSectionManager(metaInfo, superSectionNames,
+        Flags(
           superBackend = superBackend,
           isCaching = true,
-          storeInSuper = true,
-          onCloseCallbacks0 = callbacks)
+          storeInSuper = true)
       case CachingLevel.Ignore =>
-        new CachingSectionManager(metaInfo, superSectionNames,
+        Flags(
           superBackend = None,
           isCaching = false,
-          onCloseCallbacks0 = callbacks)
+          storeInSuper = false)
     }
+    new CachingSectionManager(metaInfo, superSectionNames,
+      superBackend = flags.superBackend,
+      isCaching = flags.isCaching,
+      storeInSuper = flags.storeInSuper,
+      onOpenCallbacks0 = onOpenCallbacks.getOrElse(metaInfo.name, Seq()),
+      onCloseCallbacks0 = onCloseCallbacks.getOrElse(metaInfo.name, Seq()))
   }
 
   /** Method to create a factory that creates caching data
@@ -600,10 +609,10 @@ object CachingBackend {
     defaultSectionCachingLevel: CachingLevel.Value = CachingLevel.Forward,
     defaultDataCachingLevel: CachingLevel.Value = CachingLevel.ForwardAndCache,
     superBackend: Option[ParserBackendExternal] = None,
-    onCloseCallbacks: Map[String, Seq[CachingBackend.SectionCallback]] = Map(),
-    onOpenCallbacks: Map[String, Seq[CachingBackend.SectionCallback]] = Map()
+    onOpenCallbacks: Map[String, Seq[CachingBackend.SectionCallback]] = Map(),
+    onCloseCallbacks: Map[String, Seq[CachingBackend.SectionCallback]] = Map()
   ): CachingBackend = {
-    val sectionFactory = cachingSectionFactory(cachingLevelForMetaName, defaultSectionCachingLevel, superBackend, onCloseCallbacks)
+    val sectionFactory = cachingSectionFactory(cachingLevelForMetaName, defaultSectionCachingLevel, superBackend, onOpenCallbacks, onCloseCallbacks)
     val dataFactory = cachingDataFactory(cachingLevelForMetaName, defaultDataCachingLevel)
     val (sectionManagers, metaDataManagers) = instantiateManagers(metaEnv, sectionFactory, dataFactory)
     new CachingBackend(metaEnv, sectionManagers, metaDataManagers)
