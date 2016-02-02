@@ -45,7 +45,7 @@ object CachingBackend {
 
     /** Sets values on an array (the latest) of metaInfo that should already be cached here
       */
-    def setArrayValues[T](metaInfo: MetaInfoRecord, values: NArray, offset: Option[Seq[Long]]): Unit = {
+    def setArrayValues(metaInfo: MetaInfoRecord, values: NArray, offset: Option[Seq[Long]]): Unit = {
       cachedArrayValues.get(metaInfo.name) match {
         case Some(vals) =>
           val arr = vals.last
@@ -151,7 +151,7 @@ object CachingBackend {
           },
           storeInSuper = storeInSuper)
         openSections += (gIndex -> newSect)
-        var sect = Some(newSect)
+        sect = Some(newSect)
       }
       superBackend match {
         case Some(backend) =>
