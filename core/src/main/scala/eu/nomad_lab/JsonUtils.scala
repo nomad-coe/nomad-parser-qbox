@@ -76,7 +76,8 @@ object JsonUtils {
         i0 = i1 + 1
         i1 = s.indexOf('\n', i0)
       }
-      writer.write(s, i0, i2 - i0)
+      if (i0 < i2)
+        writer.write(s, i0, i2 - i0)
     }
   }
 
