@@ -387,6 +387,7 @@ final case class CloseSection(
   override def toJValue: JValue ={
     import org.json4s.JsonDSL._;
     ("event" -> eventName) ~
+    ("metaName" -> metaName) ~
     ("gIndex" -> gIndex)
   }
 
