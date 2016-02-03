@@ -218,7 +218,7 @@
                     childY = 0;
 
                 columnX = eleX + 80;
-                var bracketContainer =  { group: "nodes", data: { id: $scope.metaInfoName + " direct children" }, position: {x:eleX + 60, y:bBox.y2 + 50}, style:{width:0,height:0} };
+                var bracketContainer =  { group: "nodes", classes: "DC", data: { id: $scope.metaInfoName + " direct children:" }, position: {x:eleX + 160, y:bBox.y2 + 50}, style:{width:0,height:0} };
                 ancestorGraph.add(bracketContainer);
                 for (var i = 0; i < allParentsData.children.length; i++)
                 {

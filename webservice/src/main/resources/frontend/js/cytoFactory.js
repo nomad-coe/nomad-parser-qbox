@@ -63,6 +63,10 @@
                          .css({
                            'content': ''
                           })
+                        .selector('.DC')
+                         .css({
+                           'font-weight':'bold'
+                          })
                         .selector('edge')
                         .css({
                           'width': 4,
