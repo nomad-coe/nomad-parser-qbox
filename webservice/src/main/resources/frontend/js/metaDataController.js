@@ -35,14 +35,32 @@
 
         // Get versions
         dataService.asyncVersionList().then(function(versions) {
-            $scope.versions =  angular.fromJson(versions)['versions'];
-            $scope.versions.sort();
+            $scope.versions = sortVersion( angular.fromJson(versions)['versions']);
+//            $scope.versions.sort();
             //Check if requested version exists; otherwise redirect to common
             if($scope.versions.indexOf($scope.version) == -1){
                 $scope.version = 'common';
                 $location.path('/'+$scope.version+'/'+$scope.metaInfoName);
             }
         });
+        var sortVersion = function(ver){
+            var nVer1 = {};
+            var nVer2 = [];
+            var res = [];
+            for(var i = 0; i < ver.length; i++){
+                nVer2.push($scope.mappedNames.version(ver[i]));
+                nVer1[$scope.mappedNames.version(ver[i])] = ver[i];
+            }
+            nVer2.sort();
+            for(i = 0; i < nVer2.length; i++){
+                res.push(nVer1[nVer2[i]])
+            }
+            if(res.indexOf("common") > -1){
+                res.splice(res.indexOf("common"),1);
+                res.splice(1, 0, "common");
+            }
+            return res;
+        };
 
         //Get version specific data
         dataService.asyncMetaDataList($scope.version).then(function(metaData) {
@@ -79,7 +97,7 @@
 //                    $scope.cyCSS.height = "700px";
 //                }
                 ancestorGraph( allParentsData ).then(function( ancestorCy ){
-                    drawChildrenAsList(allParentsData);
+//                    drawChildrenAsList(allParentsData);
                     drawChildrenAsListBelowTheRoot(allParentsData);
                     ancestorGraph.resize();
                     ancestorGraph.reset();
@@ -194,12 +212,14 @@
                 var bBox = eles.boundingBox(options);
                 console.log(eles)
                 console.log(bBox)
-                var eleX = bBox.x1,  // move the node to make space for other children
-                    eleY = bBox.y2 + (maxRow * cMinY) /2 + 40;
+                var eleX = (bBox.x1 + bBox.x2)/2 - 100*allParentsData.children.length/maxRow,  // move the node to make space for other children
+                    eleY = bBox.y2 + (maxRow * cMinY) /2 + 100;
                 var childX = 0,
                     childY = 0;
-                columnX = eleX + 20;
 
+                columnX = eleX + 80;
+                var bracketContainer =  { group: "nodes", data: { id: $scope.metaInfoName + " direct children" }, position: {x:eleX + 60, y:bBox.y2 + 50}, style:{width:0,height:0} };
+                ancestorGraph.add(bracketContainer);
                 for (var i = 0; i < allParentsData.children.length; i++)
                 {
                     if(currRow >= maxRow) {
@@ -216,10 +236,6 @@
                     }
                     allParentsData.children[i].style["text-halign"] ="right";
                     allParentsData.children[i].style["text-valign"] ="center";
-
-                    //For testing
-                    allParentsData.children[i].data.id = allParentsData.children[i].data.id + "2";
-
                     ancestorGraph.add(allParentsData.children[i])
 
                     if(allParentsData.children[i].data.id.length > colMaxWidth){

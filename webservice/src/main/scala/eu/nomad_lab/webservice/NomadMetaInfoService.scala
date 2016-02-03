@@ -658,7 +658,6 @@ table
         val eMap = Map[(String, String), String]() // (source, target) -> class
         var (nodesMap, edgesMap) = metaInfoAncestors(v, toDo, known, nMap, eMap) //Traverse the graph using tail recursion
         var children: List[JValue] = Nil
-        val prefixChildren = "Children of "
         //Add all ancestors of the current node
 
         val currNode = nodesMap(name); // Change the shape of the current node. This can be handled by the metaInfoAncestors but then we need

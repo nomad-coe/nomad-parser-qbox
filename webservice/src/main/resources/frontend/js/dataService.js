@@ -17,21 +17,9 @@ dataModule.factory('dataService', function($http) {
             'type_abstract_document_content':'Abstract Type'
         }
         var versions = {
-            "castep":  "castep + common",
             "all": "all",
-            "sample_parser":  "sample_parser + common",
-            "fhi_aims":  "fhi_aims + common",
-            "gpaw":  "gpaw + common",
-            "quantum_espresso":  "quantum_espresso + common",
             "last": "last",
-            "exciting":  "exciting + common",
-            "lammps":  "lammps + common",
-            "cp2k":  "cp2k + common",
-            "turbomole":  "turbomole + common",
-            "common":  "only common",
-            "gaussian":  "gaussian + common",
-            "octopus":  "octopus + common",
-			"dl_poly": "dl_poly + common"
+            "common": "common only"
         }
         return {
             'types': types,
@@ -46,7 +34,7 @@ dataModule.factory('dataService', function($http) {
             'version': function(t) {
                 var res = versions[t]
                 if (res === undefined)
-                    return t
+                    return "common + " + t
                 else
                     return res
             }

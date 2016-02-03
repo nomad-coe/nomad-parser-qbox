@@ -1,9 +1,8 @@
 (function() {
     'use strict';
     // to set a module
-    angular.module('queryFilter', ['ngSanitize', 'ui.select','angular.filter','metaDataApp.metaFilter','metaDataApp.dataModule','mathJaxDirective'])
+    angular.module('queryFilter', [])
     .filter('searchAndQueryFilter', searchAndQueryFilter);
-
     function searchAndQueryFilter() {
         return function (metaItems, searchFilter, sectionFilter, allParentsFilter, metaInfoTypeFilter, derivedFilter ) {
             if(!searchFilter && !sectionFilter && !allParentsFilter && !metaInfoTypeFilter && !derivedFilter ) {
