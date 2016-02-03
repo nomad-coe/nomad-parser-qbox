@@ -70,102 +70,34 @@
                 $location.path('/'+$scope.version+'/section_single_configuration_calculation');
             }
             else{
-                dataService.asyncMetaInfoAncestorChildrenGraph($scope.version,$scope.metaInfoName ).then(function(allparentsData) {
-
+                dataService.asyncMetaInfoAncestorChildrenGraph($scope.version,$scope.metaInfoName ).then(function(allParentsData) {
                 //Change the height of the element depending upon the number of children
-                if( allparentsData.children.length < 10) {
+                if( allParentsData.children.length < 10) {
                     $scope.cyCSS.height = "450px";
                 }
-//                else if( allparentsData.children.length > 20 ) {
+//                else if( allParentsData.children.length > 20 ) {
 //                    $scope.cyCSS.height = "700px";
 //                }
-
-                    ancestorGraph( allparentsData ).then(function( ancestorCy ){
-                        cy = ancestorCy;
-                        $scope.cyLoaded = true;
-                        drawChildrenAsList(allparentsData);
-                        ancestorGraph.resize();
-                        ancestorGraph.reset();
-                        ancestorGraph.reset(); //Double call magically solves some formatting problems
-                        ancestorGraph.fit();
-                        //Nothing works if panning and zoom is disabled; since resize and fit needs to pan and zoom :P
-                        //Note: ancestorGraph functions needs pan and zoom to be enabled to operate keep that in mind
-                        ancestorGraph.zoomPanToggle( $scope.DAG.zoom); //Override the default settings
-                    });
+                ancestorGraph( allParentsData ).then(function( ancestorCy ){
+                    drawChildrenAsList(allParentsData);
+                    drawChildrenAsListBelowTheRoot(allParentsData);
+                    ancestorGraph.resize();
+                    ancestorGraph.reset();
+                    ancestorGraph.reset(); //Double call magically solves some formatting problems
+                    ancestorGraph.fit();
+                    //Nothing works if panning and zoom is disabled; since resize and fit needs to pan and zoom :P
+                    //Note: ancestorGraph functions needs pan and zoom to be enabled to operate keep that in mind
+                    ancestorGraph.zoomPanToggle( $scope.DAG.zoom); //Override the default settings
+                });
                 });
             }
         }
 
        //Cytoscape related declerations
 
-        $scope.cyLoaded = false; //Not used at the moment
-        var cy;
         $scope.DAG = ancestorGraph.zoomButtonSettings;
 
-        function toDegrees (angle) {
-          return angle * (180 / Math.PI);
-        }
-
-        function toRadians (angle) {
-          return angle * (Math.PI / 180);
-        }
-
-        var drawChildrenCircle = function(allparentsData) {
-
-            var count  = 0;
-            if( allparentsData.children.length > 0 ) {
-                var child = ancestorGraph.getElementById("Children of "+$scope.metaInfoName);
-                var parent = ancestorGraph.getElementById($scope.metaInfoName);
-                var radius =  Math.max(child.position().x - parent.position().x,child.position().y - parent.position().y )
-                var radiusFactor = 1,
-                jumpFactor = 1;
-                var childX = 0,
-                    childY = 0;
-
-                var jump = 0,
-                    jumpAdd =10,
-                    sign = 1;
-                var angle =jump;
-
-                var rnd = { group: "nodes", data: { id: "RamDom Node" }, position: {x:parent.position().x, y:parent.position().y+50 }, style:{width:2,height:2} };
-
-                ancestorGraph.add(rnd);
-
-                radiusFactor +=  0.6 * Math.floor(allparentsData.children.length/12);
-                jumpAdd /= radiusFactor;
-                for (var i = 0; i < allparentsData.children.length; i++)
-                {
-                    childX = parent.position().x + radiusFactor * radius * Math.cos(toRadians(angle))
-                    childY = parent.position().y + radiusFactor * radius * Math.sin(toRadians(angle))
-                    allparentsData.children[i].position = {
-                        x: childX,
-                        y: childY
-                    }
-                    jump += jumpAdd;
-                    sign*=-1;
-                    angle += jump *sign  ;
-                    allparentsData.children[i].style["text-halign"] ="right";
-                    if(angle > 60)
-                        allparentsData.children[i].style["text-valign"] ="top";
-                    else if (angle < -60)
-                        allparentsData.children[i].style["text-valign"] ="bottom";
-                    else
-                        allparentsData.children[i].style["text-valign"] ="center";
-
-                    var edgeToParent = { group: "edges", data: { id: allparentsData.children[i].data.id + "__" + $scope.metaInfoName, source: allparentsData.children[i].data.id, target: $scope.metaInfoName } }
-                    ancestorGraph.add(allparentsData.children[i])
-                    ancestorGraph.add(edgeToParent)
-                }
-            }
-            ancestorGraph.fit();
-            ancestorGraph.resize();
-            //Nothing works if panning and zoom is disabled; since resize and fit needs to pan and zoom :P
-            //Note: ancestorGraph functions needs pan and zoom to be enabled to operate keep that in mind
-            ancestorGraph.zoomPanToggle( $scope.DAG.zoom); //Override the default settings
-        }
-
-
-        var drawChildrenAsList = function(allparentsData) {
+        var drawChildrenAsList = function(allParentsData) {
             var cMinX = 0,
                 cMinY = 35,
                 currCol = 0,
@@ -173,25 +105,25 @@
                 maxRow = 20, //max rows in a coloumn
                 columnX = 0;
             var colMaxWidth = 0;
-            if( allparentsData.children.length > 0 ) {
-                var ele = ancestorGraph.getElementById($scope.metaInfoName);
-                var eleX = ele.position().x + 250, // move the node to make space for other children
-                    eleY = ele.position().y;
-
-                var numberDesc =  ele.predecessors();
-
-                if(numberDesc.length > 0)
-                    eleX += 400;
-                var childX = 0,
-                    childY = 0;
-                if(allparentsData.children.length < maxRow){
-                    maxRow =  allparentsData.children.length;
+            if( allParentsData.children.length > 0 ) {
+                if(allParentsData.children.length < maxRow){
+                    maxRow =  allParentsData.children.length;
                 }
                 else {
                 //Reset the maxRow for max fit in each row;
-                var nc = Math.ceil(allparentsData.children.length / maxRow);
-                maxRow = Math.ceil(allparentsData.children.length / nc)
+                var nc = Math.ceil(allParentsData.children.length / maxRow);
+                maxRow = Math.ceil(allParentsData.children.length / nc)
                 }
+
+                var eles = ancestorGraph.elements("*");
+                var options = {includeNodes: true, includeEdges: true, includeLabels:true };
+                var bBox = eles.boundingBox(options);
+                console.log(eles)
+                console.log(bBox)
+                var eleX = bBox.x2 + 40, // move the node to make space for other children
+                    eleY = (bBox.y1 + bBox.y2)/2 // - (maxRow*cMinY)/2;
+                var childX = 0,
+                    childY = 0;
                 columnX = eleX + 20;
 
                 var bracketContainer =  [
@@ -209,7 +141,7 @@
                                        ];
 
                 ancestorGraph.add(bracketContainer);
-                for (var i = 0; i < allparentsData.children.length; i++)
+                for (var i = 0; i < allParentsData.children.length; i++)
                 {
                     if(currRow >= maxRow) {
                         currRow = 0, currCol += 1;
@@ -219,16 +151,79 @@
                     }
                     childX = columnX;
                     childY = eleY - ((maxRow -1 )/2) *cMinY + currRow * cMinY;
-                    allparentsData.children[i].position = {
+
+                    console.log(childX + " " +childY );
+
+
+                    allParentsData.children[i].position = {
                         x: childX,
                         y: childY
                     }
-                    allparentsData.children[i].style["text-halign"] ="right";
-                    allparentsData.children[i].style["text-valign"] ="center";
-                    ancestorGraph.add(allparentsData.children[i])
+                    allParentsData.children[i].style["text-halign"] ="right";
+                    allParentsData.children[i].style["text-valign"] ="center";
+                    ancestorGraph.add(allParentsData.children[i])
 
-                    if(allparentsData.children[i].data.id.length > colMaxWidth){
-                        colMaxWidth = allparentsData.children[i].data.id.length;
+                    if(allParentsData.children[i].data.id.length > colMaxWidth){
+                        colMaxWidth = allParentsData.children[i].data.id.length;
+                    }
+                    currRow += 1;
+                }
+            }
+        }
+        var drawChildrenAsListBelowTheRoot = function(allParentsData) {
+            var cMinX = 0,
+                cMinY = 35,
+                currCol = 0,
+                currRow = 0,
+                maxRow = 10, //max rows in a coloumn
+                columnX = 0;
+            var colMaxWidth = 0;
+
+            if( allParentsData.children.length > 0 ) {
+                if(allParentsData.children.length < maxRow){
+                    maxRow =  allParentsData.children.length;
+                }
+                else {
+                //Reset the maxRow for max fit in each row;
+                var nc = Math.ceil(allParentsData.children.length / maxRow);
+                maxRow = Math.ceil(allParentsData.children.length / nc)
+                }
+
+                var eles = ancestorGraph.elements("*");
+                var options = {includeNodes: true, includeEdges: true, includeLabels:true };
+                var bBox = eles.boundingBox(options);
+                console.log(eles)
+                console.log(bBox)
+                var eleX = bBox.x1,  // move the node to make space for other children
+                    eleY = bBox.y2 + (maxRow * cMinY) /2 + 40;
+                var childX = 0,
+                    childY = 0;
+                columnX = eleX + 20;
+
+                for (var i = 0; i < allParentsData.children.length; i++)
+                {
+                    if(currRow >= maxRow) {
+                        currRow = 0, currCol += 1;
+                        cMinX = colMaxWidth * 10;
+                        columnX +=  cMinX ;
+                        colMaxWidth = 0;
+                    }
+                    childX = columnX;
+                    childY = eleY - ((maxRow -1 )/2) *cMinY + currRow * cMinY;
+                    allParentsData.children[i].position = {
+                        x: childX,
+                        y: childY
+                    }
+                    allParentsData.children[i].style["text-halign"] ="right";
+                    allParentsData.children[i].style["text-valign"] ="center";
+
+                    //For testing
+                    allParentsData.children[i].data.id = allParentsData.children[i].data.id + "2";
+
+                    ancestorGraph.add(allParentsData.children[i])
+
+                    if(allParentsData.children[i].data.id.length > colMaxWidth){
+                        colMaxWidth = allParentsData.children[i].data.id.length;
                     }
                     currRow += 1;
                 }

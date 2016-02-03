@@ -16,6 +16,8 @@
                     layout: {
                         name: 'dagre',
                         rankDir: 'RL'
+//                        height: 50, // height of layout area (overrides container height)
+//                        width: 70 // width of layout area (overrides container width)
                     },
                     elements: elem,
                     ready: function(){
@@ -36,7 +38,7 @@
                     },
 
                     //Initial viewport state;
-                    zoom: 1,
+                    zoom: 0.3,
 //                    pan: { x: 0, y: 0 },,
 
                     //interaction options
@@ -44,7 +46,7 @@
                     maxZoom: 2,
                     boxSelectionEnabled: true,
                     autounselectify: true,
-                    zoomingEnabled: true, //Always keep true at initialization; Call f
+                    zoomingEnabled: true, //Always keep true at initialization;
                     panningEnabled: true,
                     style: cytoscape.stylesheet()
                         .selector('node')
@@ -98,6 +100,14 @@
             listeners.push(fn);
         }
 
+        ancestorGraph.elements = function(selector){
+            return cy.elements(selector);
+        }
+
+        ancestorGraph.filter = function(selector){
+            return cy.filter(selector);
+        }
+
         ancestorGraph.resize = function(){
             if(cy.zoomingEnabled() && cy.panningEnabled()) {
                 cy.resize();
@@ -114,7 +124,6 @@
         }
 
         ancestorGraph.fit = function(){
-//            panZoomIndependent(cy.fit);
             if(cy.zoomingEnabled() && cy.panningEnabled()) {
                 cy.fit();
             }
@@ -144,6 +153,7 @@
                 cy.panningEnabled(tempPan);
             }
         }
+
         function panZoomIndependent (otherFunc){
             if(cy.zoomingEnabled() && cy.panningEnabled()) {
                 otherFunc();
@@ -154,6 +164,7 @@
                 cy.zoomingEnabled(true);
                 cy.panningEnabled(true);
                 otherFunc();
+                cy.fit();
                 cy.zoomingEnabled(tempZoom);
                 cy.panningEnabled(tempPan);
             }
