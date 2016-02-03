@@ -535,11 +535,13 @@ table
         throw new MetaInfoEnv.DependsOnUnknownNameException(v.name, known.toString, now)
       val metaInfo = nowR.get
       metaInfo.superNames.foreach { superName: String =>
-        if(!edgesMap.contains(Tuple2(metaInfo.name,superName))) //This is needed to prevent overriding of the "Self_Reference"
-          edgesMap += (Tuple2(metaInfo.name,superName) -> "casual")
-        if (!known(superName)) {
-          toDo.append(superName)
-          known += superName
+        if (v.metaInfoRecordForName(superName).get.kindStr != "type_abstract_document_content") {
+          if(!edgesMap.contains(Tuple2(metaInfo.name,superName))) //This is needed to prevent overriding of the "Self_Reference"
+            edgesMap += (Tuple2(metaInfo.name,superName) -> "casual")
+          if (!known(superName)) {
+            toDo.append(superName)
+            known += superName
+          }
         }
       }
 
@@ -666,17 +668,38 @@ table
       if(!allMetaInfo.contains(name))
         JNull
       else {
-        val known = mutable.Set[String](name)
-        val toDo = mutable.ListBuffer[String](name)
-        val nMap = Map[String, (String, String)]() // name -> (shape, class(for color etc))
-        val eMap = Map[(String, String), String]() // (source, target) -> class
-        var (nodesMap, edgesMap) = metaInfoAncestors(v, toDo, known, nMap, eMap) //Traverse the graph using tail recursion
+        var known = mutable.Set[String]()
+        val toDo = mutable.ListBuffer[String]()
+        var nMap = Map[String, (String, String)]() // name -> (shape, class(for color etc))
+        var eMap = Map[(String, String), String]() // (source, target) -> class
+
+        //Handle the current node separetely outside of the recursion
+        val metaInfo = v.metaInfoRecordForName(name).get
+        val nodeClass = nodeClassByKindStr(metaInfo.kindStr)
+        nMap += (metaInfo.name -> Tuple2("star",nodeClass))
+        metaInfo.superNames.foreach { superName: String =>
+          if(!eMap.contains(Tuple2(metaInfo.name,superName))) //This is needed to prevent overriding of the "Self_Reference"
+            eMap += (Tuple2(metaInfo.name,superName) -> "casual")
+          if (!known(superName)) {
+            toDo.append(superName)
+            known += superName
+          }
+        }
+        known += name
+        //Add reference
+        val (flagRef, newNodes, refEdges) = getRefenceGraph(v, metaInfo.name)
+        if(flagRef) {
+          eMap ++= refEdges
+          for(nNode <- newNodes){
+            if (!known(nNode)) {
+              toDo.append(nNode)
+              known += nNode
+            }
+          }
+        }
+        val (nodesMap, edgesMap) = metaInfoAncestors(v, toDo, known, nMap, eMap) //Traverse the graph using tail recursion
         var children: List[JValue] = Nil
         //Add all ancestors of the current node
-
-        val currNode = nodesMap(name); // Change the shape of the current node. This can be handled by the metaInfoAncestors but then we need
-        // to add another variable to it then
-        nodesMap += (name -> Tuple2("star", currNode._2))
 
         val (nodes, edges) = createGraphJson(nodesMap,edgesMap)
 
