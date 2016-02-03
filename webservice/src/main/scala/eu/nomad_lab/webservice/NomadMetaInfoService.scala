@@ -467,6 +467,15 @@ table
   }
 
 
+  def anySuperSection(v: MetaInfoEnv,superNames: Seq[String]): Boolean = {
+    var flag = false
+      for(superName <- superNames ){
+        if(v.metaInfoRecordForName(superName).get.kindStr == "type_section")
+          flag = true
+      }
+    flag
+  }
+
   //TODO: Use DP
   // Add node indirect children, to the to do list
   // Add nodes referencedSections to the to do list
@@ -486,22 +495,27 @@ table
     }
     for(item <- indirectChildrenBySection) {
       val metaInfoItem = v.metaInfoRecordForName(item).get
-      metaInfoItem.referencedSections match {
-        case Some(sects) =>
-          toAdd = toAdd + metaInfoItem.name // To create this separate edge to the refereced section
-          toAdd = toAdd ++ sects
-          for(sec <- sects){
-            if(metaInfoItem.superNames.contains(sec)){
-//              logger.info("Self reference sects: " + metaInfoItem.name)
-              edgesMap = edgesMap + (Tuple2(metaInfoItem.name,sec) -> "Self_Reference")
+      // At this point check if any of the supername is actually a section; otherwise skip adding it
+      if(anySuperSection(v,metaInfoItem.superNames))
+      {
+        metaInfoItem.referencedSections match {
+          case Some(sects) =>
+            toAdd = toAdd + metaInfoItem.name // To create this separate edge to the refereced section
+            toAdd = toAdd ++ sects
+
+            for(sec <- sects){
+              if(metaInfoItem.superNames.contains(sec)){
+  //              logger.info("Self reference sects: " + metaInfoItem.name)
+                edgesMap = edgesMap + (Tuple2(metaInfoItem.name,sec) -> "Self_Reference")
+              }
+              else{
+  //              logger.info("Not a Self reference sects: " + metaInfoItem.name)
+                edgesMap = edgesMap + (Tuple2(metaInfoItem.name,sec) -> "reference")
+              }
             }
-            else{
-//              logger.info("Not a Self reference sects: " + metaInfoItem.name)
-              edgesMap = edgesMap + (Tuple2(metaInfoItem.name,sec) -> "reference")
-            }
-          }
-          flag = true // To create edge to the indirect children (in case)
-        case _ =>
+            flag = true // To add these edges and nodes related to the indirect children
+          case _ =>
+        }
       }
     }
     Tuple3(flag, toAdd, edgesMap)
