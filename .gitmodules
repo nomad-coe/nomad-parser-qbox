@@ -40,3 +40,6 @@
 [submodule "parsers/dl-poly"]
 	path = parsers/dl-poly
 	url = ../parser-dl-poly.git
+[submodule "parsers/mopac"]
+	path = parsers/mopac
+	url = ../parser-mopac.git
