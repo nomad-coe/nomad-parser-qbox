@@ -201,6 +201,24 @@ lazy val dlPoly = (project in file("parsers/dl-poly")).
   ).
   settings(Revolver.settings: _*)
 
+lazy val exciting = (project in file("parsers/exciting")).
+  dependsOn(core).
+  settings(commonSettings: _*).
+  settings(
+    libraryDependencies ++= commonLibs,
+    name := "exciting"
+  ).
+  settings(Revolver.settings: _*)
+
+lazy val gaussian = (project in file("parsers/gaussian")).
+  dependsOn(core).
+  settings(commonSettings: _*).
+  settings(
+    libraryDependencies ++= commonLibs,
+    name := "gaussian"
+  ).
+  settings(Revolver.settings: _*)
+
 lazy val base = (project in file("base")).
   dependsOn(core).
   dependsOn(fhiAims).
