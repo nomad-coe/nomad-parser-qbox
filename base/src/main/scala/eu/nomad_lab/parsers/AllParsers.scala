@@ -11,8 +11,8 @@ object AllParsers {
     val parserList: Seq[ParserGenerator] = Seq(
       FhiAimsParser,
       CastepParser,
-      Exciting,
-      Gaussian,
+      ExcitingParser,
+      GaussianParser,
       DlPolyParser
 
     )

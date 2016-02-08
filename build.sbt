@@ -224,6 +224,8 @@ lazy val base = (project in file("base")).
   dependsOn(fhiAims).
   dependsOn(castep).
   dependsOn(dlPoly).
+  dependsOn(gaussian).
+  dependsOn(exciting).
   settings(commonSettings: _*).
   settings(
     libraryDependencies ++= commonLibs,
