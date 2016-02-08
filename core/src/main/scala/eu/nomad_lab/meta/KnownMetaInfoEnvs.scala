@@ -16,6 +16,7 @@ object KnownMetaInfoEnvs extends MetaInfoCollection with StrictLogging {
     try {
       val classLoader: ClassLoader = getClass().getClassLoader();
       val filePath = Paths.get(classLoader.getResource(metaPath).getFile())
+//      logger.info("Path is :"+filePath);
       val baseName = filePath.getName(filePath.getNameCount()-1).toString()
       val vName = if (!versionName.isEmpty)
         versionName
@@ -25,8 +26,12 @@ object KnownMetaInfoEnvs extends MetaInfoCollection with StrictLogging {
         baseName.dropRight(5)
       else
         baseName
-      val resolver = new RelativeDependencyResolver
-      val mainEnv = SimpleMetaInfoEnv.fromFilePath(filePath.toString(), resolver)
+      val resolver = new ResourceDependencyResolver(classLoader)
+      val mainEnv = SimpleMetaInfoEnv.fromInputStream(classLoader.getResourceAsStream(metaPath), metaPath,
+        JObject(
+          ("path" -> JString(metaPath))
+            :: Nil),
+        resolver)
       val desc = if (!description.isEmpty)
         description
       else

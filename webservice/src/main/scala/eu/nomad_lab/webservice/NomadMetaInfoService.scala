@@ -416,37 +416,6 @@ table
   }
 
 
-  /** Create MAP containing information graph information, for the "name" meta tag. Contains only information about ancestors
-    * Note: Does not look for referenced section
-    */
-  def metaInfoAncestorGraphMap (version: String, name: String): Map[String, Set[(String, String)]] =
-  {
-    val versions = metaInfoCollection.versionsWithName(version)
-    if (!versions.hasNext)
-      Map()
-    else {
-      val v = versions.next
-      var nodes: Set[(String, String)] = Set() // Can map
-//      var nodes: Set[String] = Set() // Can map
-      var edges: Set[(String, String)] = Set()
-
-      v.metaInfoRecordForNameWithAllSuper(name, selfGid = true, superGids = false).foreach {
-        (metaInfo: MetaInfoRecord) =>
-          nodes = nodes + Tuple2(metaInfo.name, metaInfo.name)
-//          nodes = nodes +metaInfo.name
-          val rootsByKind = v.firstAncestorsByType(metaInfo.name)
-          rootsByKind.foreach {
-            case (kindNow, (roots, _)) =>
-              if (metaInfo.name == name || metaInfo.kindStr == kindNow) {
-                roots.foreach { (root: String) =>
-                  edges = edges + Tuple2(metaInfo.name, root)
-                }
-              }
-          }
-      }
-      Map( "nodes" -> nodes, "edges" -> edges )
-    }
-  }
 
   /** Get node class depending upon its kind string
     *
@@ -476,52 +445,8 @@ table
     flag
   }
 
-  //TODO: Use DP
-  // Add node indirect children, to the to do list
-  // Add nodes referencedSections to the to do list
-  // Add edges to from this node to toDo List
-  def getRefenceGraph(v: MetaInfoEnv, name: String):(Boolean, Set[String], Map[(String, String), String]) = {
-    val allItems = v.allNames.toList
-    var indirectChildrenBySection: Set[String] = collection.immutable.Set[String]()
-    var toAdd: Set[String] = collection.immutable.Set[String]()
-    var edgesMap = Map[(String, String),String]()
-    var flag = false
-    for (i <- allItems.indices) {
-      //Search can be limited to type of ref items
-      v.firstAncestorsByType(allItems(i)).get("type_section") match {
-        case Some((rootSections, _)) => if (rootSections.contains(name))  indirectChildrenBySection=indirectChildrenBySection + allItems(i)
-        case _ =>
-      }
-    }
-    for(item <- indirectChildrenBySection) {
-      val metaInfoItem = v.metaInfoRecordForName(item).get
-      // At this point check if any of the supername is actually a section; otherwise skip adding it
-      if(anySuperSection(v,metaInfoItem.superNames))
-      {
-        metaInfoItem.referencedSections match {
-          case Some(sects) =>
-            toAdd = toAdd + metaInfoItem.name // To create this separate edge to the refereced section
-            toAdd = toAdd ++ sects
 
-            for(sec <- sects){
-              if(metaInfoItem.superNames.contains(sec)){
-  //              logger.info("Self reference sects: " + metaInfoItem.name)
-                edgesMap = edgesMap + (Tuple2(metaInfoItem.name,sec) -> "Self_Reference")
-              }
-              else{
-  //              logger.info("Not a Self reference sects: " + metaInfoItem.name)
-                edgesMap = edgesMap + (Tuple2(metaInfoItem.name,sec) -> "reference")
-              }
-            }
-            flag = true // To add these edges and nodes related to the indirect children
-          case _ =>
-        }
-      }
-    }
-    Tuple3(flag, toAdd, edgesMap)
-  }
-
-  @tailrec final def metaInfoAncestors(v: MetaInfoEnv, toDo: mutable.ListBuffer[String], known: mutable.Set[String], nMap:Map[String,(String, String)], eMap:Map[(String, String),String]): (Map[String,(String, String)],Map[(String, String),String]) = {
+  @tailrec final def metaInfoAncestors(v: MetaInfoEnv, sourceRef:Map[String,Map[String,Option[Seq[String]]]], toDo: mutable.Set[String], nMap:Map[String,(String, String,Boolean)], eMap:Map[(String, String),String]): (Map[String,(String, String,Boolean)],Map[(String, String),String]) = {
     var nodesMap = nMap  // name -> (shape, class(for color etc))
     var edgesMap = eMap // (source, target) -> class
     // Add element and its parents
@@ -529,54 +454,83 @@ table
       Tuple2(nodesMap, edgesMap)
     else {
       val now = toDo.head
-      toDo.trimStart(1)
+      toDo.remove(now)
       val nowR = v.metaInfoRecordForName(now)
       if (nowR.isEmpty)
-        throw new MetaInfoEnv.DependsOnUnknownNameException(v.name, known.toString, now)
+        throw new MetaInfoEnv.DependsOnUnknownNameException(v.name, nMap.toString, now)
       val metaInfo = nowR.get
-      metaInfo.superNames.foreach { superName: String =>
-        if (v.metaInfoRecordForName(superName).get.kindStr != "type_abstract_document_content") {
-          if(!edgesMap.contains(Tuple2(metaInfo.name,superName))) //This is needed to prevent overriding of the "Self_Reference"
-            edgesMap += (Tuple2(metaInfo.name,superName) -> "casual")
-          if (!known(superName)) {
-            toDo.append(superName)
-            known += superName
+      metaInfo.superNames.foreach { s: String =>
+        val su = v.metaInfoRecordForName(s)
+        if (su.isEmpty)
+          throw new MetaInfoEnv.DependsOnUnknownNameException(v.name, nMap.toString, s)
+        val superName = su.get
+//        logger.info("metaInfo: "+metaInfo.name + " SuperName: "+ superName.name  +" kindStr: "+ superName.kindStr)
+        if (superName.kindStr == metaInfo.kindStr) {
+          if(!edgesMap.contains(Tuple2(metaInfo.name,superName.name))) //This is needed to prevent overriding of the "Self_Reference"
+            edgesMap += (Tuple2(metaInfo.name,superName.name) -> "casual")
+          if (!nodesMap.contains(superName.name)) {
+            nodesMap += (superName.name -> Tuple3("circle",nodeClassByKindStr(superName.kindStr),false))
+            toDo += superName.name
           }
+          else if(nodesMap(superName.name)._3) // If set as a ghost node then override, since it is in the parent now
+            nodesMap += (superName.name -> Tuple3(nodesMap(superName.name)._1,nodeClassByKindStr(superName.kindStr),false))
+            toDo += superName.name //Still add to do as it was added by the ref graph
         }
       }
 
-      val nodeShape = "circle" // Take care of it separately also
-      val nodeClass = nodeClassByKindStr(metaInfo.kindStr)
-      nodesMap += (metaInfo.name -> Tuple2(nodeShape,nodeClass))
-
-      //Add reference
-      val (flagRef, newNodes, refEdges) = getRefenceGraph(v, metaInfo.name)
-      if(flagRef) {
-        edgesMap ++= refEdges
-        for(nNode <- newNodes){
-          if (!known(nNode)) {
-            toDo.append(nNode)
-            known += nNode
+      //Handle its references
+      sourceRef.get(metaInfo.name) match {
+        case Some(refs) =>
+          for ((thr,referencedSection) <- refs) {
+            referencedSection match {
+              case Some(refSections) => //Set[String]
+                for (t <- refSections) {
+                  val target = v.metaInfoRecordForName(t).get
+                  //Add edges
+                  if (target.name == metaInfo.name)
+                    edgesMap += (thr, target.name) -> "Self_Reference"
+                  else {
+                    edgesMap += (thr, target.name) -> "reference"
+                    edgesMap += (thr, metaInfo.name) -> "casual"
+                  }
+                  //Add nodes
+                  if (!nMap.contains(target.name)) {
+                    //Add the target if not exists as a ghost node
+                    //In case requirement change add this node to :to Do: List
+                    nodesMap += target.name -> Tuple3("circle", nodeClassByKindStr(target.kindStr), true) // This can through an error if v.metaInfoRecordForName(target).get is empyth
+                  }
+                  if (!nMap.contains(thr)) {
+                    //Add the connecting node  to the reference
+                    //In case requirement change add this node to to Do: List
+                    nodesMap += thr -> Tuple3("circle", nodeClassByKindStr(v.metaInfoRecordForName(thr).get.kindStr), false) // This can not through an error as this check has been made while adding the "thr" node to all ref
+                  }
+                }
+              case _ =>
+            }
           }
-        }
+        case _ =>
       }
-      metaInfoAncestors(v, toDo, known, nodesMap, edgesMap)
+      metaInfoAncestors(v, sourceRef, toDo, nodesMap, edgesMap)
     }
   }
 
-  def createGraphJson(nodesMap: Map[String, (String, String)], edgesMap: Map[(String, String), String]): (List[JValue], List[JValue])  =
+  def createGraphJson(nodesMap: Map[String, (String, String,Boolean)], edgesMap: Map[(String, String), String]): (List[JValue], List[JValue])  =
   {
     var nodes: List[JValue] = Nil
     var edges: List[JValue] = Nil
     var selfRefEdges = Map[(String, String), String]()
     nodesMap foreach { case (key, value) =>
+      val nodeOpacity = if ( value._3 ) 0.75 else 1.0 //if ghost node is true; decrease opacity
       nodes = JObject(
         ("data" -> JObject(
           ("id" -> JString(key.mkString)) :: Nil)) ::
+//        ("classes" -> JObject(
+//          ("id" -> JString(nodeClass)) :: Nil)) ::
           ("style" -> JObject(
             ("background-color" -> JString(value._2)) ::
-              ("shape" -> JString(value._1))
-              :: Nil)) :: Nil) :: nodes
+            ("opacity" -> JDouble(nodeOpacity)) ::
+            ("shape" -> JString(value._1))
+            :: Nil)) :: Nil) :: nodes
     }
     edgesMap foreach { case (key, value) =>
       if (value == "Self_Reference")
@@ -588,7 +542,7 @@ table
             ("source" -> JString(key._1)) ::
             ("target" -> JString(key._2)) ::
               Nil)) ::
-          ("classes" -> JString(value)) :: Nil) :: edges
+        ("classes" -> JString(value)) :: Nil) :: edges
     }
 
     //Add self reference edge twice;
@@ -623,26 +577,65 @@ table
         JNull
       else {
         val v = versions.next
-        val allMetaInfo = v.allNames.toList
-        val known = mutable.Set[String]()
-        val toDo = mutable.ListBuffer[String]()
-        val nMap = Map[String, (String, String)]() // name -> (shape, class(for color etc))
-        val eMap = Map[(String, String), String]() // (source, target) -> class
+        val sourceRef = findAllReference(version)
+        val toDo = mutable.Set[String]()
+        var nMap = Map[String, (String, String,Boolean)]() // name -> (shape, class(for color etc))
+        var eMap = Map[(String, String), String]() // (source, target) -> class
 
         for(i <- metaInfos ){
-          if(allMetaInfo.contains(i)){
-            known += i
-            toDo += i
+          if(v.allNames.contains(i)){
+            val metaInfo = v.metaInfoRecordForName(i).get
+            nMap += (metaInfo.name -> Tuple3("star",nodeClassByKindStr(metaInfo.kindStr),false))
+            for( (kindStr,(roots, _)) <- v.firstAncestorsByType(metaInfo.name)) {
+              for (r <- roots){
+                nMap += r -> Tuple3("circle", nodeClassByKindStr(v.metaInfoRecordForName(r).get.kindStr), false)
+                eMap += ((metaInfo.name, r) -> "casual")
+                toDo += r
+              }
+            }
+            //Handle its references
+            sourceRef.get(metaInfo.name) match {
+              case Some(refs) =>
+                for ((thr,referencedSection) <- refs) {
+                  referencedSection match {
+                    case Some(refSections) => //Set[String]
+                      for (t <- refSections) {
+                        val target = v.metaInfoRecordForName(t).get
+                        //Add edges
+                        if (target.name == metaInfo.name)
+                          eMap += (thr, target.name) -> "Self_Reference"
+                        else {
+                          eMap += (thr, target.name) -> "reference"
+                          eMap += (thr, metaInfo.name) -> "casual"
+                        }
+                        //Add nodes
+                        if (!nMap.contains(target.name)) {
+                          //Add the target if not exists as a ghost node
+                          //In case requirement change add this node to :to Do: List
+                          nMap += target.name -> Tuple3("circle", nodeClassByKindStr(target.kindStr), true) // This can through an error if v.metaInfoRecordForName(target).get is empyth
+                        }
+                        if (!nMap.contains(thr)) {
+                          //Add the connecting node  to the reference
+                          //In case requirement change add this node to to Do: List
+                          nMap += thr -> Tuple3("circle", nodeClassByKindStr(v.metaInfoRecordForName(thr).get.kindStr), false) // This can not through an error as this check has been made while adding the "thr" node to all ref
+                        }
+                      }
+                    case _ =>
+                  }
+                }
+              case _ =>
+            }
+
           }
         }
 //      Main function to calculate the graph
-        var (nodesMap, edgesMap) = metaInfoAncestors(v, toDo, known, nMap, eMap) //Traverse the graph using tail recursion
+        var (nodesMap, edgesMap) = metaInfoAncestors(v, sourceRef,toDo, nMap, eMap) //Traverse the graph using tail recursion
 
         for(i <- metaInfos){
-          if(allMetaInfo.contains(i)){
+          if(v.allNames.contains(i)){
             val currNode = nodesMap(i); // Change the shape of the current node. This can be handled by the metaInfoAncestors but then we need
             // to add another variable to it then
-            nodesMap += (i -> Tuple2("star", currNode._2))
+            nodesMap += (i -> Tuple3("star", currNode._2, false))
           }
         }
         val (nodes, edges) = createGraphJson(nodesMap,edgesMap)
@@ -655,17 +648,140 @@ table
     }
   }
 
+  /**Get all references as a map in the given version
+    *
+    *
+    */
+
+  def findAllReference(version: String):Map[String,Map[String,Option[Seq[String]]]] = {
+    val versions = metaInfoCollection.versionsWithName(version)
+    if (!versions.hasNext)
+      Map()
+    else {
+      val v = versions.next
+      var allReferences: Map[String,Map[String,Option[Seq[String]]]] = Map()
+      v.allNames foreach {
+        name => v.metaInfoRecordForName(name)  match {
+            case Some(metaInfo) =>
+              if( metaInfo.kindStr == "type_document_content" && metaInfo.dtypeStr.getOrElse("Empty dtypeStr") == "r" ){
+                v.rootAnchestorsOfType("type_section",metaInfo.name).foreach{   ancTypeSec =>
+                val internalMap = if(allReferences.contains(ancTypeSec))
+                       allReferences(ancTypeSec) + (metaInfo.name -> metaInfo.referencedSections)
+                  else
+                       Map(metaInfo.name -> metaInfo.referencedSections)
+                  allReferences = allReferences + (ancTypeSec -> internalMap)
+                }
+              }
+            case _ =>
+        }
+      }
+      allReferences
+    }
+  }
+
+
   /** Create JSON containing information graph information, for the "name" meta tag. Contains complete data including ancestors and children
     */
-  def metaInfoAncestorChildrenGraphJson (version: String, name: String): JValue =
+  def metaInfoAncestorChildrenGraphJson (version: String, name: String): JValue = {
+    val versions = metaInfoCollection.versionsWithName(version)
+    if (!versions.hasNext)
+      JNull
+    else {
+      val v = versions.next
+      v.metaInfoRecordForName(name) match {
+        case Some(metaInfo) =>
+          val toDo: mutable.Set[String] = mutable.Set()
+          val refMap = Map[String,Option[Seq[String]]]()
+          var nMap = Map[String, (String, String, Boolean)]() // name -> (shape, class(for color etc), ghost)
+          var eMap = Map[(String, String), String]() // (source, target) -> class
+          val sourceRef = findAllReference(version)
+          //Handle node and its first ancestor by type
+          //Note: The first node is handled out of the recursion for the following recursion;
+          //1. For first node all ancestor by type are added to the graph, but it is not the case for the other graph
+          //2. It has different shape (star)
+
+          nMap += (metaInfo.name -> Tuple3("star",nodeClassByKindStr(metaInfo.kindStr),false))
+          for( (kindStr,(roots, _)) <- v.firstAncestorsByType(metaInfo.name)) {
+            for (r <- roots){
+              nMap += r -> Tuple3("circle", nodeClassByKindStr(v.metaInfoRecordForName(r).get.kindStr), false)
+              eMap += ((metaInfo.name, r) -> "casual")
+              toDo += r
+            }
+          }
+          //Handle its references
+          sourceRef.get(metaInfo.name) match {
+          case Some(refs) =>
+            for ((thr,referencedSection) <- refs) {
+              referencedSection match {
+                case Some(refSections) => //Set[String]
+                  for (t <- refSections) {
+                    val target = v.metaInfoRecordForName(t).get
+                    //Add edges
+                    if (target.name == metaInfo.name)
+                      eMap += (thr, target.name) -> "Self_Reference"
+                    else {
+                      eMap += (thr, target.name) -> "reference"
+                      eMap += (thr, metaInfo.name) -> "casual"
+                    }
+                    //Add nodes
+                    if (!nMap.contains(target.name)) {
+                      //Add the target if not exists as a ghost node
+                      //In case requirement change add this node to :to Do: List
+                      nMap += target.name -> Tuple3("circle", nodeClassByKindStr(target.kindStr), true) // This can through an error if v.metaInfoRecordForName(target).get is empyth
+                    }
+                    if (!nMap.contains(thr)) {
+                      //Add the connecting node  to the reference
+                      //In case requirement change add this node to to Do: List
+                      nMap += thr -> Tuple3("circle", nodeClassByKindStr(v.metaInfoRecordForName(thr).get.kindStr), false) // This can not through an error as this check has been made while adding the "thr" node to all ref
+                    }
+                  }
+                case _ =>
+              }
+            }
+          case _ =>
+          }
+          //Recursively add all the to Do nodes to the graph
+          val (nodesMap, edgesMap) =  metaInfoAncestors(v, sourceRef, toDo, nMap, eMap)
+          val (nodes, edges) = createGraphJson(nodesMap,edgesMap)
+          ///// Direct Children related Stuff;
+          val sortedChildren = v.allDirectChildrenOf(name).toList.sortWith(_ > _)
+          var children: List[JValue] = Nil
+          for (child <- sortedChildren) {
+            if (!nodesMap.contains(child)) {
+              // Add only if the child has not been traversed
+              val metaInfo = v.metaInfoRecordForName(child).get
+              children = JObject(
+                ("data" -> JObject(
+                  ("id" -> JString(metaInfo.name)) ::
+                    Nil)) ::
+                  ("style" -> JObject(
+                    ("background-color" -> JString(nodeClassByKindStr(metaInfo.kindStr)
+                    )) :: Nil)) :: Nil) :: children
+            }
+          }
+
+          JObject(
+            ("nodes" -> JArray(nodes)) ::
+              ("edges" -> JArray(edges)) ::
+              ("children" -> JArray(children)) ::
+              Nil)
+
+        case None => JNull
+      }
+    }
+  }
+
+  /*
+        /** Create JSON containing information graph information, for the "name" meta tag. Contains complete data including ancestors and children
+    */
+  def metaInfoAncestorChildrenGraphJson2 (version: String, name: String): JValue =
   {
     val versions = metaInfoCollection.versionsWithName(version)
     if (!versions.hasNext)
       JNull
     else {
       val v = versions.next
-      val allMetaInfo = v.allNames.toList
-      if(!allMetaInfo.contains(name))
+      if(!v.allNames.contains(name))
         JNull
       else {
         var known = mutable.Set[String]()
@@ -727,7 +843,7 @@ table
       }
     }
   }
-
+*/
   def metaInfoForVersionAndNameHtml(version: String, name: String): Stream[String] = {
     val versions = metaInfoCollection.versionsWithName(version)
     if (!versions.hasNext)

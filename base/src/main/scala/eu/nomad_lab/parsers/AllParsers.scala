@@ -1,4 +1,4 @@
-package eu.nomad_lab.parsers;
+package eu.nomad_lab.parsers
 import scala.collection.breakOut
 
 object AllParsers {

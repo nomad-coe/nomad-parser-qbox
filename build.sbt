@@ -11,7 +11,7 @@ lazy val commonSettings = Seq(
   resolvers     += "netcdf releases" at "http://artifacts.unidata.ucar.edu/content/repositories/unidata-releases",
   fork in run   := true /*,
   fork in Test  := true // breaks test summary report */
-);
+)
 
 // json4s 3.3 is being finalized
 
@@ -60,13 +60,13 @@ lazy val commonLibs = {
     kafka,
     pegdown,
     scalalog) ++ log4j2
-};
+}
 
 lazy val jooqCommon = seq(jooqSettings:_*) ++ Seq(
   jooqVersion := "3.6.2",
   (codegen in JOOQ) <<= (codegen in JOOQ).dependsOn(flywayMigrate)
     //  jooqForceGen := true
-);
+)
 
 val rdbBase : Seq[(String,String)] = Seq(
   "generator.database.includes" -> ".*",
@@ -77,14 +77,14 @@ val rdbBase : Seq[(String,String)] = Seq(
 //  "generator.strategy.name" -> "qgame.jooq.DBGeneratorStrategy",
 //  "generator.name" -> "qgame.jooq.DBGenerator",
 //  "generator.database.outputSchemaToDefault" -> "true"
-);
+)
 
-lazy val rdbUrl = settingKey[String]("url to the rdb used during building");
+lazy val rdbUrl = settingKey[String]("url to the rdb used during building")
 
 lazy val flywayH2 = Seq(
   flywayUrl := rdbUrl.value,
   flywayLocations := Seq( "classpath:rdb/sql/common") //, "classpath:rdb/sql/h2")
-);
+)
 
 // jooq db description generation
 lazy val jooqH2 = Seq(
@@ -98,7 +98,7 @@ lazy val jooqH2 = Seq(
         "generator.database.inputSchema" -> "PUBLIC"
   ),
   jooqOptions ++= rdbBase
-);
+)
 
 /*lazy val h2Settings = {
   Seq( rdbUrl := {
@@ -113,7 +113,7 @@ lazy val flywayPostgres = (
   flywayLocations := Seq(
     "classpath:rdb/sql/common",
     "classpath:rdb/sql/postgres" )
-);
+)
 
 /*lazy val jooqPostgres = Seq(
   libraryDependencies += "org.postgresql"      %   "postgresql"    % "9.4-1201-jdbc41" % "jooq",
@@ -206,7 +206,8 @@ lazy val exciting = (project in file("parsers/exciting")).
   settings(commonSettings: _*).
   settings(
     libraryDependencies ++= commonLibs,
-    name := "exciting"
+    name := "exciting",
+    (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
   ).
   settings(Revolver.settings: _*)
 
@@ -215,7 +216,8 @@ lazy val gaussian = (project in file("parsers/gaussian")).
   settings(commonSettings: _*).
   settings(
     libraryDependencies ++= commonLibs,
-    name := "gaussian"
+    name := "gaussian",
+    (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
   ).
   settings(Revolver.settings: _*)
 
@@ -235,9 +237,22 @@ lazy val base = (project in file("base")).
 lazy val webservice = (project in file("webservice")).
   dependsOn(base).
   settings(commonSettings: _*).
+  enablePlugins(DockerPlugin).
   settings(
     libraryDependencies ++= commonLibs,
-    name := "nomadWebService"
+    name := "nomadWebService",
+    docker <<= (docker dependsOn assembly),
+    dockerfile in docker := {
+      val artifact = (assemblyOutputPath in assembly).value
+      val artifactTargetPath = s"/app/${artifact.name}"
+      new Dockerfile {
+        from("ankitkariryaa/sbt-javac")
+        expose(8081)
+        add(artifact, artifactTargetPath)
+        entryPoint("bash")
+        //        entryPoint("java", "-jar", artifactTargetPath)
+      }
+    }
   ).
   settings(Revolver.settings: _*)
 
@@ -250,12 +265,13 @@ lazy val tool = (project in file("tool")).
     name := "nomadTool",
     docker <<= (docker dependsOn assembly),
     dockerfile in docker := {
-      val artifact = (outputPath in assembly).value
+      val artifact = (assemblyOutputPath in assembly).value
       val artifactTargetPath = s"/app/${artifact.name}"
       new Dockerfile {
         from("java:7")
         add(artifact, artifactTargetPath)
-        entryPoint("java", "-jar", artifactTargetPath)
+        entryPoint("bash")
+//        entryPoint("java", "-jar", artifactTargetPath)
       }
     }
   ).

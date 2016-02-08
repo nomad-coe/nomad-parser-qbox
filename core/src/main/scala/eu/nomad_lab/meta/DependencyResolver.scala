@@ -94,6 +94,55 @@ class RelativeDependencyResolver(
   }
 }
 
+/** DependencyResolver that handles relativePath dependencies
+  *
+  * not threadsafe, it is supposed to be used by a single thread
+  */
+class ResourceDependencyResolver(
+                                  val classResolver: ClassLoader,
+                                  val parentResolver: Option[DependencyResolver] = None,
+                                  dependencies: mutable.Map[String, MetaInfoEnv] = null,
+                                  namesInProgress: mutable.Set[String] = null
+                                ) extends DependencyResolver {
+  implicit val formats = DefaultFormats;
+
+  val deps = {
+    if (dependencies == null)
+      new mutable.HashMap[String, MetaInfoEnv]
+    else
+      dependencies
+  }
+  val inProgress = {
+    if (namesInProgress == null)
+      new mutable.HashSet[String]
+    else
+      namesInProgress
+  }
+
+  /** resolves relative paths references
+    */
+  def resolveDependency(source: JObject, dep: JObject): MetaInfoEnv = {
+    val basePath: Path = Paths.get((source \ "path").extract[String]).getParent()
+    val relPath = (dep \ "relativePath").extract[String]
+    val dPath = basePath.resolve(relPath).toString
+
+    if (deps.contains(dPath))
+      return deps(dPath)
+    if (inProgress.contains(dPath))
+      throw new DependencyResolver.CircularDepException(
+        source, dep, inProgress.mkString("{",", ","}"))
+    inProgress += dPath
+    val newEnv = SimpleMetaInfoEnv.fromInputStream(classResolver.getResourceAsStream(dPath), dPath,
+        JObject(
+          ("path" -> JString(dPath)) ::
+          ("base" -> source) :: Nil),
+      rootResolver)
+    inProgress -= dPath
+    deps += (dPath -> newEnv)
+    return newEnv
+  }
+}
+
 /** dummy DependencyResolver that resolves no dependency
   */
 class NoDependencyResolver(
