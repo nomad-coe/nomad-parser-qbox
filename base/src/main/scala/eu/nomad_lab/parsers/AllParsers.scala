@@ -13,8 +13,8 @@ object AllParsers {
       CastepParser,
       ExcitingParser,
       GaussianParser,
-      DlPolyParser
-
+      DlPolyParser,
+      Cp2kParser
     )
 
     val res: Map[String, ParserGenerator] = parserList.map { (pg: ParserGenerator) =>
