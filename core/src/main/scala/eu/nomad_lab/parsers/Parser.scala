@@ -37,7 +37,8 @@ object AncillaryFilesPrefilter extends Enumeration {
   */
 case class ParserMatch(
   val matchPriority: Int = 0,
-  val weakMatch: Boolean = false
+  val weakMatch: Boolean = false,
+  val extraInfo: JValue = JNothing
 ) {}
 
 object ParserMatch {

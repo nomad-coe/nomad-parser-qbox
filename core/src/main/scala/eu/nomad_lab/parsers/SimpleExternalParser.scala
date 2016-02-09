@@ -19,6 +19,7 @@ import scala.sys.process.ProcessIO
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
 import scala.collection.mutable
+import scala.collection.breakOut
 
 object SimpleExternalParserGenerator extends StrictLogging {
   /** Exception unpacking things from the resources and setting up environment
@@ -160,8 +161,10 @@ class SimpleExternalParserGenerator(
       case Some(str) =>
         mainFileRe.findFirstMatchIn(str) match {
           case Some(m) =>
-            logger.debug(s"$filePath matches parser $name")
-            Some(ParserMatch(mainFileMatchPriority, mainFileMatchWeak))
+            val extraInfo: List[(String, JString)] = m.groupNames.map{ (name: String) =>
+              name -> JString(m.group(name)) }(breakOut)
+            logger.debug(s"$filePath matches parser $name (extraInfo:${JsonUtils.normalizedStr(JObject(extraInfo))}")
+            Some(ParserMatch(mainFileMatchPriority, mainFileMatchWeak, JObject(extraInfo)))
           case None =>
             logger.debug(s"$filePath does *NOT* match parser $name")
             None
@@ -585,7 +588,7 @@ class ExternalParserWrapper(
   def run(): Boolean = {
     try {
       val command = cmd.map{ makeReplacements _ }
-      val cwd = new java.io.File(makeReplacements(cmdCwd))
+      val cwd = Paths.get(makeReplacements(cmdCwd)).normalize().toFile()
       val env =  cmdEnv.map{ case (key, value) =>
         key -> SimpleExternalParserGenerator.makeReplacements(allReplacements, value)
       }
@@ -597,7 +600,7 @@ class ExternalParserWrapper(
         case Some(handler) => handler(_)
         case None => logErrors(_)
       }
-      logger.info(s"parser $parserName will run $command in $cwd with environment $env")
+      logger.info(s"parser $parserName will run '${command.map(_.replace(" ", "\\ ")).mkString(" ")}' in $cwd with environment $env")
       val proc = Process(command, cwd, env.toSeq: _*).run(new ProcessIO(currentStdInHandler, jsonDecode _, currentStdErrHandler))
       // should switch to finite state machine and allow async interaction, for now we just block...
       hadErrors = (proc.exitValue != 0)
