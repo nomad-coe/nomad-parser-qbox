@@ -50,7 +50,7 @@ class JsonParseEventsWriterBackend(
       case Some(status) =>
         outF.write(""",
   "parserStatus": """)
-        JsonUtils.dumpString(parserStatus.toString(), outF)
+        JsonUtils.dumpString(status.toString(), outF)
       case None => ()
     }
     parserErrors match {
@@ -93,7 +93,7 @@ class JsonParseEventsWriterBackend(
         case Some(status) =>
           outF.write(""",
   "parserStatus": """)
-          JsonUtils.dumpString(parserStatus.toString(), outF)
+          JsonUtils.dumpString(status.toString(), outF)
         case None => ()
       }
     }
