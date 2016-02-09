@@ -302,6 +302,14 @@ lazy val treeparser = (project in file("tree-parser-worker")).
     libraryDependencies ++= commonLibs,
     name := "nomadTreeParserWorker"
   ).
+  settings(flywaySettings: _*).
+  ////settings(h2Settings: _*).
+  settings(rdbUrl := {
+  "jdbc:h2:file:" + ((resourceManaged in Compile).value / "localdb_h2")
+} ).
+  settings(flywayH2: _*).
+  settings(jooqCommon: _*).
+  settings(jooqH2: _*).
   settings(Revolver.settings: _*)
 
 lazy val root = (project in file(".")).
