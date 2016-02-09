@@ -231,6 +231,16 @@ lazy val gaussian = (project in file("parsers/gaussian")).
   ).
   settings(Revolver.settings: _*)
 
+lazy val gpaw = (project in file("parsers/gpaw")).
+  dependsOn(core).
+  settings(commonSettings: _*).
+  settings(
+    libraryDependencies ++= commonLibs,
+    name := "gpaw",
+    (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
+  ).
+  settings(Revolver.settings: _*)
+
 lazy val base = (project in file("base")).
   dependsOn(core).
   dependsOn(fhiAims).
@@ -239,6 +249,7 @@ lazy val base = (project in file("base")).
   dependsOn(dlPoly).
   dependsOn(gaussian).
   dependsOn(exciting).
+  dependsOn(gpaw).
   settings(commonSettings: _*).
   settings(
     libraryDependencies ++= commonLibs,
