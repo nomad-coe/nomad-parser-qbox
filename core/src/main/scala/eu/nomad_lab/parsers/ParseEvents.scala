@@ -47,6 +47,8 @@ object ParseEvent {
             "f64"
           case _: JString =>
             "C"
+          case _: JBool =>
+            "b"
           case _: JObject =>
             "D"
           case _ =>
@@ -65,7 +67,7 @@ object ParseEvent {
       case "f32" =>
         NArray.factory(DataType.FLOAT, ishape)
       case "b" =>
-        NArray.factory(DataType.BYTE, ishape)
+        NArray.factory(DataType.BOOLEAN, ishape)
       case "B" =>
         NArray.factory(DataType.STRING, ishape)
       case "C" =>
@@ -90,7 +92,7 @@ object ParseEvent {
           it.setFloatNext(value.extract[Float]) }
       case "b" =>
         { (it: NIndexIterator, value: JValue) =>
-          it.setByteNext(value.extract[Byte]) }
+          it.setBooleanNext(value.extract[Boolean]) }
       case "B" =>
         { (it: NIndexIterator, value: JValue) =>
           it.setObjectNext(value.extract[String]) }

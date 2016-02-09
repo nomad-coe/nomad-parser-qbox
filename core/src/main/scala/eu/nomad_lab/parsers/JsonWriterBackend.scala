@@ -70,7 +70,7 @@ object JsonWriterBackend {
       case "i64" | "r" =>
         { (it: NIndexIterator) => writer.write(it.getLongNext().toString()) }
       case "b" =>
-        { (it: NIndexIterator) => writer.write(it.getByteNext().toString()) }
+        { (it: NIndexIterator) => writer.write(it.getBooleanNext().toString()) }
       case "B" | "C" | "D" =>
         { (it: NIndexIterator) => JsonUtils.dumpString(it.next().toString(), writer) }
     }
