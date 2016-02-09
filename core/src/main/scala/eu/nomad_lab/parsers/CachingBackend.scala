@@ -414,8 +414,8 @@ object CachingBackend {
   /** manager for the given meta info
     */
   def cachingDataManager(metaInfo: MetaInfoRecord, sectionManager: CachingSectionManager, forward: Boolean = true): GenericBackend.MetaDataManager = {
-    if (metaInfo.kindStr != "type_document_content")
-      throw new MetaCompilationException(metaInfo, "caching data manager can be instantiated only for conrete data (kindStr = type_document_content)")
+    if (metaInfo.kindStr != "type_document_content" && metaInfo.kindStr != "type_dimension")
+      throw new MetaCompilationException(metaInfo, "caching data manager can be instantiated only for conrete data (kindStr = type_document_content or type_dimension)")
     val scalar = metaInfo.shape match {
       case Some(shape) =>
         if (shape.isEmpty)
@@ -590,7 +590,7 @@ object CachingBackend {
     // concrete data
     val metaDataManagers: Map[String, U] = allNames.flatMap{ (name:String) =>
       val metaInfo = metaEnv.metaInfoRecordForName(name, true, true).get
-      if (metaInfo.kindStr == "type_document_content") {
+      if (metaInfo.kindStr == "type_document_content" || metaInfo.kindStr == "type_dimension") {
         val superSectionNames = GenericBackend.firstSuperSections(metaEnv,name)
         if (superSectionNames.size != 1)
           throw new InvalidMetaInfoException(metaInfo, s"multiple direct super sections: ${superSectionNames.mkString(", ")}")
