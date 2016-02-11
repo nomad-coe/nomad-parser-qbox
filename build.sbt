@@ -251,6 +251,17 @@ lazy val quantumEspresso = (project in file("parsers/quantum-espresso")).
   ).
   settings(Revolver.settings: _*)
 
+
+lazy val lammps = (project in file("parsers/lammps")).
+  dependsOn(core).
+  settings(commonSettings: _*).
+  settings(
+    libraryDependencies ++= commonLibs,
+    name := "lammps",
+    (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
+  ).
+  settings(Revolver.settings: _*)
+
 lazy val base = (project in file("base")).
   dependsOn(core).
   dependsOn(fhiAims).
@@ -261,6 +272,7 @@ lazy val base = (project in file("base")).
   dependsOn(exciting).
   dependsOn(gpaw).
   dependsOn(quantumEspresso).
+  dependsOn(lammps).
   settings(commonSettings: _*).
   settings(
     libraryDependencies ++= commonLibs,
