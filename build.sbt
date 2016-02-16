@@ -34,6 +34,7 @@ lazy val commonLibs = {
   val playJson      = "com.typesafe.play"  %% "play-json"       % "2.4.3"
   val kafka         = "org.apache.kafka"   %% "kafka"           % "0.9.0.0" exclude("log4j", "log4j") exclude("org.slf4j","slf4j-log4j12")
   val pegdown       = "org.pegdown"         % "pegdown"         % "1.6.0"
+  val rabbitMQ      = "com.rabbitmq"        % "amqp-client"      %"3.6.0"
   val log4j2        = Seq(
     "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.5",
     "org.apache.logging.log4j" % "log4j-api"        % "2.5",
@@ -59,6 +60,7 @@ lazy val commonLibs = {
     fastring,
     kafka,
     pegdown,
+    rabbitMQ,
     scalalog) ++ log4j2
 }
 

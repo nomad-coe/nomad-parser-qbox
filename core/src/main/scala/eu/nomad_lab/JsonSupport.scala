@@ -1,11 +1,10 @@
 package eu.nomad_lab;
 
-import java.io.{OutputStream, InputStream}
+import java.io._
 import java.nio.charset.StandardCharsets
 import org.json4s.{DefaultFormats, Extraction, JsonInput}
 import org.json4s.native.Serialization
 import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JArray, JObject, JValue, JField}
-import java.io.{Reader, StringWriter, Writer, BufferedWriter, OutputStreamWriter, InputStreamReader}
 
 
 /** Methods to handle (de-)serialization of custom objects to (from) json
@@ -85,7 +84,14 @@ object JsonSupport {
       new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8)))
   }
 
-  /** Serialize to Writer.
+  /** Serialize to ByteArray
+    */
+  def writeUtf8[A <: AnyRef, O <: OutputStream](a: A): Array[Byte] = {
+    val out = new ByteArrayOutputStream()
+    writeOutputStream(a, out)
+    out.toByteArray
+  }
+    /** Serialize to Writer.
    */
   def writeWriter[A <: AnyRef, W <: Writer](a: A, out: W): Unit = {
     Serialization.write(a, out)
@@ -102,6 +108,13 @@ object JsonSupport {
   def readReader[A](in: Reader)(implicit mf: Manifest[A]): A = {
     Serialization.read[A](in)
   }
+
+  /** Deserialize from a Utf8 Byte Array
+    */
+  def readUtf8[A](b:Array[Byte])(implicit mf: Manifest[A]): A = {
+    readInputStream[A](new ByteArrayInputStream(b))
+  }
+
 
   /** Deserialize from a InputReader
    */

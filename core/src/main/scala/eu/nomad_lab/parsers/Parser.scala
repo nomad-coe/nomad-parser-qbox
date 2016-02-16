@@ -362,8 +362,8 @@ class ParserCollection(
   /** Scans the given file and returns the candidate parsers (unsorted)
     */
   def scanFile(filePath: String, bytePrefix: Array[Byte]): Seq[CandidateParser] = {
-    val file = new java.io.File(filePath)
-    val mimeType: String = ParserCollection.tika.detect(bytePrefix, file.getName())
+//    val file = new java.io.File(filePath)
+    val mimeType: String = ParserCollection.tika.detect(bytePrefix, filePath) //tika should be able to handles filenames with path attached
     logger.debug(s"$filePath detected as $mimeType")
     val parsersDone = mutable.Set[String]()
     lazy val stringPrefix = {
