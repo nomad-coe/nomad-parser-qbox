@@ -302,6 +302,7 @@ trait ParserBackendExternal extends ParserBackendBase {
 object ParserCollection {
   val tika = new Tika()
 
+
   /** Multiple parsers can handle the same file
     */
   class MultipleMatchException(
@@ -357,6 +358,26 @@ class ParserCollection(
           None
       }
     }
+  }
+
+  /** Really tries to read the whole buffer (from offest on) into buf
+    *
+    * gives up only if there is an error or EOF
+    */
+  def tryRead(fIn: java.io.InputStream, buf: Array[Byte], offset: Int = 0): Int = {
+    var pos: Int = offset
+    var readMore: Boolean = true
+    while (readMore) {
+      val nReadNow = fIn.read(buf, pos, buf.size - pos)
+      if (nReadNow <= 0)
+        readMore = false
+      else {
+        pos += nReadNow
+        if (pos >= buf.size)
+          readMore = false
+      }
+    }
+    pos - offset
   }
 
   /** Scans the given file and returns the candidate parsers (unsorted)

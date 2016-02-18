@@ -5,25 +5,7 @@ import scala.collection.mutable
 import com.typesafe.scalalogging.StrictLogging
 
 object CLITool extends StrictLogging {
-  /** Really tries to read the whole buffer (from offest on) into buf
-    *
-    * gives up only if there is an error or EOF
-    */
-  def tryRead(fIn: java.io.InputStream, buf: Array[Byte], offset: Int = 0): Int = {
-    var pos: Int = offset
-    var readMore: Boolean = true
-    while (readMore) {
-      val nReadNow = fIn.read(buf, pos, buf.size - pos)
-      if (nReadNow <= 0)
-        readMore = false
-      else {
-        pos += nReadNow
-        if (pos >= buf.size)
-          readMore = false
-      }
-    }
-    pos - offset
-  }
+
 
   /** Backend types recognized by this tool
     */
@@ -201,7 +183,7 @@ Runs the main parsing step
         val cachedOptimizedParsers: mutable.Map[String, parsers.OptimizedParser] = mutable.Map()
         val fIn = new java.io.FileInputStream(path)
         val buf = Array.fill[Byte](8*1024)(0)
-        val nRead = tryRead(fIn, buf, 0)
+        val nRead = parserCollection.tryRead(fIn, buf, 0)
         val minBuf = buf.dropRight(buf.size - nRead)
         var possibleParsers = parserCollection.scanFile(path, minBuf).sorted
         if (possibleParsers.isEmpty && parserCollection.parsers.size == 1) {
