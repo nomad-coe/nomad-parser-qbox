@@ -13,7 +13,7 @@ import org.apache.tika.Tika
 import scala.annotation.tailrec
 import com.rabbitmq.client._
 import java.io._
-import eu.nomad_lab.QueueMessage
+
 
 object TreeParser extends StrictLogging {
 
@@ -31,28 +31,40 @@ object TreeParser extends StrictLogging {
 
 
   def main(args: Array[String]) = {
+
 //    readFromTreeParserQueue()
-    val tempMessage =  QueueMessage.TreeParserQueueMessage("examples.tar","/home/kariryaa/NoMad/nomad-lab-base/tree-parser-worker/")
-//    val mp = scanZipFile(tempMessage)
 
+    val tempMessage =  QueueMessage.TreeParserQueueMessage(
+      treeUri = "file:///home/kariryaa/NoMad/nomad-lab-base/tree-parser-worker/fhi.zip",
+      treeFilePath = "/home/kariryaa/NoMad/nomad-lab-base/tree-parser-worker/fhi.zip",
+      treeType = TreeType.Zip
+    )
+    findParserAndWriteToQueue(tempMessage)
 
-    val f = new File(tempMessage.treeFilePath+tempMessage.treeUri)
-//    val fis:InputStream = new BufferedInputStream(new FileInputStream(f))
-//    val ais: ArchiveInputStream =  archieveStreamFactory.createArchiveInputStream(fis)
-//    val filesToUncompress:Map[String, String] = Map()
-//    val scannedFiles:Map[String, String] = scanArchivedInputStream(filesToUncompress,ais)
-//    logger.info("All extracted files: " + scannedFiles )
-//    ais.close()
-//    fis.close()
-
-    val tempBIs:InputStream = new BufferedInputStream(new FileInputStream(f))
-    val buf = Array.fill[Byte](8*1024)(0)
-    val nRead = parserCollection.tryRead(tempBIs, buf, 0)
-    val minBuf = buf.dropRight(buf.size - nRead)
-    val mimeType: String = tika.detect(minBuf, f.getName)
-    tempBIs.close()
-    println(mimeType)
-//    println(mp)
+    //    val tempMessage =  QueueMessage.TreeParserQueueMessage(
+//        treeUri = "file:///home/kariryaa/NoMad/nomad-lab-base/tree-parser-worker/examples.tar",
+//        treeFilePath = "/home/kariryaa/NoMad/nomad-lab-base/tree-parser-worker/examples.tar"
+//        )
+////    val mp = scanZipFile(tempMessage)
+//
+//
+//    val f = new File(tempMessage.treeFilePath+tempMessage.treeUri)
+////    val fis:InputStream = new BufferedInputStream(new FileInputStream(f))
+////    val ais: ArchiveInputStream =  archieveStreamFactory.createArchiveInputStream(fis)
+////    val filesToUncompress:Map[String, String] = Map()
+////    val scannedFiles:Map[String, String] = scanArchivedInputStream(filesToUncompress,ais)
+////    logger.info("All extracted files: " + scannedFiles )
+////    ais.close()
+////    fis.close()
+//
+//    val tempBIs:InputStream = new BufferedInputStream(new FileInputStream(f))
+//    val buf = Array.fill[Byte](8*1024)(0)
+//    val nRead = parserCollection.tryRead(tempBIs, buf, 0)
+//    val minBuf = buf.dropRight(buf.size - nRead)
+//    val mimeType: String = tika.detect(minBuf, f.getName)
+//    tempBIs.close()
+//    println(mimeType)
+////    println(mp)
     ()
   }
 
@@ -68,7 +80,7 @@ object TreeParser extends StrictLogging {
       @throws(classOf[IOException])
       override def handleDelivery(consumerTag: String, envelope: Envelope, properties: AMQP.BasicProperties, body: Array[Byte]) {
         val message: QueueMessage.TreeParserQueueMessage = eu.nomad_lab.JsonSupport.readUtf8(body)
-        System.out.println(" [x] Received '" + message + "'")
+        println(" [x] Received '" + message + "'")
         findParserAndWriteToQueue(message)
       }
     }
@@ -80,50 +92,75 @@ object TreeParser extends StrictLogging {
 *
 * */
   def findParserAndWriteToQueue(incomingMessage: QueueMessage.TreeParserQueueMessage) = {
-
     //Read file and get the corresponding parsers
-    val f = new File(incomingMessage.treeFilePath+incomingMessage.treeUri)
+    val f = new File(incomingMessage.treeFilePath)
     if (!f.isFile)
       logger.error(f + " doesn't exist")
     else if (f.isDirectory)
       logger.error(f + "is a directory") //TODO: Handle directories
     else {
-
       val prodFactory: ConnectionFactory = new ConnectionFactory
       prodFactory.setHost("localhost")
       val prodConnection: Connection = prodFactory.newConnection
       val prodchannel: Channel = prodConnection.createChannel
       prodchannel.queueDeclare(writeQueue, true, false, false, null)
-      //    To infer the type of the file before hand; At the moment the type has been fixed to tar and zip are handled correctly
-      val tempBIs:InputStream = new BufferedInputStream(new FileInputStream(f))
-      val buf = Array.fill[Byte](8*1024)(0)
-      val nRead = parserCollection.tryRead(tempBIs, buf, 0)
-      val minBuf = buf.dropRight(buf.size - nRead)
-      val mimeType: String = tika.detect(minBuf, f.getName)
-      tempBIs.close()
-      var scannedFiles:Map[String,String] = Map()
-      //Different formats should be handled differently; eg.  Zip can't be streamed
-      if(mimeType.contains("zip"))
-        {
-          scannedFiles = scanZipFile(incomingMessage)
-        }
-      else if(mimeType.contains("tar")){
-        val bis:InputStream = new BufferedInputStream(new FileInputStream(f))
-        val ais: ArchiveInputStream =  archieveStreamFactory.createArchiveInputStream(bis)
-        val filesToUncompress:Map[String, String] = Map()
-        scannedFiles = scanArchivedInputStream(filesToUncompress,ais)
-        logger.info("All extracted files: " + scannedFiles )
-        ais.close()
-        bis.close()
-
+      //    To infer the type of the file before hand, in case not passed to the tree parser; At the moment the type has been fixed; Only Tar and Zip are handled correctly
+      val treeType: TreeType.Value = incomingMessage.treeType match {
+        case TreeType.Unknown =>
+          val tempfis:InputStream = new BufferedInputStream(new FileInputStream(f))
+          val buf = Array.fill[Byte](1024)(0)
+          val nRead = parserCollection.tryRead(tempfis, buf, 0)
+          val minBuf = buf.dropRight(buf.size - nRead)
+          val mimeType: String = tika.detect(minBuf, f.getName)
+          logger.info(s"mimeType: $mimeType")
+          tempfis.close()
+          mimeType match {
+            case "application/zip"  => TreeType.Zip
+            case "application/x-tar" => TreeType.Tar
+            case _ => TreeType.Unknown
+          }
+        case v => v
       }
+      logger.info(s"incomingMessage: ${JsonSupport.writePrettyStr(incomingMessage)}, treeType: $treeType")
+      val scannedFiles:Map[String,String] = treeType match {
+        case TreeType.Zip =>  scanZipFile(incomingMessage)
+        case TreeType.Tar =>
+          val bis:InputStream = new BufferedInputStream(new FileInputStream(f))
+          val ais: ArchiveInputStream =  archieveStreamFactory.createArchiveInputStream(bis)
+          val filesToUncompress:Map[String, String] = Map()
+          val files = scanArchivedInputStream(filesToUncompress,ais)
+          ais.close()
+          bis.close()
+          files
+        case _ => Map()
+      }
+      logger.info("All extracted files: " + scannedFiles )
       for( (filePath,parser) <- scannedFiles ) {
-        val fileUri = incomingMessage.treeUri+filePath
-        val completeFilePath =Some(incomingMessage.treeFilePath+incomingMessage.treeUri+filePath)
-        val message = QueueMessage.SingleParserQueueMessage(parser,fileUri,completeFilePath,Some(incomingMessage.treeFilePath),mimeType)
-        prodchannel.basicPublish("", writeQueue, MessageProperties.PERSISTENT_TEXT_PLAIN, JsonSupport.writeUtf8(message))
+        val partialFilePath = incomingMessage.relativeTreeFilePath match {
+          case Some(rPath) =>
+            if (filePath.startsWith(rPath))
+              filePath.drop(rPath.size)
+            else
+              filePath
+          case None =>
+            filePath
+        }
+        val nUri = if (incomingMessage.treeUri.endsWith("/"))
+            incomingMessage.treeUri.dropRight(1)
+        else
+          incomingMessage.treeUri
+        val mainFileUri = nUri + "/" + partialFilePath.dropWhile(_ == '/')
+        val message = QueueMessage.SingleParserQueueMessage(
+          parserName = parser,
+          mainFileUri = mainFileUri,
+          relativeFilePath = filePath,
+          treeFilePath = incomingMessage.treeFilePath,
+          treeType = treeType
+        )
+        val msgBytes = JsonSupport.writeUtf8(message)
+        logger.info(s"Message: $message, bytes Array size: ${msgBytes.length}")
+        prodchannel.basicPublish("", writeQueue, MessageProperties.PERSISTENT_TEXT_PLAIN,msgBytes )
       }
-
       logger.info(s"Wrote to Queue: $writeQueue")
       prodchannel.close
       prodConnection.close
@@ -159,12 +196,12 @@ object TreeParser extends StrictLogging {
     }
   }
 
-/** Scan a zip file and if possible, find the most appropriate parser for each file in the zip file
+/** Scan a zip file and if possible, find the most appropriate parser for each file in the zip archive
 *
 * */
   def scanZipFile(incomingMessage: QueueMessage.TreeParserQueueMessage): Map[String,String] = {
     var fileParserName: Map[String,String] = Map()
-    val zipFile = new ZipFile(incomingMessage.treeFilePath+incomingMessage.treeUri)
+    val zipFile = new ZipFile(incomingMessage.treeFilePath)
     val entries = zipFile.getEntries()
     while (entries.hasMoreElements()) {
       val zipEntry: ZipArchiveEntry = entries.nextElement()

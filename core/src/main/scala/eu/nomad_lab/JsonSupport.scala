@@ -80,8 +80,9 @@ object JsonSupport {
   /** Serialize to OutputStream
    */
   def writeOutputStream[A <: AnyRef, O <: OutputStream](a: A, out: O): Unit = {
-    Serialization.write(a,
-      new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8)))
+    val bufWriter = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8))
+    Serialization.write(a,bufWriter)
+    bufWriter.flush()
   }
 
   /** Serialize to ByteArray

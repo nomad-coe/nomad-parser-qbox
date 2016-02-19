@@ -39,5 +39,6 @@ object ParserRun {
         new parsers.JsonParseEventsWriterBackend(optimizer.parseableMetaInfo, stdOut)
     }
     optimizer.parseExternal(uri,path,extBackend,Parser.name)
+    optimizer.cleanup()
   }
 }

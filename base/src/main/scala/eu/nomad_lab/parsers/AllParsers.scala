@@ -15,9 +15,9 @@ object AllParsers {
       GaussianParser,
       DlPolyParser,
       Cp2kParser,
-      GpawParser,
-      QuantumEspressoParser,
-      LammpsParser
+      GpawParser
+//      QuantumEspressoParser,
+//      LammpsParser
     )
 
     val res: Map[String, ParserGenerator] = parserList.map { (pg: ParserGenerator) =>
