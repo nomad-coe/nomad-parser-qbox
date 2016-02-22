@@ -4,6 +4,7 @@ import ucar.ma2.MAMath
 import scala.collection.breakOut
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.util.control.NonFatal
 import eu.nomad_lab.JsonUtils
 import eu.nomad_lab.meta.MetaInfoEnv
 import eu.nomad_lab.meta.MetaInfoRecord
@@ -11,6 +12,19 @@ import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JAr
 
 object CachingBackend {
     type SectionCallback = (CachingBackend, CachingSectionManager, Long, Option[CachingSection]) => Unit
+
+  /** error while setting a value
+    */
+  class SetValueError(
+    valueMetaInfo: MetaInfoRecord,
+    gIndex: Long,
+    openSections: mutable.Map[Long, CachingSection],
+    msg: String,
+    what: Throwable = null
+  ) extends Exception (
+    s"Error setting value for ${JsonUtils.normalizedStr(valueMetaInfo.toJValue())} in section with gIndex $gIndex ${if (!openSections.contains(gIndex)) "(section not open!)" else ""}: $msg",
+    what
+  )
 
   /** represents a section within a section manager, and can cache some values
     */
@@ -220,31 +234,46 @@ object CachingBackend {
     /** Stores the given json value in the section given by gIndex
       */
     def addValue(valueMetaInfo: MetaInfoRecord, value: JValue, gIndex: Long): Unit = {
-      val gI = if (gIndex == -1)
-        lastSectionGIndex
-      else
-        gIndex
-      openSections(gI).addValue(valueMetaInfo, value)
+      try {
+        val gI = if (gIndex == -1)
+          lastSectionGIndex
+        else
+          gIndex
+        openSections(gI).addValue(valueMetaInfo, value)
+      } catch {
+        case NonFatal(e) =>
+          throw new SetValueError(valueMetaInfo, gIndex, openSections, "in addValue", e)
+      }
     }
 
     /** Sets values in valueMetaInfo in an already added array in the section given by gIndex
       */
     def setArrayValues(valueMetaInfo: MetaInfoRecord, value: NArray, offset: Option[Seq[Long]], gIndex: Long): Unit = {
-      val gI = if (gIndex == -1)
-        lastSectionGIndex
-      else
-        gIndex
-      openSections(gI).setArrayValues(valueMetaInfo, value, offset)
+      try {
+        val gI = if (gIndex == -1)
+          lastSectionGIndex
+        else
+          gIndex
+        openSections(gI).setArrayValues(valueMetaInfo, value, offset)
+      } catch {
+        case NonFatal(e) =>
+          throw new SetValueError(valueMetaInfo, gIndex, openSections, "in setArrayValues", e)
+      }
     }
 
     /** adds and array for metaInfo to the section gIndex
       */
     def addArrayValues(valueMetaInfo: MetaInfoRecord, value: NArray, gIndex: Long): Unit = {
-      val gI = if (gIndex == -1)
-        lastSectionGIndex
-      else
-        gIndex
-      openSections(gI).addArrayValues(valueMetaInfo, value)
+      try {
+        val gI = if (gIndex == -1)
+          lastSectionGIndex
+        else
+          gIndex
+        openSections(gI).addArrayValues(valueMetaInfo, value)
+      } catch {
+        case NonFatal(e) =>
+          throw new SetValueError(valueMetaInfo, gIndex, openSections, "in addArrayValues", e)
+      }
     }
   }
 
