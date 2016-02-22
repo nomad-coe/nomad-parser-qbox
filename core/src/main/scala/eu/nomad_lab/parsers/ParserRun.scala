@@ -11,7 +11,7 @@ object ParserRun {
   /* Parse the given file path with the given parser and options
   *
   * */
-  def parse(Parser:SimpleExternalParserGenerator,pPath:String,opt:String) =
+  def parse(Parser:SimpleExternalParserGenerator,pPath:String,opt:String): ParseResult.Value =
   {
     object BackendType extends Enumeration {
       type Enum = Value
@@ -38,7 +38,8 @@ object ParserRun {
       case BackendType.JsonEventEmitter =>
         new parsers.JsonParseEventsWriterBackend(optimizer.parseableMetaInfo, stdOut)
     }
-    optimizer.parseExternal(uri,path,extBackend,Parser.name)
+    val res = optimizer.parseExternal(uri,path,extBackend,Parser.name)
     optimizer.cleanup()
+    res
   }
 }
