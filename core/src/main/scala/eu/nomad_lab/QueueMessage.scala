@@ -38,7 +38,7 @@ object QueueMessage {
                                      followSymlinks: Boolean = true // In case of directory
                                    )
 
-  case class SingleParserQueueMessage(
+  case class CalculationParserQueueMessage(
                                        parserName: String, //Name of the parser to use for the file; CastepParser
                                        mainFileUri: String, //Uri of the main file; Example:  nmd://R9h5Wp_FGZdsBiSo5Id6pnie_xeIH/data/examples/foo/Si2.castep
                                        relativeFilePath: String, // file path, from the tree root. Example data/examples/foo/Si2.castep
@@ -57,6 +57,4 @@ object QueueMessage {
                                      normalizedFileUri: String, // This is build as sha of archive, changing R into N, i.e. nmd://N9h5Wp_FGZdsBiSo5Id6pnie_xeIH
                                      normalizedFilePath: String // Complete file path, to the normalized file /nomad/nomadlab/normalized/<parserId>/N9h/N9h5Wp_FGZdsBiSo5Id6pnie_xeIH.nc
                                    )
-
-
 }

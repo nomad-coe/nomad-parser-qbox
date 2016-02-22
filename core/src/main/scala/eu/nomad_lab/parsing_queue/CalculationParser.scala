@@ -4,14 +4,14 @@ import java.io._
 import java.nio.file.{Path, Paths}
 
 import com.typesafe.scalalogging.StrictLogging
-import eu.nomad_lab.QueueMessage.{SingleParserQueueMessage, ToBeNormalizedQueueMessage}
+import eu.nomad_lab.QueueMessage.{CalculationParserQueueMessage, ToBeNormalizedQueueMessage}
 import eu.nomad_lab.{JsonSupport, CompactSha, TreeType, parsers}
 import org.apache.commons.compress.archivers.zip.{ZipArchiveEntry, ZipFile}
 import org.apache.commons.compress.utils.IOUtils
 
 object CalculationParser{
   class CalculationParserException(
-                                    message: SingleParserQueueMessage,
+                                    message: CalculationParserQueueMessage,
                                     calculationParser: CalculationParser,
                                     msg: String,
                                     what: Throwable = null
@@ -24,7 +24,7 @@ object CalculationParser{
     *
     * @param inMsg
   //    */
-  def uncompress(inMsg: SingleParserQueueMessage, ucRoot:Path):Option[Path] = {
+  def uncompress(inMsg: CalculationParserQueueMessage, ucRoot:Path):Option[Path] = {
     inMsg.treeType match {
       case TreeType.Zip =>
         val prefix = Paths.get(inMsg.relativeFilePath).getParent.toString
@@ -55,7 +55,7 @@ class CalculationParser (
                         val parsedRoot: String,
                         val parserCollection: parsers.ParserCollection
                         ) extends  StrictLogging {
-  def uncompressAndInitializeParser(message: SingleParserQueueMessage): ToBeNormalizedQueueMessage = {
+  def uncompressAndInitializeParser(message: CalculationParserQueueMessage): ToBeNormalizedQueueMessage = {
     val parser = parserCollection.parsers(message.parserName)
     CalculationParser.uncompress(message,Paths.get(ucRoot)) match {
       case Some(filePath) =>
