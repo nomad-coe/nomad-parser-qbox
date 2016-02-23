@@ -56,7 +56,7 @@ object TreeParserWorker extends StrictLogging {
   }
 
 
-  def readFromTreeParserQueue() = {
+  def readFromTreeParserQueue():Unit = {
     val factory: ConnectionFactory = new ConnectionFactory
     factory.setHost("localhost")
     val connection: Connection = factory.newConnection
@@ -72,6 +72,7 @@ object TreeParserWorker extends StrictLogging {
       }
     }
     channel.basicConsume(settings.readQueue, true, consumer)
+    ()
   }
 
 
