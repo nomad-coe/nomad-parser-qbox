@@ -2,9 +2,9 @@ package eu.nomad_lab;
 
 import java.io._
 import java.nio.charset.StandardCharsets
-import org.json4s.{DefaultFormats, Extraction, JsonInput}
+import org.json4s.{DefaultFormats, Extraction}
 import org.json4s.native.Serialization
-import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JArray, JObject, JValue, JField}
+import org.json4s.{JValue}
 
 
 /** Methods to handle (de-)serialization of custom objects to (from) json

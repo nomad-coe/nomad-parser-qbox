@@ -64,6 +64,79 @@ lazy val commonLibs = {
     scalalog) ++ log4j2
 }
 
+// # libs
+
+// ## input configuration
+val configLib     = "com.typesafe"        % "config"         % "1.2.1"
+
+// ## logging libs
+val loggingLibs = {
+  val scalalogLib      = "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0"
+  val log4j2Libs       = Seq(
+    "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.5",
+    "org.apache.logging.log4j" % "log4j-api"        % "2.5",
+    "org.apache.logging.log4j" % "log4j-core"       % "2.5",
+    "org.apache.logging.log4j" % "log4j-1.2-api"    % "2.5")
+  scalalogLib +: log4j2Libs
+}
+
+// ## test libs
+val testLibs         = {
+  val specs2Lib        = "org.specs2"         %% "specs2-core"    % "2.3.11" % "test"
+  val scalacheckLib    = "org.scalacheck"     %% "scalacheck"     % "1.12.4" % "test"
+  Seq(specs2Lib, scalacheckLib)
+}
+
+// ## json libs
+// json4s 3.3 is being finalized
+val json4sNativeLib  = "org.json4s"         %% "json4s-native"  % "3.2.11"
+val json4sJacksonLib = "org.json4s"         %% "json4s-jackson" % "3.2.11"
+
+// ## mime type recognition lib
+val tikaLib          = "org.apache.tika"     % "tika-core"       % "1.10"
+
+// ## compression handling libs
+val compressionLibs = {
+  val commonsCompressLib = "org.apache.commons"  % "commons-compress" % "1.10"
+  val xzForJavaLib       = "org.tukaani"         % "xz"               % "1.5"
+  Seq(commonsCompressLib, xzForJavaLib)
+}
+
+// ## archive management libs
+val bagitLib = "gov.loc" % "bagit" % "4.11.0"
+
+// ## queuing lib
+val kafkaLib         = "org.apache.kafka"   %% "kafka"           % "0.9.0.0" exclude("log4j", "log4j") exclude("org.slf4j","slf4j-log4j12")
+
+// ## markdown interpreter lib
+val pegdownLib       = "org.pegdown"         % "pegdown"         % "1.6.0"
+
+// ## spray and akka (web service and actors)
+lazy val sprayLibs = {
+  val akkaV = "2.3.9"
+  val sprayV = "1.3.3"
+  Seq(
+    "io.spray"            %%  "spray-can"     % sprayV,
+    "io.spray"            %%  "spray-routing" % sprayV,
+    "io.spray"            %%  "spray-testkit" % sprayV  % "test",
+    "com.typesafe.akka"   %%  "akka-actor"    % akkaV,
+    "com.typesafe.akka"   %%  "akka-testkit"  % akkaV   % "test")
+}
+
+// ## db libs
+val h2Lib            = "com.h2database"      % "h2"             % "1.4.187"
+val postgresLib      = "org.postgresql"      % "postgresql"     % "9.4.1207.jre7"
+val flywayLib        = "org.flywaydb"        % "flyway-core"    % "3.2.1"
+val jooqLibVersion   = "3.6.2"
+val jooqLib          = "org.jooq"            % "jooq"            % jooqLibVersion
+val jooqMetaLib      = "org.jooq"            % "jooq-meta"            % jooqLibVersion
+
+// discarded libs
+// val re2j          = "com.google.re2j"     % "re2j"            % "1.0" // faster regexps
+// val fastring      = "com.dongxiguo"      %% "fastring"        % "0.2.4" // faster string templates
+// val playJson      = "com.typesafe.play"  %% "play-json"       % "2.4.3" // json4s alternative
+ val netcdf        = "edu.ucar"            % "netcdf4"         % "4.6.3" // pure java netcdf lib (writes only netcdf3, so full version in unmanaged jars)
+
 lazy val jooqCommon = seq(jooqSettings:_*) ++ Seq(
   jooqVersion := "3.6.2",
   (codegen in JOOQ) <<= (codegen in JOOQ).dependsOn(flywayMigrate)
@@ -140,7 +213,7 @@ lazy val flywayPostgres = (
 lazy val cgen = (project in file("cgen")).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= commonLibs,
+//    libraryDependencies ++= commonLibs,
     name := "cgen"
   ).
   settings(flywaySettings: _*).
@@ -159,7 +232,17 @@ lazy val core = (project in file("core")).
   dependsOn(cgen).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= commonLibs,
+    libraryDependencies ++= (
+      configLib +:
+        netcdf +:
+        json4sNativeLib +:
+        json4sJacksonLib +:
+        pegdownLib +:
+        tikaLib +:
+        kafkaLib +:
+        testLibs ++:
+        compressionLibs ++:
+        loggingLibs),
     name := "nomadCore",
     (unmanagedResourceDirectories in Compile) += (baseDirectory.value / "../nomad-meta-info/meta_info").getCanonicalFile(),
     (unmanagedResourceDirectories in Compile) += (baseDirectory.value / "../python-common/common").getCanonicalFile()
@@ -178,7 +261,9 @@ lazy val fhiAims = (project in file("parsers/fhi-aims")).
   dependsOn(core).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= commonLibs,
+    libraryDependencies ++= (//commonLibs,
+      testLibs
+         ),
     name := "fhiAims"
   ).
   settings(Revolver.settings: _*)
@@ -187,7 +272,9 @@ lazy val castep = (project in file("parsers/castep")).
   dependsOn(core).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= commonLibs,
+    libraryDependencies ++= (//commonLibs,
+      testLibs
+         ),
     name := "castep",
     (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
   ).
@@ -197,7 +284,9 @@ lazy val cp2k = (project in file("parsers/cp2k")).
   dependsOn(core).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= commonLibs,
+    libraryDependencies ++= (//commonLibs,
+      testLibs
+      ),
     name := "cp2k",
     (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
   ).
@@ -207,7 +296,9 @@ lazy val dlPoly = (project in file("parsers/dl-poly")).
   dependsOn(core).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= commonLibs,
+    libraryDependencies ++= (//commonLibs,
+      testLibs
+      ),
     name := "dlPoly",
     (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
   ).
@@ -217,7 +308,9 @@ lazy val exciting = (project in file("parsers/exciting")).
   dependsOn(core).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= commonLibs,
+    libraryDependencies ++= (//commonLibs,
+      testLibs
+      ),
     name := "exciting",
     (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
   ).
@@ -227,7 +320,9 @@ lazy val gaussian = (project in file("parsers/gaussian")).
   dependsOn(core).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= commonLibs,
+    libraryDependencies ++= (//commonLibs,
+      testLibs
+      ),
     name := "gaussian",
     (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
   ).
@@ -237,7 +332,9 @@ lazy val gpaw = (project in file("parsers/gpaw")).
   dependsOn(core).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= commonLibs,
+    libraryDependencies ++= (//commonLibs,
+      testLibs
+      ),
     name := "gpaw",
     (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
   ).
@@ -247,7 +344,9 @@ lazy val quantumEspresso = (project in file("parsers/quantum-espresso")).
   dependsOn(core).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= commonLibs,
+    libraryDependencies ++= (//commonLibs,
+      testLibs
+      ),
     name := "quantumEspresso",
     (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
   ).
@@ -258,7 +357,9 @@ lazy val lammps = (project in file("parsers/lammps")).
   dependsOn(core).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= commonLibs,
+    libraryDependencies ++= (//commonLibs,
+      testLibs
+      ),
     name := "lammps",
     (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
   ).
@@ -286,7 +387,10 @@ lazy val webservice = (project in file("webservice")).
   settings(commonSettings: _*).
   enablePlugins(DockerPlugin).
   settings(
-    libraryDependencies ++= commonLibs,
+    libraryDependencies ++= (//commonLibs,
+      sprayLibs ++:
+      testLibs
+      ),
     name := "nomadWebService",
     docker <<= (docker dependsOn assembly),
     dockerfile in docker := {
@@ -308,7 +412,9 @@ lazy val tool = (project in file("tool")).
   settings(commonSettings: _*).
   enablePlugins(DockerPlugin).
   settings(
-    libraryDependencies ++= commonLibs,
+    libraryDependencies ++= (//commonLibs,
+        testLibs
+    ),
     name := "nomadTool",
     docker <<= (docker dependsOn assembly),
     dockerfile in docker := {
@@ -328,7 +434,9 @@ lazy val calculationparser = (project in file("calculation-parser-worker")).
   dependsOn(base).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= commonLibs,
+    libraryDependencies ++= (//commonLibs,
+      testLibs
+      ),
     name := "nomadCalculationParserWorker"
   ).
   settings(Revolver.settings: _*)
@@ -337,7 +445,9 @@ lazy val normalizer = (project in file("normalizer-worker")).
   dependsOn(base).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= commonLibs,
+    libraryDependencies ++= (//commonLibs,
+      testLibs
+      ),
     name := "nomadNormalizerWorker"
   ).
   settings(Revolver.settings: _*)
@@ -346,18 +456,11 @@ lazy val treeparser = (project in file("tree-parser-worker")).
   dependsOn(base).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= commonLibs,
+    libraryDependencies ++= (//commonLibs,
+      testLibs
+      ),
     name := "nomadTreeParserWorker"
-  ).
-  settings(flywaySettings: _*).
-  ////settings(h2Settings: _*).
-  settings(rdbUrl := {
-  "jdbc:h2:file:" + ((resourceManaged in Compile).value / "localdb_h2")
-} ).
-  settings(flywayH2: _*).
-  settings(jooqCommon: _*).
-  settings(jooqH2: _*).
-  settings(Revolver.settings: _*)
+  )
 
 lazy val root = (project in file(".")).
   settings(commonSettings: _*).
