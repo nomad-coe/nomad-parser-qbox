@@ -455,12 +455,26 @@ lazy val normalizer = (project in file("normalizer-worker")).
 lazy val treeparser = (project in file("tree-parser-worker")).
   dependsOn(base).
   settings(commonSettings: _*).
+  enablePlugins(DockerPlugin).
   settings(
     libraryDependencies ++= (//commonLibs,
       testLibs
       ),
-    name := "nomadTreeParserWorker"
-  )
+    name := "nomadTreeParserWorker",
+    docker <<= (docker dependsOn assembly),
+    dockerfile in docker := {
+      val artifact = (assemblyOutputPath in assembly).value
+      val artifactTargetPath = s"/app/${artifact.name}"
+      new Dockerfile {
+        from("ankitkariryaa/sbt-javac")
+        expose(8081)
+        add(artifact, artifactTargetPath)
+        entryPoint("bash")
+//        entryPoint("java", "-jar", artifactTargetPath)
+      }
+    }
+  ).
+  settings(Revolver.settings: _*)
 
 lazy val root = (project in file(".")).
   settings(commonSettings: _*).
