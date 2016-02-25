@@ -50,19 +50,19 @@ object TreeParserInitilaizer extends StrictLogging {
     prodchannel.queueDeclare(settings.writeQueue, true, false, false, null)
 
     for(filePath <- args) {
-      val p = Paths.get(filePath)
-      val filename = p.getFileName.toString
+      val path = Paths.get(filePath)
+      val filename = path.getFileName.toString
       val uri = s"""nmd://${if(filename.lastIndexOf(".") > -1) filename.substring(0,filename.lastIndexOf(".")) else filename}"""
       val message = TreeParserQueueMessage(
         treeUri = uri,
-        treeFilePath = p.toString,
+        treeFilePath = path.toAbsolutePath.toString,
         treeType = if(filePath.contains(".zip")) TreeType.Zip else TreeType.Unknown
       )
       val msgBytes = JsonSupport.writeUtf8(message)
       logger.info(s"Message: $message, bytes Array size: ${msgBytes.length}")
       prodchannel.basicPublish("", settings.writeQueue, MessageProperties.PERSISTENT_TEXT_PLAIN, msgBytes)
     }
-    logger.info(s"Wrote to Queue: $settings.writeQueue")
+    logger.info(s"Wrote to Queue: ${settings.writeQueue}")
     prodchannel.close
     prodConnection.close
   }

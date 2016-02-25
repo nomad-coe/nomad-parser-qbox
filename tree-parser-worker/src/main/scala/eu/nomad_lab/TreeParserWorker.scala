@@ -89,7 +89,7 @@ object TreeParserWorker extends StrictLogging {
         logger.info(s"Message: $message, bytes Array size: ${msgBytes.length}")
         prodchannel.basicPublish("", settings.writeQueue, MessageProperties.PERSISTENT_TEXT_PLAIN,msgBytes )
       }
-      logger.info(s"Wrote to Queue: $settings.writeQueue")
+      logger.info(s"Wrote to Queue: ${settings.writeQueue}")
       prodchannel.close
       prodConnection.close
     }
