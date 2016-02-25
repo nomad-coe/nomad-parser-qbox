@@ -24,8 +24,8 @@ object CalculationParserWorker extends  StrictLogging {
 
     val uuid = java.util.UUID.randomUUID.toString
     val varToReplaceRe = """\$\{([a-zA-Z][a-zA-Z0-9]*)\}""".r
-    val readQueue = config.getString("nomad_lab.parser_worker_rabbitmq.SingleParserInitializationQueue1")
-    val writeQueue = config.getString("nomad_lab.parser_worker_rabbitmq.ToBeNormalizedInitializationQueue1")
+    val readQueue = config.getString("nomad_lab.parser_worker_rabbitmq.singleParserQueue")
+    val writeQueue = config.getString("nomad_lab.parser_worker_rabbitmq.toBeNormalizedQueue")
     val uncompressRoot = varToReplaceRe.replaceFirstIn(config.getString("nomad_lab.parser_worker_rabbitmq.uncompressRoot"),uuid)
     val parsedRoot = config.getString("nomad_lab.parser_worker_rabbitmq.parsedRoot")
     val rabbitMQHost = config.getString("nomad_lab.parser_worker_rabbitmq.rabbitMQHost")

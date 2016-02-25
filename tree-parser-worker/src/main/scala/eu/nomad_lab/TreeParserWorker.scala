@@ -18,8 +18,8 @@ object TreeParserWorker extends StrictLogging {
     // validate vs. reference.conf
     config.checkValid(ConfigFactory.defaultReference(), "simple-lib")
 
-    val readQueue = config.getString("nomad_lab.parser_worker_rabbitmq.TreeParserInitializationQueue1")
-    val writeQueue = config.getString("nomad_lab.parser_worker_rabbitmq.SingleParserInitializationQueue1")
+    val readQueue = config.getString("nomad_lab.parser_worker_rabbitmq.treeParserQueue")
+    val writeQueue = config.getString("nomad_lab.parser_worker_rabbitmq.singleParserQueue")
     val rabbitMQHost = config.getString("nomad_lab.parser_worker_rabbitmq.rabbitMQHost")
 
     def toJValue: JValue = {

@@ -20,7 +20,7 @@ object TreeParserInitilaizer extends StrictLogging {
     // validate vs. reference.conf
     config.checkValid(ConfigFactory.defaultReference(), "simple-lib")
     val rabbitMQHost = config.getString("nomad_lab.parser_worker_rabbitmq.rabbitMQHost")
-    val writeQueue = config.getString("nomad_lab.parser_worker_rabbitmq.TreeParserInitializationQueue1")
+    val writeQueue = config.getString("nomad_lab.parser_worker_rabbitmq.treeParserQueue")
 
     def toJValue: JValue = {
       import org.json4s.JsonDSL._;
