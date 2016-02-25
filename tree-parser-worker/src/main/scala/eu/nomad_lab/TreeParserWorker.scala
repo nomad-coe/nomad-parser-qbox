@@ -2,19 +2,12 @@ package eu.nomad_lab
 
 import com.typesafe.config.{ConfigFactory, Config}
 import com.typesafe.scalalogging.StrictLogging
-import eu.nomad_lab.QueueMessage.{CalculationParserQueueMessage, TreeParserQueueMessage}
-import eu.nomad_lab.parsers.CandidateParser
+import eu.nomad_lab.QueueMessage.{TreeParserQueueMessage}
 import eu.nomad_lab.parsing_queue.TreeParser.TreeParserException
-import eu.nomad_lab.parsing_queue.{TreeParser, CalculationParser}
-import org.apache.commons.compress.archivers.zip.{ZipArchiveEntry,ZipFile}
-import org.apache.commons.compress.archivers.{ArchiveStreamFactory, ArchiveInputStream}
-import org.apache.tika.Tika
+import eu.nomad_lab.parsing_queue.{TreeParser}
 import org.json4s.JsonAST.JValue
-import scala.annotation.tailrec
 import com.rabbitmq.client._
 import java.io._
-
-import scala.collection.mutable
 
 
 object TreeParserWorker extends StrictLogging {
@@ -25,12 +18,14 @@ object TreeParserWorker extends StrictLogging {
     // validate vs. reference.conf
     config.checkValid(ConfigFactory.defaultReference(), "simple-lib")
 
-    val readQueue = config.getString("nomad_lab.tree_parser_worker.readQueue")
-    val writeQueue = config.getString("nomad_lab.tree_parser_worker.writeQueue")
+    val readQueue = config.getString("nomad_lab.parser_worker_rabbitmq.TreeParserInitializationQueue1")
+    val writeQueue = config.getString("nomad_lab.parser_worker_rabbitmq.SingleParserInitializationQueue1")
+    val rabbitMQHost = config.getString("nomad_lab.parser_worker_rabbitmq.rabbitMQHost")
 
     def toJValue: JValue = {
       import org.json4s.JsonDSL._;
-      ( ("readQueue" -> readQueue) ~
+      ( ("rabbitMQHost" -> rabbitMQHost) ~
+        ("readQueue" -> readQueue) ~
         ("writeQueue" -> writeQueue))
     }
   }
@@ -41,11 +36,11 @@ object TreeParserWorker extends StrictLogging {
     parserCollection = parserCollection
   )
 
-  def main(args: Array[String]) = {
+  def main(args: Array[String]): Unit = {
 
     readFromTreeParserQueue()
 
-    //For sample trial without the read queue initialization
+////    For sample trial without the read queue initialization
 //    val tempMessage =  QueueMessage.TreeParserQueueMessage(
 //      treeUri = "file:///home/kariryaa/NoMad/nomad-lab-base/tree-parser-worker/fhi.zip",
 //      treeFilePath = "/home/kariryaa/NoMad/nomad-lab-base/tree-parser-worker/fhi.zip",
@@ -56,9 +51,9 @@ object TreeParserWorker extends StrictLogging {
   }
 
 
-  def readFromTreeParserQueue():Unit = {
+  def readFromTreeParserQueue(): Unit = {
     val factory: ConnectionFactory = new ConnectionFactory
-    factory.setHost("localhost")
+    factory.setHost(settings.rabbitMQHost)
     val connection: Connection = factory.newConnection
     val channel: Channel = connection.createChannel
     channel.queueDeclare(settings.readQueue, true, false, false, null)
@@ -79,13 +74,13 @@ object TreeParserWorker extends StrictLogging {
 /** Find the parsable files and parsers. Write this information for the single step parser
 *
 * */
-  def findParserAndWriteToQueue(incomingMessage: TreeParserQueueMessage) = {
+  def findParserAndWriteToQueue(incomingMessage: TreeParserQueueMessage): Unit = {
     val msgList = treeParser.findParser(incomingMessage)
     if(msgList.isEmpty)
       throw new TreeParserException(incomingMessage, "No Parsable file found, ")
     else{
       val prodFactory: ConnectionFactory = new ConnectionFactory
-      prodFactory.setHost("localhost")
+      prodFactory.setHost(settings.rabbitMQHost)
       val prodConnection: Connection = prodFactory.newConnection
       val prodchannel: Channel = prodConnection.createChannel
       prodchannel.queueDeclare(settings.writeQueue, true, false, false, null)

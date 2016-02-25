@@ -433,11 +433,24 @@ lazy val tool = (project in file("tool")).
 lazy val calculationparser = (project in file("calculation-parser-worker")).
   dependsOn(base).
   settings(commonSettings: _*).
+  enablePlugins(DockerPlugin).
   settings(
     libraryDependencies ++= (//commonLibs,
       testLibs
       ),
-    name := "nomadCalculationParserWorker"
+    name := "nomadCalculationParserWorker",
+    docker <<= (docker dependsOn assembly),
+    dockerfile in docker := {
+      val artifact = (assemblyOutputPath in assembly).value
+      val artifactTargetPath = s"/app/${artifact.name}"
+      new Dockerfile {
+        from("ankitkariryaa/java-pip")
+        expose(8081)
+        add(artifact, artifactTargetPath)
+        //        entryPoint("bash")
+        entryPoint("java", "-jar", artifactTargetPath)
+      }
+    }
   ).
   settings(Revolver.settings: _*)
 
@@ -449,6 +462,17 @@ lazy val normalizer = (project in file("normalizer-worker")).
       testLibs
       ),
     name := "nomadNormalizerWorker"
+  ).
+  settings(Revolver.settings: _*)
+
+lazy val treeparserinitializer = (project in file("tree-parser-initializer")).
+  dependsOn(base).
+  settings(commonSettings: _*).
+  settings(
+    libraryDependencies ++= (//commonLibs,
+      testLibs
+      ),
+    name := "treeparserinitializer"
   ).
   settings(Revolver.settings: _*)
 
@@ -466,11 +490,11 @@ lazy val treeparser = (project in file("tree-parser-worker")).
       val artifact = (assemblyOutputPath in assembly).value
       val artifactTargetPath = s"/app/${artifact.name}"
       new Dockerfile {
-        from("ankitkariryaa/sbt-javac")
+        from("ankitkariryaa/java-pip")
         expose(8081)
         add(artifact, artifactTargetPath)
-        entryPoint("bash")
-//        entryPoint("java", "-jar", artifactTargetPath)
+//        entryPoint("bash")
+        entryPoint("java", "-jar", artifactTargetPath)
       }
     }
   ).

@@ -22,14 +22,19 @@ object CalculationParserWorker extends  StrictLogging {
     // validate vs. reference.conf
     config.checkValid(ConfigFactory.defaultReference(), "simple-lib")
 
-    val readQueue = config.getString("nomad_lab.calculation_parser_worker.readQueue")
-    val writeQueue = config.getString("nomad_lab.calculation_parser_worker.writeQueue")
-    val uncompressRoot = config.getString("nomad_lab.calculation_parser_worker.uncompressRoot")
-    val parsedRoot = config.getString("nomad_lab.calculation_parser_worker.parsedRoot")
+    val uuid = java.util.UUID.randomUUID.toString
+    val varToReplaceRe = """\$\{([a-zA-Z][a-zA-Z0-9]*)\}""".r
+    val readQueue = config.getString("nomad_lab.parser_worker_rabbitmq.SingleParserInitializationQueue1")
+    val writeQueue = config.getString("nomad_lab.parser_worker_rabbitmq.ToBeNormalizedInitializationQueue1")
+    val uncompressRoot = varToReplaceRe.replaceFirstIn(config.getString("nomad_lab.parser_worker_rabbitmq.uncompressRoot"),uuid)
+    val parsedRoot = config.getString("nomad_lab.parser_worker_rabbitmq.parsedRoot")
+    val rabbitMQHost = config.getString("nomad_lab.parser_worker_rabbitmq.rabbitMQHost")
+
 
     def toJValue: JValue = {
       import org.json4s.JsonDSL._;
-      ( ("readQueue" -> readQueue) ~
+      ( ("rabbitMQHost" -> rabbitMQHost) ~
+        ("readQueue" -> readQueue) ~
         ("writeQueue" -> writeQueue) ~
         ("uncompressRoot"  ->uncompressRoot)~
         ("parsedRoot"  ->parsedRoot))
@@ -40,7 +45,7 @@ object CalculationParserWorker extends  StrictLogging {
 
   def initializeNextQueue(message: ToBeNormalizedQueueMessage) = {
     val prodFactory: ConnectionFactory = new ConnectionFactory
-    prodFactory.setHost("localhost")
+    prodFactory.setHost(settings.rabbitMQHost)
     val prodConnection: Connection = prodFactory.newConnection
     val prodchannel: Channel = prodConnection.createChannel
     prodchannel.queueDeclare(settings.writeQueue, true, false, false, null)
@@ -70,9 +75,9 @@ object CalculationParserWorker extends  StrictLogging {
 
   }
 
-  def readFromQueue() = {
+  def readFromQueue(): Unit = {
     val factory: ConnectionFactory = new ConnectionFactory
-    factory.setHost("localhost")
+    factory.setHost(settings.rabbitMQHost)
     val connection: Connection = factory.newConnection
     val channel: Channel = connection.createChannel
     channel.queueDeclare(settings.readQueue, true, false, false, null)
