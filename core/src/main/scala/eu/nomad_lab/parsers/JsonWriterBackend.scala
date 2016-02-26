@@ -179,7 +179,7 @@ class JsonWriterBackend(
         throw new JsonWriterException(s"unexpected state $writingStatus in JsonWriter")
     }
     outF.write("""{
-  "type": "nomad_info_data_1_0""")
+  "type": "nomad_info_data_1_0"""")
     mainFileUri match {
       case Some(uri) =>
         outF.write(""",
