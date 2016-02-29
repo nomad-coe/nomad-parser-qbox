@@ -6,22 +6,31 @@ import scala.collection._
 import scala.collection.mutable.ListBuffer
 import com.typesafe.scalalogging.StrictLogging
 
-object ParserRun {
+object ParserRun extends StrictLogging {
 
   /* Parse the given file path with the given parser and options
   *
   * */
-  def parse(Parser:SimpleExternalParserGenerator,pPath:String,opt:String): ParseResult.Value =
+  def parse(parserGen: SimpleExternalParserGenerator,pPath:String,opt:String): ParseResult.Value =
   {
     object BackendType extends Enumeration {
       type Enum = Value
       val JsonWriter, JsonEventEmitter, Netcdf = Value
     }
-    val p = Paths.get(pPath).toAbsolutePath
-    val path = p.toString
+    val p = Paths.get(pPath)
+    val path = (if (!p.toFile().exists()) {
+      //val basePath = Paths.get((new java.io.File(".")).getCanonicalPath())
+      //val relPath = p.subpath(2, p.getNameCount()).toString()
+      //println(s"XXX $basePath + $relPath")
+      //basePath.resolve(relPath)
+      p.subpath(2, p.getNameCount())
+    } else
+      p
+    ).toAbsolutePath().toString()
     val uri = p.toUri.toString
-    val stdOut = new java.io.OutputStreamWriter(System.out)
-    val optimizer = Parser.optimizedParser(Seq())
+    val tmpFile = java.io.File.createTempFile("parserTest", ".log")
+    val outF = new java.io.FileWriter(tmpFile, true)
+    val parser = parserGen.optimizedParser(Seq())
     var backendType: BackendType.Enum = BackendType.JsonEventEmitter
     opt match {
       case "json" =>
@@ -33,13 +42,19 @@ object ParserRun {
     }
     val extBackend: parsers.ParserBackendExternal = backendType match {
       case BackendType.JsonWriter =>
-        new parsers.JsonWriterBackend(optimizer.parseableMetaInfo, stdOut)
+        new parsers.JsonWriterBackend(parser.parseableMetaInfo, outF)
       case BackendType.Netcdf => null
       case BackendType.JsonEventEmitter =>
-        new parsers.JsonParseEventsWriterBackend(optimizer.parseableMetaInfo, stdOut)
+        new parsers.JsonParseEventsWriterBackend(parser.parseableMetaInfo, outF)
     }
-    val res = optimizer.parseExternal(uri,path,extBackend,Parser.name)
-    optimizer.cleanup()
+    val res = parser.parseExternal(uri,path,extBackend, parserGen.name)
+    outF.close()
+    if (res == ParseResult.ParseSuccess) {
+      tmpFile.delete()
+      parser.cleanup()
+    } else {
+      logger.warn(s"parsing failure, leaving parsing output in $tmpFile and avoiding parser cleanup")
+    }
     res
   }
 }
