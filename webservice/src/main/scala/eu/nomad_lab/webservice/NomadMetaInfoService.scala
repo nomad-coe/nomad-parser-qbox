@@ -1063,7 +1063,7 @@ table
             }
           }
         }~
-        path("multiplemetainfograph.json" /) {
+        path("multiplemetainfograph.json") {
           get {
             parameter('metaInfoList) { metaInfoList =>
               respondWithMediaType(`application/json`) {

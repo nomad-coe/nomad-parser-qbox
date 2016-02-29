@@ -68,13 +68,13 @@ class NomadMetaInfoServiceSpec extends Specification with Specs2RouteTest with N
     }
 
     "GET multiple metaInfo graph" in {
-      Get("/nmi/v/last/multiplemetainfograph.json/?metaInfoList=atom_forces_T0,atom_forces_type,atom_label") ~> sealRoute(myRoute) ~> check {
+      Get("/nmi/v/last/multiplemetainfograph.json?metaInfoList=atom_forces_T0,atom_forces_type,atom_label") ~> sealRoute(myRoute) ~> check {
         (JsonUtils.parseStr(responseAs[String]) \ "nodes").extract[JArray].children.length >= 3 must_== true
       }
     }
 
     "GET multiple metaInfo graph for incorrect metaInfo" in {
-      Get("/nmi/v/last/multiplemetainfograph.json/?metaInfoList=asadsad,atdsfsdfes_sade,basdsadel") ~> sealRoute(myRoute) ~> check {
+      Get("/nmi/v/last/multiplemetainfograph.json?metaInfoList=asadsad,atdsfsdfes_sade,basdsadel") ~> sealRoute(myRoute) ~> check {
         (JsonUtils.parseStr(responseAs[String]) \ "nodes").extract[JArray].children.length == 0 must_== true
       }
     }
