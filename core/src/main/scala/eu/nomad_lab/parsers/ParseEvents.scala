@@ -12,8 +12,13 @@ import eu.nomad_lab.meta.MetaInfoRecord
 import java.io.Writer
 import org.json4s.{JNothing, JNull, JBool, JDouble, JDecimal, JInt, JString, JArray, JObject, JValue, JField}
 import org.json4s.CustomSerializer
+import scala.util.control.NonFatal
 
 object ParseEvent {
+  class ParseEventParseError(
+    msg: String, what: Throwable
+  ) extends Exception(msg, what)
+
   /** builds an array of the given size looking up the type from the backend metaInfo
     */
   def buildArray(backend: Option[ParserBackendExternal], metaName: String, valuesShape: Seq[Long], flatValues: List[JValue]): NArray = {
@@ -149,114 +154,119 @@ object ParseEvent {
         var parserStatus: Option[ParseResult.Value] = None;
         var parserErrors: JValue = JNothing;
         var jsonValue: JValue = JNothing;
-        obj foreach {
-          case JField("event", value) =>
-            value match {
-              case JString(s)       => event = s
-              case JNothing | JNull => ()
-              case _                => throw new JsonUtils.InvalidValueError(
-                "event", "ParseEvent", JsonUtils.prettyStr(value), "a string")
-            }
-          case JField("metaName", value) =>
-            value match {
-              case JString(s)       => metaName = s
-              case JNothing | JNull => ()
-              case _                => throw new JsonUtils.InvalidValueError(
-                "metaName", "ParseEvent", JsonUtils.prettyStr(value), "a string")
-            }
-          case JField("gIndex", value) =>
-            value match {
-              case JInt(i)          => gIndex = i.longValue
-              case JDecimal(i)      => gIndex = i.longValue
-              case JNothing | JNull => ()
-              case _                => throw new JsonUtils.InvalidValueError(
-                "gIndex", "NomadMetaInfo", JsonUtils.prettyStr(value), "a string")
-            }
-          case JField("value", value) =>
-            jsonValue = value
-          case JField("shape", value) =>
-            if (!value.toOption.isEmpty)
-              shape = Some(value.extract[Seq[Long]])
-          case JField("valuesShape", value) =>
-            if (!value.toOption.isEmpty)
-              valuesShape = value.extract[Seq[Long]]
-          case JField("offset", value) =>
-            if (!value.toOption.isEmpty)
-              offset = Some(value.extract[Seq[Long]])
-          case JField("flatValues", value) =>
-            if (!value.toOption.isEmpty)
+        try{
+          obj foreach {
+            case JField("event", value) =>
               value match {
-                case JArray(arr) =>
-                  flatValues = arr
-                case JNothing | JNull =>
-                  ()
+                case JString(s)       => event = s
+                case JNothing | JNull => ()
+                case _                => throw new JsonUtils.InvalidValueError(
+                  "event", "ParseEvent", JsonUtils.prettyStr(value), "a string")
+              }
+            case JField("metaName", value) =>
+              value match {
+                case JString(s)       => metaName = s
+                case JNothing | JNull => ()
+                case _                => throw new JsonUtils.InvalidValueError(
+                  "metaName", "ParseEvent", JsonUtils.prettyStr(value), "a string")
+              }
+            case JField("gIndex", value) =>
+              value match {
+                case JInt(i)          => gIndex = i.longValue
+                case JDecimal(i)      => gIndex = i.longValue
+                case JNothing | JNull => ()
+                case _                => throw new JsonUtils.InvalidValueError(
+                  "gIndex", "NomadMetaInfo", JsonUtils.prettyStr(value), "a string")
+              }
+            case JField("value", value) =>
+              jsonValue = value
+            case JField("shape", value) =>
+              if (!value.toOption.isEmpty)
+                shape = Some(value.extract[Seq[Long]])
+            case JField("valuesShape", value) =>
+              if (!value.toOption.isEmpty)
+                valuesShape = value.extract[Seq[Long]]
+            case JField("offset", value) =>
+              if (!value.toOption.isEmpty)
+                offset = Some(value.extract[Seq[Long]])
+            case JField("flatValues", value) =>
+              if (!value.toOption.isEmpty)
+                value match {
+                  case JArray(arr) =>
+                    flatValues = arr
+                  case JNothing | JNull =>
+                    ()
+                  case _ =>
+                    throw new JsonUtils.InvalidValueError(
+                      "flatValues", "ParseEvent", JsonUtils.prettyStr(value), "an array")
+                }
+            case JField("references", value) =>
+              if (!value.toOption.isEmpty)
+                references = value.extract[Map[String, Long]]
+            case JField("mainFileUri", value) =>
+              value match {
+                case JString(s)       => mainFileUri = Some(s)
+                case JNothing | JNull => ()
+                case _                => throw new JsonUtils.InvalidValueError(
+                  "mainFileUri", "ParseEvent", JsonUtils.prettyStr(value), "a string")
+              }
+            case JField("parserInfo", value) =>
+              parserInfo = value
+            case JField("parserStatus", value) =>
+              value match {
+                case JString(s) =>
+                  parserStatus = Some(ParseResult.withName(s))
+                case JNothing | JNull => ()
+                case _                => throw new JsonUtils.InvalidValueError(
+                  "parserStatus", "ParseEvent", JsonUtils.prettyStr(value), s"a string value that is one of ${ParseResult.values.mkString("[",",","]")}")
+              }
+            case JField("parserErrors", value) =>
+              parserErrors = value
+            case JField(field, value) =>
+              throw new JsonUtils.UnexpectedFieldError("ParseEvent", field, value)
+          }
+          event match {
+            case "startedParsingSession" =>
+              StartedParsingSession(mainFileUri, parserInfo, parserStatus, parserErrors)
+            case "finishedParsingSession" =>
+              FinishedParsingSession(parserStatus, parserErrors, mainFileUri, parserInfo)
+            case "setSectionInfo" =>
+              SetSectionInfo(metaName, gIndex, references)
+            case "closeSection" =>
+              CloseSection(metaName, gIndex)
+            case "addValue" =>
+              AddValue(metaName, jsonValue, gIndex)
+            case "addRealValue" =>
+              jsonValue match {
+                case JDouble(d) =>
+                  AddRealValue(metaName, d, gIndex)
+                case JInt(i) =>
+                  AddRealValue(metaName, i.doubleValue, gIndex)
+                case JDecimal(d) =>
+                  AddRealValue(metaName, d.doubleValue, gIndex)
                 case _ =>
                   throw new JsonUtils.InvalidValueError(
-                    "flatValues", "ParseEvent", JsonUtils.prettyStr(value), "an array")
+                    "value", "ParseEvent", JsonUtils.prettyStr(jsonValue), "addRealValue expects a real value")
               }
-          case JField("references", value) =>
-            if (!value.toOption.isEmpty)
-              references = value.extract[Map[String, Long]]
-          case JField("mainFileUri", value) =>
-            value match {
-              case JString(s)       => mainFileUri = Some(s)
-              case JNothing | JNull => ()
-              case _                => throw new JsonUtils.InvalidValueError(
-                "mainFileUri", "ParseEvent", JsonUtils.prettyStr(value), "a string")
-            }
-          case JField("parserInfo", value) =>
-            parserInfo = value
-          case JField("parserStatus", value) =>
-            value match {
-              case JString(s) =>
-                parserStatus = Some(ParseResult.withName(s))
-              case JNothing | JNull => ()
-              case _                => throw new JsonUtils.InvalidValueError(
-                "parserStatus", "ParseEvent", JsonUtils.prettyStr(value), s"a string value that is one of ${ParseResult.values.mkString("[",",","]")}")
-            }
-          case JField("parserErrors", value) =>
-            parserErrors = value
-          case JField(field, value) =>
-            throw new JsonUtils.UnexpectedFieldError("ParseEvent", field, value)
-        }
-        event match {
-          case "startedParsingSession" =>
-            StartedParsingSession(mainFileUri, parserInfo, parserStatus, parserErrors)
-          case "finishedParsingSession" =>
-            FinishedParsingSession(parserStatus, parserErrors, mainFileUri, parserInfo)
-          case "setSectionInfo" =>
-            SetSectionInfo(metaName, gIndex, references)
-          case "closeSection" =>
-            CloseSection(metaName, gIndex)
-          case "addValue" =>
-            AddValue(metaName, jsonValue, gIndex)
-          case "addRealValue" =>
-            jsonValue match {
-              case JDouble(d) =>
-                AddRealValue(metaName, d, gIndex)
-              case JInt(i) =>
-                AddRealValue(metaName, i.doubleValue, gIndex)
-              case JDecimal(d) =>
-                AddRealValue(metaName, d.doubleValue, gIndex)
-              case _ =>
-                throw new JsonUtils.InvalidValueError(
-                  "value", "ParseEvent", JsonUtils.prettyStr(jsonValue), "addRealValue expects a real value")
-            }
-          case "addArray" =>
-            shape match {
-              case Some(dims) =>
-                AddArray(metaName, dims, gIndex)
-              case None =>
-                throw new JsonUtils.InvalidValueError(
-                  "shape", "ParseEvent", shape.mkString("[",",","]"), "addArray requires a shape")
-            }
-          case "setArrayValues" =>
-            SetArrayValues(metaName, buildArray(backend, metaName, valuesShape, flatValues),
-              offset, gIndex)
-          case "addArrayValues" =>
-            AddArrayValues(metaName, buildArray(backend, metaName, valuesShape, flatValues), gIndex)
-          case "openSection" =>
-            OpenSectionWithGIndex(metaName, gIndex)
+            case "addArray" =>
+              shape match {
+                case Some(dims) =>
+                  AddArray(metaName, dims, gIndex)
+                case None =>
+                  throw new JsonUtils.InvalidValueError(
+                    "shape", "ParseEvent", shape.mkString("[",",","]"), "addArray requires a shape")
+              }
+            case "setArrayValues" =>
+              SetArrayValues(metaName, buildArray(backend, metaName, valuesShape, flatValues),
+                offset, gIndex)
+            case "addArrayValues" =>
+              AddArrayValues(metaName, buildArray(backend, metaName, valuesShape, flatValues), gIndex)
+            case "openSection" =>
+              OpenSectionWithGIndex(metaName, gIndex)
+          }
+        } catch {
+          case NonFatal(e) =>
+            throw new ParseEventParseError(s"Error trying to parse a ParseEvent from ${JsonUtils.prettyStr(value)}.", e)
         }
       }
       case v =>
