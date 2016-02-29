@@ -67,7 +67,7 @@ dataModule.factory('dataService', function($http) {
     },
     asyncMetaInfoListGraph: function(version,metaNames) {
         promiseMetaInfoListGraph = $http({
-                                     url: '/nmi/v/'+version+'/multiplemetainfograph.json/',
+                                     url: '/nmi/v/'+version+'/multiplemetainfograph.json',
                                      method: "GET",
                                      params: {"metaInfoList":metaNames.toString()}
                                    }).then(function (response) {
