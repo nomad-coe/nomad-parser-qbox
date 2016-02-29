@@ -56,17 +56,31 @@ object TreeParserWorker extends StrictLogging {
     factory.setHost(settings.rabbitMQHost)
     val connection: Connection = factory.newConnection
     val channel: Channel = connection.createChannel
+
+    //channel.queueDeclare(String queue, boolean durable, boolean exclusive, boolean autoDelete, Map<String, Object> arguments)
     channel.queueDeclare(settings.readQueue, true, false, false, null)
     logger.info(s"Reading from Queue: ${settings.readQueue}")
+
+    // Fair dispatch: don't dispatch a new message to a worker until it has processed and acknowledged the previous one
+    val prefetchCount = 1
+    channel.basicQos(prefetchCount)
+
     val consumer: Consumer = new DefaultConsumer((channel)) {
       @throws(classOf[IOException])
       override def handleDelivery(consumerTag: String, envelope: Envelope, properties: AMQP.BasicProperties, body: Array[Byte]) {
         val message: TreeParserQueueMessage = eu.nomad_lab.JsonSupport.readUtf8[TreeParserQueueMessage](body)
         println(" [x] Received '" + message + "'")
-        findParserAndWriteToQueue(message)
+        //Send acknowledgement to the broker once the message has been consumed.
+        try {
+          findParserAndWriteToQueue(message)
+        } finally {
+          println(" [x] Done")
+          channel.basicAck(envelope.getDeliveryTag(), false)
+        }
       }
     }
-    channel.basicConsume(settings.readQueue, true, consumer)
+    //basicConsume(String queue, boolean autoAck, Consumer callback)
+    channel.basicConsume(settings.readQueue, false, consumer)
     ()
   }
 

@@ -80,19 +80,33 @@ object CalculationParserWorker extends  StrictLogging {
     factory.setHost(settings.rabbitMQHost)
     val connection: Connection = factory.newConnection
     val channel: Channel = connection.createChannel
+
+    //channel.queueDeclare(String queue, boolean durable, boolean exclusive, boolean autoDelete, Map<String, Object> arguments)
     channel.queueDeclare(settings.readQueue, true, false, false, null)
     logger.info(s"Reading from Queue: ${settings.readQueue}")
+
+    // Fair dispatch: don't dispatch a new message to a worker until it has processed and acknowledged the previous one
+    val prefetchCount = 1
+    channel.basicQos(prefetchCount)
+
     val consumer: Consumer = new DefaultConsumer((channel)) {
       @throws(classOf[IOException])
       override def handleDelivery(consumerTag: String, envelope: Envelope, properties: AMQP.BasicProperties, body: Array[Byte]) {
         val message: CalculationParserQueueMessage = eu.nomad_lab.JsonSupport.readUtf8[CalculationParserQueueMessage](body)
         System.out.println(" [x] Received '" + message + "'")
 //        uncompress(message)
-        val resultMessage = calculationParser.uncompressAndInitializeParser(message)
-        initializeNextQueue(resultMessage)
+
+        //Send acknowledgement to the broker once the message has been consumed.
+        try {
+          val resultMessage = calculationParser.uncompressAndInitializeParser(message)
+          initializeNextQueue(resultMessage)
+        } finally {
+          println(" [x] Done")
+          channel.basicAck(envelope.getDeliveryTag(), false)
+        }
       }
     }
-    channel.basicConsume(settings.readQueue, true, consumer)
+    channel.basicConsume(settings.readQueue, false, consumer)
   }
 
 }
