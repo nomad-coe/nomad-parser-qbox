@@ -4,6 +4,6 @@ import com.typesafe.config.{Config, ConfigFactory}
 
 object LocalEnv{
   def setup(config: Config): Unit = {
-    Rdb.defaultSettings_=(new Rdb.Settings(config))
+    //Rdb.defaultSettings_=(new Rdb.Settings(config))
   }
 }

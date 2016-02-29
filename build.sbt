@@ -3,67 +3,6 @@
   */
 scalaVersion  := "2.11.7"
 
-lazy val commonSettings = Seq(
-  organization  := "eu.nomad-laboratory",
-  version       := "0.1",
-  scalaVersion  := "2.11.7",
-  scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
-  resolvers     += "netcdf releases" at "http://artifacts.unidata.ucar.edu/content/repositories/unidata-releases",
-  fork in run   := true /*,
-  fork in Test  := true // breaks test summary report */
-)
-
-// json4s 3.3 is being finalized
-
-lazy val commonLibs = {
-  val akkaV = "2.3.9"
-  val sprayV = "1.3.3"
-  val json4sNative  = "org.json4s"         %% "json4s-native"  % "3.2.11"
-  val json4sJackson = "org.json4s"         %% "json4s-jackson" % "3.2.11"
-  val re2j          = "com.google.re2j"     % "re2j"           % "1.0"
-  val configLib     = "com.typesafe"        % "config"         % "1.2.1"
-  val spec2         = "org.specs2"         %% "specs2-core"    % "2.3.11" % "test"
-  val h2            = "com.h2database"      % "h2"             % "1.4.187"
-  val scalacheck    = "org.scalacheck"     %% "scalacheck"     % "1.12.4" % "test"
-  val scalalog      = "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0"
-  val tika          = "org.apache.tika"     % "tika-core"       % "1.10"
-  val commonsCompress = "org.apache.commons"  % "commons-compress" % "1.10"
-  val xzForJava     = "org.tukaani"         % "xz"              % "1.5"
-  val netcdf        = "edu.ucar"            % "netcdf4"         % "4.6.3"
-  val fastring      = "com.dongxiguo"      %% "fastring"        % "0.2.4"
-  val playJson      = "com.typesafe.play"  %% "play-json"       % "2.4.3"
-  val kafka         = "org.apache.kafka"   %% "kafka"           % "0.9.0.0" exclude("log4j", "log4j") exclude("org.slf4j","slf4j-log4j12")
-  val pegdown       = "org.pegdown"         % "pegdown"         % "1.6.0"
-  val rabbitMQ      = "com.rabbitmq"        % "amqp-client"      %"3.6.0"
-  val log4j2        = Seq(
-    "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.5",
-    "org.apache.logging.log4j" % "log4j-api"        % "2.5",
-    "org.apache.logging.log4j" % "log4j-core"       % "2.5",
-    "org.apache.logging.log4j" % "log4j-1.2-api"    % "2.5")
-  Seq(
-    "io.spray"            %%  "spray-can"     % sprayV,
-    "io.spray"            %%  "spray-routing" % sprayV,
-    "io.spray"            %%  "spray-testkit" % sprayV  % "test",
-    "com.typesafe.akka"   %%  "akka-actor"    % akkaV,
-    "com.typesafe.akka"   %%  "akka-testkit"  % akkaV   % "test",
-    spec2,
-    re2j,
-    configLib,
-    json4sNative,
-    json4sJackson,
-    h2,
-    scalacheck,
-    tika,
-    commonsCompress,
-    xzForJava,
-    netcdf,
-    fastring,
-    kafka,
-    pegdown,
-    rabbitMQ,
-    scalalog) ++ log4j2
-}
-
 // # libs
 
 // ## input configuration
@@ -105,8 +44,10 @@ val compressionLibs = {
 // ## archive management libs
 val bagitLib = "gov.loc" % "bagit" % "4.11.0"
 
-// ## queuing lib
+// ## queuing libs
 val kafkaLib         = "org.apache.kafka"   %% "kafka"           % "0.9.0.0" exclude("log4j", "log4j") exclude("org.slf4j","slf4j-log4j12")
+val rabbitmqLib      = "com.rabbitmq"        % "amqp-client"      %"3.6.0"
+
 
 // ## markdown interpreter lib
 val pegdownLib       = "org.pegdown"         % "pegdown"         % "1.6.0"
@@ -135,146 +76,133 @@ val jooqMetaLib      = "org.jooq"            % "jooq-meta"            % jooqLibV
 // val re2j          = "com.google.re2j"     % "re2j"            % "1.0" // faster regexps
 // val fastring      = "com.dongxiguo"      %% "fastring"        % "0.2.4" // faster string templates
 // val playJson      = "com.typesafe.play"  %% "play-json"       % "2.4.3" // json4s alternative
- val netcdf        = "edu.ucar"            % "netcdf4"         % "4.6.3" // pure java netcdf lib (writes only netcdf3, so full version in unmanaged jars)
+val netcdf        = "edu.ucar"            % "netcdf4"         % "4.6.3" // pure java netcdf lib (writes only netcdf3, so full version in unmanaged jars)
 
-lazy val jooqCommon = seq(jooqSettings:_*) ++ Seq(
-  jooqVersion := "3.6.2",
-  (codegen in JOOQ) <<= (codegen in JOOQ).dependsOn(flywayMigrate)
-    //  jooqForceGen := true
+val versionRe = """v([0-9]+(?:\.[0-9]+(?:\.[0-9]+)?)?)-?(.*)?""".r
+
+lazy val commonSettings = Seq(
+  organization  := "eu.nomad-laboratory",
+  scalaVersion  := "2.11.7",
+  scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8", "-feature"),
+  // resolvers     += "netcdf releases" at "http://artifacts.unidata.ucar.edu/content/repositories/unidata-releases",
+  libraryDependencies ++= testLibs,
+  libraryDependencies ++= loggingLibs,
+  fork in run   := true,
+  fork in Test  := true // breaks test summary report */
 )
 
-val rdbBase : Seq[(String,String)] = Seq(
-  "generator.database.includes" -> ".*",
-  "generator.target.packageName" -> "eu.nomad_lab.rdb",
-  "generator.generate.pojos" -> "false",
-  "generator.generate.immutablePojos" -> "false",
-  "generator.generate.deprecated" -> "false"
-//  "generator.strategy.name" -> "qgame.jooq.DBGeneratorStrategy",
-//  "generator.name" -> "qgame.jooq.DBGenerator",
-//  "generator.database.outputSchemaToDefault" -> "true"
+lazy val gitVersionSettings = Seq(
+  buildInfoPackage := "eu.nomad_lab",
+  buildInfoOptions += BuildInfoOption.ToMap,
+  buildInfoObject := name.value.capitalize + "VersionInfo",
+  version := {
+    val gitV: String = Process("git" :: "describe" :: "--tags" :: "--dirty" :: Nil, baseDirectory.value) !!;
+    gitV.trim
+  },
+  buildInfoKeys := Seq[BuildInfoKey](
+    name,
+    version,
+    scalaVersion,
+    sbtVersion,
+    BuildInfoKey.action("buildTime") {
+      System.currentTimeMillis
+    })
+)
+
+
+lazy val jooqCommon = seq(jooqSettings:_*) ++ Seq(
+  jooqVersion := "3.6.2"
 )
 
 lazy val rdbUrl = settingKey[String]("url to the rdb used during building")
 
-lazy val flywayH2 = Seq(
-  flywayUrl := rdbUrl.value,
-  flywayLocations := Seq( "classpath:rdb/sql/common") //, "classpath:rdb/sql/h2")
-)
+//libraryDependencies ++= loggingLibs
 
-// jooq db description generation
-lazy val jooqH2 = Seq(
-  libraryDependencies +=  "com.h2database"      %   "h2"            % "1.4.187"           % "jooq",
-  jooqOptions := Seq(
-        "jdbc.driver" -> "org.h2.Driver",
-        "jdbc.url" -> rdbUrl.value,
-        //"jdbc.user" -> "sa",
-        //"jdbc.password" -> "sa",
-        "generator.database.name" -> "org.jooq.util.h2.H2Database",
-        "generator.database.inputSchema" -> "PUBLIC"
-  ),
-  jooqOptions ++= rdbBase
-)
-
-/*lazy val h2Settings = {
-  Seq( rdbUrl := {
-    "jdbc:h2:file:" + ((resourceManaged in Compile).value / "localdb_h2")
-  } ) ++ flywayH2 ++ jooqCommon ++ jooqH2
-};*/
-
-lazy val flywayPostgres = (
-  flywayUrl := rdbUrl.value,
-  flywayUser := "nomad_lab",
-  flywayPassword := "pippo",
-  flywayLocations := Seq(
-    "classpath:rdb/sql/common",
-    "classpath:rdb/sql/postgres" )
-)
-
-/*lazy val jooqPostgres = Seq(
-  libraryDependencies += "org.postgresql"      %   "postgresql"    % "9.4-1201-jdbc41" % "jooq",
-  multiplyJooqOptions := Map("rdb" -> Seq(
-    "jdbc.driver" -> "org.postgres.Driver",
-    "jdbc.url" -> rdbUrl.value,
-    "jdbc.user" -> "nomad_lab",
-    "jdbc.password" -> "pippo",
-    "generator.database.name" -> "org.jooq.util.postgres.PostgresDatabase"
-  ) ++ rdbBase ) );
- */
-
-/*lazy val postgresSettings = { Seq( rdbUrl := "jdbc:postgres://localhost:5432/nomad_lab" )
-  ++ flywayPostgres ++ jooqCommon ++ jooqPostgres };*/
-
-// code generation step to before, so the api can be used in core
-// the generated code can also be generated to a directory that is then checked in
-// for example with:
-// settings(jooqOutputDirectory := (baseDirectory.value / "../core/src/main/java").getCanonicalFile())
-// this can be useful to have a separate project not compiled by default and then add the
-// generated files to git, for example for DB like postgres that not every developer might have installed
-lazy val cgen = (project in file("cgen")).
+lazy val rdbGen = (project in file("rdb/rdb-gen")).
   settings(commonSettings: _*).
   settings(
-//    libraryDependencies ++= commonLibs,
-    name := "cgen"
+    name := "rdbGen"
   ).
   settings(flywaySettings: _*).
-  ////settings(h2Settings: _*).
-  settings(rdbUrl := {
+  settings(jooqCommon: _*).
+  settings(
+    rdbUrl := {
     "jdbc:h2:file:" + ((resourceManaged in Compile).value / "localdb_h2")
   } ).
-  settings(flywayH2: _*).
+  settings(
+    flywayUrl := rdbUrl.value,
+    flywayLocations := Seq( "classpath:rdb/migrations")
+  ).
   settings(jooqCommon: _*).
-  settings(jooqH2: _*)
+  settings(
+    (codegen in JOOQ) <<= (codegen in JOOQ).dependsOn(flywayMigrate),
+    libraryDependencies +=  h2Lib % "jooq",
+    jooqOptions := Seq(
+      "jdbc.driver" -> "org.h2.Driver",
+      "jdbc.url" -> rdbUrl.value,
+      "generator.database.name" -> "org.jooq.util.h2.H2Database",
+      "generator.database.inputSchema" -> "PUBLIC",
+      "generator.database.outputSchemaToDefault" -> "true",
+      "generator.database.includes" -> ".*",
+      "generator.target.packageName" -> "eu.nomad_lab.rdb.db",
+      "generator.generate.pojos" -> "false",
+      "generator.generate.immutablePojos" -> "false",
+      "generator.generate.deprecated" -> "false"
+    ),
+    jooqOutputDirectory := (baseDirectory.value / "../rdb/src/main/java").getCanonicalFile()
+  )
 
-  //settings(sbtavrohugger.SbtAvrohugger.specificAvroSettings)
-
+lazy val rdb = (project in file("dbs/rdb")).
+  enablePlugins(BuildInfoPlugin).
+  settings(gitVersionSettings: _*).
+  settings(commonSettings: _*).
+  settings(
+    name := "rdb",
+    libraryDependencies ++= (
+      configLib +:
+        h2Lib +:
+        jooqLib +:
+        flywayLib +:
+        loggingLibs),
+    (unmanagedResourceDirectories in Compile) += (baseDirectory.value / "../rdb-gen/src/main/resources").getCanonicalFile()
+  )
 
 lazy val core = (project in file("core")).
-  dependsOn(cgen).
+  enablePlugins(BuildInfoPlugin).
+  settings(gitVersionSettings: _*).
   settings(commonSettings: _*).
   settings(
     libraryDependencies ++= (
       configLib +:
-        netcdf +:
         json4sNativeLib +:
         json4sJacksonLib +:
         pegdownLib +:
         tikaLib +:
         kafkaLib +:
-        testLibs ++:
+        netcdf +:
         compressionLibs ++:
         loggingLibs),
     name := "nomadCore",
     (unmanagedResourceDirectories in Compile) += (baseDirectory.value / "../nomad-meta-info/meta_info").getCanonicalFile(),
     (unmanagedResourceDirectories in Compile) += (baseDirectory.value / "../python-common/common").getCanonicalFile()
-  )//.
-  //settings(flywaySettings: _*).
-  ////settings(h2Settings: _*).
-  //settings(rdbUrl := {
-  //  "jdbc:h2:file:" + ((resourceManaged in Compile).value / "localdb_h2")
-  //} ).
-  //settings(flywayH2: _*).
-  //settings(jooqCommon: _*).
-  //settings(jooqH2: _*)
-
+  )
 
 lazy val fhiAims = (project in file("parsers/fhi-aims")).
   dependsOn(core).
+  enablePlugins(BuildInfoPlugin).
+  settings(gitVersionSettings: _*).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= (//commonLibs,
-      testLibs
-         ),
     name := "fhiAims"
   ).
   settings(Revolver.settings: _*)
 
 lazy val castep = (project in file("parsers/castep")).
   dependsOn(core).
+  enablePlugins(BuildInfoPlugin).
+  settings(gitVersionSettings: _*).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= (//commonLibs,
-      testLibs
-         ),
     name := "castep",
     (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
   ).
@@ -282,11 +210,10 @@ lazy val castep = (project in file("parsers/castep")).
 
 lazy val cp2k = (project in file("parsers/cp2k")).
   dependsOn(core).
+  enablePlugins(BuildInfoPlugin).
+  settings(gitVersionSettings: _*).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= (//commonLibs,
-      testLibs
-      ),
     name := "cp2k",
     (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
   ).
@@ -294,11 +221,10 @@ lazy val cp2k = (project in file("parsers/cp2k")).
 
 lazy val dlPoly = (project in file("parsers/dl-poly")).
   dependsOn(core).
+  enablePlugins(BuildInfoPlugin).
+  settings(gitVersionSettings: _*).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= (//commonLibs,
-      testLibs
-      ),
     name := "dlPoly",
     (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
   ).
@@ -306,11 +232,10 @@ lazy val dlPoly = (project in file("parsers/dl-poly")).
 
 lazy val exciting = (project in file("parsers/exciting")).
   dependsOn(core).
+  enablePlugins(BuildInfoPlugin).
+  settings(gitVersionSettings: _*).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= (//commonLibs,
-      testLibs
-      ),
     name := "exciting",
     (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
   ).
@@ -318,11 +243,10 @@ lazy val exciting = (project in file("parsers/exciting")).
 
 lazy val gaussian = (project in file("parsers/gaussian")).
   dependsOn(core).
+  enablePlugins(BuildInfoPlugin).
+  settings(gitVersionSettings: _*).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= (//commonLibs,
-      testLibs
-      ),
     name := "gaussian",
     (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
   ).
@@ -330,11 +254,10 @@ lazy val gaussian = (project in file("parsers/gaussian")).
 
 lazy val gpaw = (project in file("parsers/gpaw")).
   dependsOn(core).
+  enablePlugins(BuildInfoPlugin).
+  settings(gitVersionSettings: _*).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= (//commonLibs,
-      testLibs
-      ),
     name := "gpaw",
     (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
   ).
@@ -342,11 +265,10 @@ lazy val gpaw = (project in file("parsers/gpaw")).
 
 lazy val quantumEspresso = (project in file("parsers/quantum-espresso")).
   dependsOn(core).
+  enablePlugins(BuildInfoPlugin).
+  settings(gitVersionSettings: _*).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= (//commonLibs,
-      testLibs
-      ),
     name := "quantumEspresso",
     (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
   ).
@@ -355,11 +277,10 @@ lazy val quantumEspresso = (project in file("parsers/quantum-espresso")).
 
 lazy val lammps = (project in file("parsers/lammps")).
   dependsOn(core).
+  enablePlugins(BuildInfoPlugin).
+  settings(gitVersionSettings: _*).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= (//commonLibs,
-      testLibs
-      ),
     name := "lammps",
     (unmanagedResourceDirectories in Compile) += baseDirectory.value / "parser"
   ).
@@ -376,21 +297,22 @@ lazy val base = (project in file("base")).
   dependsOn(gpaw).
   dependsOn(quantumEspresso).
   dependsOn(lammps).
+  enablePlugins(BuildInfoPlugin).
+  settings(gitVersionSettings: _*).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= commonLibs,
+    libraryDependencies ++= loggingLibs,
     name := "nomadBase"
   )
 
 lazy val webservice = (project in file("webservice")).
   dependsOn(base).
+  enablePlugins(BuildInfoPlugin).
+  settings(gitVersionSettings: _*).
   settings(commonSettings: _*).
   enablePlugins(DockerPlugin).
   settings(
-    libraryDependencies ++= (//commonLibs,
-      sprayLibs ++:
-      testLibs
-      ),
+    libraryDependencies ++= sprayLibs,
     name := "nomadWebService",
     docker <<= (docker dependsOn assembly),
     dockerfile in docker := {
@@ -412,9 +334,6 @@ lazy val tool = (project in file("tool")).
   settings(commonSettings: _*).
   enablePlugins(DockerPlugin).
   settings(
-    libraryDependencies ++= (//commonLibs,
-        testLibs
-    ),
     name := "nomadTool",
     docker <<= (docker dependsOn assembly),
     dockerfile in docker := {
@@ -435,10 +354,8 @@ lazy val calculationparser = (project in file("calculation-parser-worker")).
   settings(commonSettings: _*).
   enablePlugins(DockerPlugin).
   settings(
-    libraryDependencies ++= (//commonLibs,
-      testLibs
-      ),
     name := "nomadCalculationParserWorker",
+    libraryDependencies += rabbitmqLib,
     docker <<= (docker dependsOn assembly),
     dockerfile in docker := {
       val artifact = (assemblyOutputPath in assembly).value
@@ -458,10 +375,8 @@ lazy val normalizer = (project in file("normalizer-worker")).
   dependsOn(base).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= (//commonLibs,
-      testLibs
-      ),
-    name := "nomadNormalizerWorker"
+    name := "nomadNormalizerWorker",
+    libraryDependencies += rabbitmqLib
   ).
   settings(Revolver.settings: _*)
 
@@ -469,10 +384,8 @@ lazy val treeparserinitializer = (project in file("tree-parser-initializer")).
   dependsOn(base).
   settings(commonSettings: _*).
   settings(
-    libraryDependencies ++= (//commonLibs,
-      testLibs
-      ),
-    name := "treeparserinitializer"
+    name := "treeparserinitializer",
+    libraryDependencies += rabbitmqLib
   ).
   settings(Revolver.settings: _*)
 
@@ -481,10 +394,8 @@ lazy val treeparser = (project in file("tree-parser-worker")).
   settings(commonSettings: _*).
   enablePlugins(DockerPlugin).
   settings(
-    libraryDependencies ++= (//commonLibs,
-      testLibs
-      ),
     name := "nomadTreeParserWorker",
+    libraryDependencies += rabbitmqLib,
     docker <<= (docker dependsOn assembly),
     dockerfile in docker := {
       val artifact = (assemblyOutputPath in assembly).value
@@ -502,4 +413,10 @@ lazy val treeparser = (project in file("tree-parser-worker")).
 
 lazy val root = (project in file(".")).
   settings(commonSettings: _*).
-  aggregate(cgen, core, fhiAims, base, webservice, tool, calculationparser, normalizer, treeparser)
+  settings(
+    libraryDependencies ++= loggingLibs
+  ).
+  aggregate(
+    core,
+    fhiAims,  castep, cp2k, dlPoly, gaussian, exciting, gpaw, quantumEspresso, lammps,
+    base, webservice, tool, calculationparser, normalizer, treeparser)
