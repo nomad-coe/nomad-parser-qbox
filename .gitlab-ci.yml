@@ -7,6 +7,8 @@ compilation:
   stage: build
   script:
     - git submodule update --init
+    - git fetch --tags origin master
+    - git submodules foreach git fetch --tags origin master
     - sbt compile
   only:
     - master
@@ -18,6 +20,8 @@ testing:
   stage: test
   script:
     - git submodule update --init
+    - git fetch --tags origin master
+    - git submodules foreach git fetch --tags origin master
     - sbt test
   only:
     - master
