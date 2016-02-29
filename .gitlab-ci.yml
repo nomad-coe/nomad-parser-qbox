@@ -8,7 +8,7 @@ compilation:
   script:
     - git submodule update --init
     - git fetch --tags origin master
-    - git submodules foreach git fetch --tags origin master
+    - git submodule foreach git fetch --tags origin master
     - sbt compile
   only:
     - master
@@ -21,7 +21,7 @@ testing:
   script:
     - git submodule update --init
     - git fetch --tags origin master
-    - git submodules foreach git fetch --tags origin master
+    - git submodule foreach git fetch --tags origin master
     - sbt test
   only:
     - master
