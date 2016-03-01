@@ -1,4 +1,6 @@
 package eu.nomad_lab
+
+import eu.nomad_lab.parsers.ParseResult.ParseResult
 import org.json4s.JsonAST.{JArray, JString, JField, JObject}
 import org.json4s._
 
@@ -43,8 +45,20 @@ object QueueMessage {
                                        mainFileUri: String, //Uri of the main file; Example:  nmd://R9h5Wp_FGZdsBiSo5Id6pnie_xeIH/data/examples/foo/Si2.castep
                                        relativeFilePath: String, // file path, from the tree root. Example data/examples/foo/Si2.castep
                                        treeFilePath: String, // Same as the treeFilePath in TreeParserQueueMessage; eg. /nomad/nomadlab/raw_data/data/R9h/R9h5Wp_FGZdsBiSo5Id6pnie_xeIH.zip
-                                       treeType: TreeType.Value = TreeType.Unknown // type of root tree we are dealing with
+                                       treeType: TreeType.Value = TreeType.Unknown, // type of root tree we are dealing with
+                                       overwrite: Boolean = false // Overwrite an existing file; eg. In case of failure of previous run
                                      )
+
+  case class CalculationParserResultMessage(
+                                         parseResult:ParseResult,
+                                         parserInfo: JValue, // info on the parser used i.e. {"name":"CastepParser","version":"1.0"}
+                                         parsedFileUri: Option[String], // This is build as sha of mainFileUri, prepended with P, i.e. nmd://PutioKaDl4tgPd4FnrdxPscSGKAgK
+                                         parsedFilePath: Option[String],  // Complete file path, to the parsed file /nomad/nomadlab/work/parsed/<parserId>/Put/PutioKaDl4tgPd4FnrdxPscSGKAgK.nc
+                                         didExist: Boolean, // Did the parsed file did exist
+                                         created: Boolean, // Was a new parsed file created
+                                         errorMessage:Option[String] = None,
+                                         parseRequest: CalculationParserQueueMessage//Uri of the main file; Example:  nmd://R9h5Wp_FGZdsBiSo5Id6pnie_xeIH/data/examples/foo/Si2.castep
+                                         )
 
   case class ToBeNormalizedQueueMessage(
                                      parserInfo: JValue, // info on the parser used i.e. {"name":"CastepParser","version":"1.0"}

@@ -32,7 +32,7 @@ object CalculationParserWorker extends  StrictLogging {
 
 
     def toJValue: JValue = {
-      import org.json4s.JsonDSL._;
+      import org.json4s.JsonDSL._
       ( ("rabbitMQHost" -> rabbitMQHost) ~
         ("readQueue" -> readQueue) ~
         ("writeQueue" -> writeQueue) ~
@@ -71,6 +71,7 @@ object CalculationParserWorker extends  StrictLogging {
 //      treeFilePath = "/home/kariryaa/NoMad/nomad-lab-base/tree-parser-worker/examples.zip", // Same as the treeFilePath in TreeParserQueueMessage; eg. /nomad/nomadlab/raw_data/data/R9h/R9h5Wp_FGZdsBiSo5Id6pnie_xeIH.zip
 //      treeType = TreeType.Zip
 //    )
+//
     readFromQueue()
 
   }
@@ -98,7 +99,7 @@ object CalculationParserWorker extends  StrictLogging {
 
         //Send acknowledgement to the broker once the message has been consumed.
         try {
-          val resultMessage = calculationParser.uncompressAndInitializeParser(message)
+        val resultMessage = calculationParser.uncompressAndInitializeParser(message)
           initializeNextQueue(resultMessage)
         } finally {
           println(" [x] Done")
