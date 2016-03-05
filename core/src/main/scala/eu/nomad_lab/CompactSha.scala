@@ -20,6 +20,9 @@ class UpdateAfterDigestException(msg: String) extends Exception(msg) { }
   * 168 bits can be represent exactly with base 64, and are not overly long (28 characters)
   * Its collision characteristics are thus similar to the original SHA (which has 160 bits).
   * The gid normally has a prefix that specifies the kind of data used to build the digest.
+  *
+  * Well defined prefixes
+  *
   */
 class CompactSha(val mDigest: MessageDigest) {
   object State extends Enumeration {

@@ -6,7 +6,7 @@ import java.nio.file.{Paths, Path}
 import com.rabbitmq.client._
 import com.typesafe.config.{ConfigFactory, Config}
 import com.typesafe.scalalogging.StrictLogging
-import eu.nomad_lab.QueueMessage.{CalculationParserQueueMessage, ToBeNormalizedQueueMessage}
+import eu.nomad_lab.QueueMessage.{CalculationParserRequest, CalculationParserResult}
 import eu.nomad_lab.parsing_queue.CalculationParser
 import org.apache.commons.compress.archivers.zip.{ZipArchiveEntry, ZipFile}
 import org.apache.commons.compress.archivers.{ArchiveInputStream, ArchiveStreamFactory}
@@ -22,11 +22,10 @@ object CalculationParserWorker extends  StrictLogging {
     // validate vs. reference.conf
     config.checkValid(ConfigFactory.defaultReference(), "simple-lib")
 
-    val uuid = java.util.UUID.randomUUID.toString
     val varToReplaceRe = """\$\{([a-zA-Z][a-zA-Z0-9]*)\}""".r
     val readQueue = config.getString("nomad_lab.parser_worker_rabbitmq.singleParserQueue")
     val writeQueue = config.getString("nomad_lab.parser_worker_rabbitmq.toBeNormalizedQueue")
-    val uncompressRoot = varToReplaceRe.replaceFirstIn(config.getString("nomad_lab.parser_worker_rabbitmq.uncompressRoot"),uuid)
+    val uncompressRoot = config.getString("nomad_lab.parser_worker_rabbitmq.uncompressRoot")
     val parsedRoot = config.getString("nomad_lab.parser_worker_rabbitmq.parsedRoot")
     val rabbitMQHost = config.getString("nomad_lab.parser_worker_rabbitmq.rabbitMQHost")
 
@@ -43,7 +42,7 @@ object CalculationParserWorker extends  StrictLogging {
   val settings = new Settings(ConfigFactory.load())
   val parserCollection = parsers.AllParsers.defaultParserCollection
 
-  def initializeNextQueue(message: ToBeNormalizedQueueMessage) = {
+  def initializeNextQueue(message: CalculationParserResult) = {
     val prodFactory: ConnectionFactory = new ConnectionFactory
     prodFactory.setHost(settings.rabbitMQHost)
     val prodConnection: Connection = prodFactory.newConnection
@@ -57,10 +56,14 @@ object CalculationParserWorker extends  StrictLogging {
   }
 
 
+  val uuid = java.util.UUID.randomUUID.toString
   val calculationParser = new CalculationParser(
     ucRoot = settings.uncompressRoot,
     parsedRoot = settings.parsedRoot,
-    parserCollection = parsers.AllParsers.defaultParserCollection
+    parserCollection = parsers.AllParsers.defaultParserCollection,
+    replacements = Map(
+      "uuid" -> uuid
+    )
   )
   def main(args: Array[String]): Unit = {
     //Example message for a single parser Parser
@@ -93,13 +96,13 @@ object CalculationParserWorker extends  StrictLogging {
     val consumer: Consumer = new DefaultConsumer((channel)) {
       @throws(classOf[IOException])
       override def handleDelivery(consumerTag: String, envelope: Envelope, properties: AMQP.BasicProperties, body: Array[Byte]) {
-        val message: CalculationParserQueueMessage = eu.nomad_lab.JsonSupport.readUtf8[CalculationParserQueueMessage](body)
+        val message: CalculationParserRequest = eu.nomad_lab.JsonSupport.readUtf8[CalculationParserRequest](body)
         System.out.println(" [x] Received '" + message + "'")
 //        uncompress(message)
 
         //Send acknowledgement to the broker once the message has been consumed.
         try {
-        val resultMessage = calculationParser.uncompressAndInitializeParser(message)
+          val resultMessage = calculationParser.handleParseRequest(message)
           initializeNextQueue(resultMessage)
         } finally {
           println(" [x] Done")

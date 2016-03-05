@@ -2,7 +2,7 @@ package eu.nomad_lab
 
 import com.typesafe.config.{ConfigFactory, Config}
 import com.typesafe.scalalogging.StrictLogging
-import eu.nomad_lab.QueueMessage.{TreeParserQueueMessage}
+import eu.nomad_lab.QueueMessage.{TreeParserRequest}
 import eu.nomad_lab.parsing_queue.TreeParser.TreeParserException
 import eu.nomad_lab.parsing_queue.{TreeParser}
 import org.json4s.JsonAST.JValue
@@ -68,7 +68,7 @@ object TreeParserWorker extends StrictLogging {
     val consumer: Consumer = new DefaultConsumer((channel)) {
       @throws(classOf[IOException])
       override def handleDelivery(consumerTag: String, envelope: Envelope, properties: AMQP.BasicProperties, body: Array[Byte]) {
-        val message: TreeParserQueueMessage = eu.nomad_lab.JsonSupport.readUtf8[TreeParserQueueMessage](body)
+        val message: TreeParserRequest = eu.nomad_lab.JsonSupport.readUtf8[TreeParserRequest](body)
         println(" [x] Received '" + message + "'")
         //Send acknowledgement to the broker once the message has been consumed.
         try {
@@ -88,7 +88,7 @@ object TreeParserWorker extends StrictLogging {
 /** Find the parsable files and parsers. Write this information for the single step parser
 *
 * */
-  def findParserAndWriteToQueue(incomingMessage: TreeParserQueueMessage): Unit = {
+  def findParserAndWriteToQueue(incomingMessage: TreeParserRequest): Unit = {
     val msgList = treeParser.findParser(incomingMessage)
     if(msgList.isEmpty)
       throw new TreeParserException(incomingMessage, "No Parsable file found, ")

@@ -6,7 +6,7 @@ import java.nio.file.{Path, Paths}
 import com.typesafe.scalalogging.StrictLogging
 import eu.nomad_lab.parsers.ParserCollection
 import eu.nomad_lab.{TreeType, JsonSupport}
-import eu.nomad_lab.QueueMessage.{CalculationParserQueueMessage, TreeParserQueueMessage}
+import eu.nomad_lab.QueueMessage.{CalculationParserRequest, TreeParserRequest}
 import eu.nomad_lab.parsing_queue.TreeParser.TreeParserException
 import org.apache.commons.compress.archivers.{ArchiveStreamFactory, ArchiveInputStream}
 import org.apache.commons.compress.archivers.zip.{ZipArchiveEntry, ZipFile}
@@ -18,7 +18,7 @@ import scala.collection.mutable
 
 object TreeParser{
   class TreeParserException(
-                            message: TreeParserQueueMessage,
+                            message: TreeParserRequest,
                             msg: String,
                             what: Throwable = null
                             ) extends Exception(
@@ -36,9 +36,9 @@ class TreeParser(
   /** Find the parsable files and parsers. Return the list of messages
     *
     * */
-  def findParser(incomingMessage : TreeParserQueueMessage ) ={
+  def findParser(incomingMessage : TreeParserRequest ) ={
     //Read file and get the corresponding parsers
-    var msgList: scala.collection.mutable.MutableList[CalculationParserQueueMessage] = mutable.MutableList()
+    var msgList: scala.collection.mutable.MutableList[CalculationParserRequest] = mutable.MutableList()
     val f = new File(incomingMessage.treeFilePath)
     if (!f.isFile)
       logger.error(f + " doesn't exist")
@@ -91,7 +91,7 @@ class TreeParser(
         else
           incomingMessage.treeUri
         val mainFileUri = nUri + "/" + partialFilePath.dropWhile(_ == '/')
-        val message = CalculationParserQueueMessage(
+        val message = CalculationParserRequest(
           parserName = parser,
           mainFileUri = mainFileUri,
           relativeFilePath = filePath,
@@ -107,7 +107,7 @@ class TreeParser(
   /** Scan a zip file and if possible, find the most appropriate parser for each file in the zip archive
     *
     * */
-  def scanZipFile(incomingMessage: TreeParserQueueMessage): Map[String,String] = {
+  def scanZipFile(incomingMessage: TreeParserRequest): Map[String,String] = {
     incomingMessage.treeType match {
       case TreeType.Zip =>
       var fileParserName: Map[String,String] = Map()

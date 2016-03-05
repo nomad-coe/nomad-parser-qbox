@@ -31,7 +31,7 @@ class TreeTypeSerializer extends CustomSerializer[TreeType.Value](format => (
 
 object QueueMessage {
 
-  case class TreeParserQueueMessage(
+  case class TreeParserRequest(
                                      treeUri: String, // URI inside the given treeFilePath; eg. nmd://R9h5Wp_FGZdsBiSo5Id6pnie_xeIH/data
                                      treeFilePath: String, //Path to the archive or the root directory eg. /nomad/nomadlab/raw_data/data/R9h/R9h5Wp_FGZdsBiSo5Id6pnie_xeIH.zip
                                      treeType: TreeType.Value = TreeType.Unknown, // type of tree we are dealing with
@@ -40,7 +40,7 @@ object QueueMessage {
                                      followSymlinks: Boolean = true // In case of directory
                                    )
 
-  case class CalculationParserQueueMessage(
+  case class CalculationParserRequest(
                                        parserName: String, //Name of the parser to use for the file; CastepParser
                                        mainFileUri: String, //Uri of the main file; Example:  nmd://R9h5Wp_FGZdsBiSo5Id6pnie_xeIH/data/examples/foo/Si2.castep
                                        relativeFilePath: String, // file path, from the tree root. Example data/examples/foo/Si2.castep
@@ -49,7 +49,7 @@ object QueueMessage {
                                        overwrite: Boolean = false // Overwrite an existing file; eg. In case of failure of previous run
                                      )
 
-  case class CalculationParserResultMessage(
+  case class CalculationParserResult(
                                          parseResult:ParseResult,
                                          parserInfo: JValue, // info on the parser used i.e. {"name":"CastepParser","version":"1.0"}
                                          parsedFileUri: Option[String], // This is build as sha of mainFileUri, prepended with P, i.e. nmd://PutioKaDl4tgPd4FnrdxPscSGKAgK
@@ -57,7 +57,7 @@ object QueueMessage {
                                          didExist: Boolean, // Did the parsed file did exist
                                          created: Boolean, // Was a new parsed file created
                                          errorMessage:Option[String] = None,
-                                         parseRequest: CalculationParserQueueMessage//Uri of the main file; Example:  nmd://R9h5Wp_FGZdsBiSo5Id6pnie_xeIH/data/examples/foo/Si2.castep
+                                         parseRequest: CalculationParserRequest//Uri of the main file; Example:  nmd://R9h5Wp_FGZdsBiSo5Id6pnie_xeIH/data/examples/foo/Si2.castep
                                          )
 
   case class ToBeNormalizedQueueMessage(
