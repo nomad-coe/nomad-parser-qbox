@@ -4,7 +4,7 @@ import java.nio.file.Paths
 
 import com.typesafe.config.{ConfigFactory, Config}
 import com.typesafe.scalalogging.StrictLogging
-import eu.nomad_lab.QueueMessage.TreeParserQueueMessage
+import eu.nomad_lab.QueueMessage.TreeParserRequest
 import eu.nomad_lab.parsing_queue.TreeParser
 import org.json4s.JsonAST.JValue
 
@@ -53,7 +53,7 @@ object TreeParserInitilaizer extends StrictLogging {
       val path = Paths.get(filePath)
       val filename = path.getFileName.toString
       val uri = s"""nmd://${if(filename.lastIndexOf(".") > -1) filename.substring(0,filename.lastIndexOf(".")) else filename}"""
-      val message = TreeParserQueueMessage(
+      val message = TreeParserRequest(
         treeUri = uri,
         treeFilePath = path.toAbsolutePath.toString,
         treeType = if(filePath.contains(".zip")) TreeType.Zip else TreeType.Unknown
