@@ -38,7 +38,6 @@ object Rdb extends StrictLogging {
   def defaultSettings(): Settings = {
     Rdb.synchronized {
       if (privateDefaultSettings == null) {
-        logger.info(s"eu.nomad_lab.Rdb creating default settings")
         privateDefaultSettings = new Settings(ConfigFactory.load())
       }
       privateDefaultSettings
