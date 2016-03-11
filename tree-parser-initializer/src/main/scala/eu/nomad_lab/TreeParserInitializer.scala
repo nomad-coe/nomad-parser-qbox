@@ -10,8 +10,6 @@ import org.json4s.JsonAST.JValue
 
 import com.rabbitmq.client._
 
-
-
 object TreeParserInitilaizer extends StrictLogging {
 
   /** The settings required to get the read and write queue
@@ -39,9 +37,8 @@ object TreeParserInitilaizer extends StrictLogging {
     writeToQueue(args)
   }
 
-/** Find the parsable files and parsers. Write this information for the single step parser
-*
-* */
+  /** Find the parsable files and parsers. Write this information for the single step parser
+    */
   def writeToQueue(args: Array[String]) = {
     val prodFactory: ConnectionFactory = new ConnectionFactory
     prodFactory.setHost(settings.rabbitMQHost)
@@ -52,11 +49,18 @@ object TreeParserInitilaizer extends StrictLogging {
     for(filePath <- args) {
       val path = Paths.get(filePath)
       val filename = path.getFileName.toString
-      val uri = s"""nmd://${if(filename.lastIndexOf(".") > -1) filename.substring(0,filename.lastIndexOf(".")) else filename}"""
+      val archiveRe = "(R[-_a-zA-Z0-9]{28}).zip".r
+      val (uri, pathInArchive) = filename match {
+        case archiveRe(gid) =>
+          (s"nmd://$gid/data", Some(s"$gid/data"))
+        case _ =>
+          ( "file://" + path.toAbsolutePath().toString(), None)
+      }
       val message = TreeParserRequest(
         treeUri = uri,
         treeFilePath = path.toAbsolutePath.toString,
-        treeType = if(filePath.contains(".zip")) TreeType.Zip else TreeType.Unknown
+        treeType = if(filePath.endsWith(".zip")) TreeType.Zip else TreeType.Unknown,
+        relativeTreeFilePath = pathInArchive
       )
       val msgBytes = JsonSupport.writeUtf8(message)
       logger.info(s"Message: $message, bytes Array size: ${msgBytes.length}")
