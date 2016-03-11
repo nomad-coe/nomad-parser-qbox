@@ -149,6 +149,10 @@ trait OptimizedParser {
     */
   def parserGenerator: ParserGenerator
 
+  /** if this optimized parser can be cached and reused
+    */
+  def canBeReused: Boolean = false
+
   /** description of the data that can be extracted by this parser
     * can also be a superset, so simply parserGenerator.parseableMetaInfo
     */

@@ -26,17 +26,16 @@ object CalculationParserWorker extends  StrictLogging {
     val readQueue = config.getString("nomad_lab.parser_worker_rabbitmq.singleParserQueue")
     val writeQueue = config.getString("nomad_lab.parser_worker_rabbitmq.toBeNormalizedQueue")
     val uncompressRoot = config.getString("nomad_lab.parser_worker_rabbitmq.uncompressRoot")
-    val parsedRoot = config.getString("nomad_lab.parser_worker_rabbitmq.parsedRoot")
+    val parsedJsonPath = config.getString("nomad_lab.parser_worker_rabbitmq.parsedJsonPath")
     val rabbitMQHost = config.getString("nomad_lab.parser_worker_rabbitmq.rabbitMQHost")
-
 
     def toJValue: JValue = {
       import org.json4s.JsonDSL._
       ( ("rabbitMQHost" -> rabbitMQHost) ~
         ("readQueue" -> readQueue) ~
         ("writeQueue" -> writeQueue) ~
-        ("uncompressRoot"  ->uncompressRoot)~
-        ("parsedRoot"  ->parsedRoot))
+        ("uncompressRoot"  -> uncompressRoot)~
+        ("parsedJsonPath"  -> parsedJsonPath))
     }
   }
   val settings = new Settings(ConfigFactory.load())
@@ -56,14 +55,11 @@ object CalculationParserWorker extends  StrictLogging {
   }
 
 
-  val uuid = java.util.UUID.randomUUID.toString
   val calculationParser = new CalculationParser(
     ucRoot = settings.uncompressRoot,
-    parsedRoot = settings.parsedRoot,
+    parsedJsonPath = settings.parsedJsonPath,
     parserCollection = parsers.AllParsers.defaultParserCollection,
-    replacements = Map(
-      "uuid" -> uuid
-    )
+    replacements = LocalEnv.defaultSettings.replacements
   )
   def main(args: Array[String]): Unit = {
     //Example message for a single parser Parser

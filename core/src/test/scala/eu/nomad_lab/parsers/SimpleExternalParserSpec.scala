@@ -3,6 +3,7 @@ package eu.nomad_lab.parsers
 import org.specs2.mutable.Specification
 import org.{json4s => jn}
 import eu.nomad_lab.meta
+import eu.{nomad_lab => lab}
 import scala.collection.mutable
 import java.nio.charset.StandardCharsets
 
@@ -50,7 +51,7 @@ class ParseAndCollect(
 class SimpleExternalParserSpec extends Specification {
   sequential
   "makeReplacements" >> {
-    SimpleExternalParserGenerator.makeReplacements(Map(
+    lab.LocalEnv.makeReplacements(Map(
       ("a", "AX"),
       ("b", "BX")), "${a}xy$a${c}{\\${a}${b}") must_== "AXxy$a${c}{\\AXBX"
   }

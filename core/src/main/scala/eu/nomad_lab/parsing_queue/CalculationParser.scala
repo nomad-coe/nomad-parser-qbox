@@ -1,17 +1,18 @@
 package eu.nomad_lab.parsing_queue
 
 import java.io._
-import java.nio.file.{Path, Paths}
+import java.nio.file.{Files, Path, Paths, StandardCopyOption}
 
 import com.typesafe.scalalogging.StrictLogging
 import eu.nomad_lab.QueueMessage.{CalculationParserResult, CalculationParserRequest, ToBeNormalizedQueueMessage}
 import eu.nomad_lab.parsers.ParseResult
+import eu.nomad_lab.parsers.OptimizedParser
 import eu.nomad_lab.parsers.ParseResult._
 import eu.nomad_lab.{JsonSupport, CompactSha, TreeType, parsers}
 import org.apache.commons.compress.archivers.zip.{ZipArchiveEntry, ZipFile}
 import org.apache.commons.compress.utils.IOUtils
 import org.json4s._
-import eu.nomad_lab.parsers.SimpleExternalParserGenerator.makeReplacements
+import eu.{nomad_lab => lab}
 import scala.collection.mutable
 import scala.util.control.NonFatal
 
@@ -25,48 +26,71 @@ object CalculationParser extends StrictLogging {
     s"$msg when parsing ${JsonSupport.writeStr(message)} (${calculationParser.ucRoot})",
     what
   )
-  /** Extract all the files at the current level and in the subfolder
-    *
-    * @param inMsg
-  //    */
-  def uncompress(inMsg: CalculationParserRequest, ucRoot:Path):Option[Path] = {
-    inMsg.treeType match {
-      case TreeType.Zip =>
-        val prefix = Paths.get(inMsg.relativeFilePath).getParent.toString
-        val zipFile = new ZipFile(inMsg.treeFilePath)
-        val entries = zipFile.getEntries()
-        while (entries.hasMoreElements()) {
-          val zipEntry: ZipArchiveEntry = entries.nextElement()
-          if (!zipEntry.isDirectory && !zipEntry.isUnixSymlink) {
-            //Only check non directory and symlink for now; TODO: Add support to read symlink
-            if (zipEntry.getName.contains(prefix)) {
-              val destination = ucRoot.resolve(zipEntry.getName).toFile
-              if(destination.exists()) {
-                logger.info("uncompress: File  already exists! Skipping the uncompression step!!")
-              }
-              else{
-                destination.getParentFile.mkdirs()
-                val zIn: InputStream = zipFile.getInputStream(zipEntry)
-                val out: OutputStream = new FileOutputStream(destination)
-                IOUtils.copy(zIn, out)
-                IOUtils.closeQuietly(zIn)
-                out.close()
-              }
-            }
-          }
-        }
-        Some(ucRoot.resolve(inMsg.relativeFilePath).toAbsolutePath)
-      case _ => None
-    }
-  }
 }
 
 class CalculationParser (
                         val ucRoot: String,
-                        val parsedRoot: String,
+                        val parsedJsonPath: String,
                         val parserCollection: parsers.ParserCollection,
                         val replacements: Map[String, String]
                         ) extends  StrictLogging {
+  val alreadyUncompressed = mutable.Set[String]()
+  var lastArchivePath: String = ""
+  var lastUncompressRoot: Option[Path] = None
+  val cachedParsers = mutable.Map[String, OptimizedParser]()
+
+  /** Extract all the files from the current level on
+    */
+  def uncompress(inMsg: CalculationParserRequest, uncompressRoot:Path):Option[Path] = {
+    if ((!lastArchivePath.isEmpty || lastUncompressRoot.isDefined || !alreadyUncompressed.isEmpty) && (inMsg.treeFilePath != lastArchivePath || lastUncompressRoot != Some(uncompressRoot))) {
+      lastUncompressRoot match {
+        case Some(toRm) =>
+          lab.LocalEnv.deleteRecursively(toRm)
+        case None => ()
+      }
+      alreadyUncompressed.clear()
+    }
+    lastUncompressRoot = Some(uncompressRoot)
+    lastArchivePath = inMsg.treeFilePath
+    inMsg.treeType match {
+      case TreeType.Zip =>
+        val dirPath = Paths.get(inMsg.relativeFilePath).getParent
+        val prefix = {
+          val p = dirPath.toString
+          if (p.isEmpty() || p == ".")
+            ""
+          else
+            p + "/"
+        }
+        if (!alreadyUncompressed.contains(prefix)) {
+          alreadyUncompressed += prefix
+          val zipFile = new ZipFile(inMsg.treeFilePath)
+          val entries = zipFile.getEntries()
+          while (entries.hasMoreElements()) {
+            val zipEntry: ZipArchiveEntry = entries.nextElement()
+            if (!zipEntry.isDirectory && !zipEntry.isUnixSymlink) {
+              //Only check non directory and symlink for now; TODO: Add support to read symlink
+              if (zipEntry.getName.startsWith(prefix)) {
+                val destination = uncompressRoot.resolve(zipEntry.getName).toFile
+                if(!destination.exists()) {
+                  logger.debug("uncompress: File  already exists! Skipping the uncompression step!!")
+                } else {
+                  destination.getParentFile.mkdirs()
+                  val zIn: InputStream = zipFile.getInputStream(zipEntry)
+                  val out: OutputStream = new FileOutputStream(destination)
+                  IOUtils.copy(zIn, out)
+                  IOUtils.closeQuietly(zIn)
+                  out.close()
+                }
+              }
+            }
+          }
+        }
+        Some(uncompressRoot.resolve(inMsg.relativeFilePath).toAbsolutePath)
+      case _ => None
+    }
+  }
+
   def handleParseRequest(inMsg: CalculationParserRequest): CalculationParserResult = {
     var didExist = false
     var created = true
@@ -80,14 +104,14 @@ class CalculationParser (
         errorMessage = Some(s"Could not find parser named ${inMsg.parserName}")
       case Some(parser) =>
         parserInfo = parser.parserInfo
-        val parserId = (parser.parserInfo \ "versionInfo" \ "version") match {
-          case JString(v) => inMsg.parserName + "_" + v
+        val parserId = (parser.parserInfo \ "versionInfo" \ "parserId") match {
+          case JString(v) => v
           case _ => inMsg.parserName + "_undefined"
         }
         var repl = replacements
         repl += ("parserName" -> inMsg.parserName)
         repl += ("parserId" -> parserId)
-        val archiveIdRe = "^nmd://(R[-_a-zA-z]{28})(?:/.*)?$".r
+        val archiveIdRe = "^nmd://(R[-_a-zA-Z0-9]{28})(?:/.*)?$".r
         val nomadUrlRe = "^nmd://.*$".r
         val archiveId = inMsg.mainFileUri match {
           case archiveIdRe(aId) => aId
@@ -99,34 +123,47 @@ class CalculationParser (
         }
         repl += ("archiveId" -> archiveId)
         repl += ("archiveIdPrefix" -> archiveId.take(3))
-        val uncompressTarget = Paths.get(makeReplacements(repl, ucRoot))
-        CalculationParser.uncompress(inMsg,uncompressTarget) match {
+        val uncompressTarget = Paths.get(lab.LocalEnv.makeReplacements(repl, ucRoot))
+        uncompress(inMsg,uncompressTarget) match {
           case Some(filePath) =>
-            val optimizer = parser.optimizedParser(Seq())
+            val optimizedParser = cachedParsers.get(inMsg.parserName) match {
+              case Some(optParser) =>
+                cachedParsers.remove(inMsg.parserName)
+                optParser
+              case None =>
+                parser.optimizedParser(Seq())
+            }
             val uncompressedRoot = uncompressTarget.toFile()
             val cSha = CompactSha()
             cSha.updateStr(inMsg.mainFileUri)
-            val mfileUriSha = cSha.gidStr("P")
-            repl += ("parsedFileId" -> mfileUriSha)
-            repl += ("parsedFileIdPrefix" -> mfileUriSha.take(3))
-            repl += ("calculationId" -> ("C" + mfileUriSha.drop(1)))
-            repl += ("calculationIdPrefix" -> ("C" + mfileUriSha.drop(1)).take(3))
-            val pFURI = "nmd://" +  mfileUriSha
-            val parsedFileOutputPath = Paths.get(parsedRoot,mfileUriSha.substring(0,3), mfileUriSha + ".json")
+            val parsedFileId = cSha.gidStr("P")
+            repl += ("parsedFileId" -> parsedFileId)
+            repl += ("parsedFileIdPrefix" -> parsedFileId.take(3))
+            val calculationId = "C" + parsedFileId.drop(1)
+            repl += ("calculationId" -> calculationId)
+            repl += ("calculationIdPrefix" -> calculationId.take(3))
+            val pFURI = "nmd://" +  parsedFileId
+            val parsedFileOutputPath = Paths.get(lab.LocalEnv.makeReplacements(repl, parsedJsonPath))
             if (parsedFileOutputPath.toFile.exists()) // TODO: inMsg now contains overwrite flag; add support for the flag
               didExist = true
             else
               parsedFileOutputPath.getParent.toFile.mkdirs()
-            val outWriter = new FileWriter(parsedFileOutputPath.toFile)
-            val extBackend: parsers.ParserBackendExternal = new parsers.JsonWriterBackend(optimizer.parseableMetaInfo, outWriter)
+            val tmpFile = Files.createTempFile(parsedFileOutputPath.getParent, parsedFileId.take(5), ".tmp")
+            val outWriter = new FileWriter(tmpFile.toFile)
+            val extBackend: parsers.ParserBackendExternal = new parsers.JsonWriterBackend(optimizedParser.parseableMetaInfo, outWriter)
             try {
-              pResult=  optimizer.parseExternal(inMsg.mainFileUri,filePath.toString,extBackend,parser.name)
+              pResult = optimizedParser.parseExternal(inMsg.mainFileUri,filePath.toString,extBackend,parser.name)
+              outWriter.flush()
+              outWriter.close()
+              Files.move(tmpFile, parsedFileOutputPath, StandardCopyOption.ATOMIC_MOVE)
             } catch {
               case NonFatal(e) => errorMessage = Some(s"${parser.name} threw: $e when parsing $filePath")
             } finally {
-              optimizer.cleanup()
-              outWriter.flush()
               outWriter.close()
+              if (optimizedParser.canBeReused)
+                cachedParsers += (inMsg.parserName -> optimizedParser)
+              else
+                optimizedParser.cleanup()
             }
             println(s"ParserResult: $pResult when parsing $filePath by ${parser.name}" )
             pResult match {
@@ -136,7 +173,7 @@ class CalculationParser (
               case _ => ()
             }
           case None =>
-            errorMessage = Some("Error uncompressing main file")
+            errorMessage = Some("Error uncompressing files")
         }
     }
 
@@ -150,5 +187,18 @@ class CalculationParser (
       errorMessage = errorMessage,
       parseRequest = inMsg
     )
+  }
+
+  /** Cleans up the calculation parser
+    */
+  def cleanup(): Unit = {
+    for ((_, optParser) <- cachedParsers)
+      optParser.cleanup()
+    cachedParsers.clear()
+    lastUncompressRoot match {
+      case Some(toRm) =>
+        lab.LocalEnv.deleteRecursively(toRm)
+      case None => ()
+    }
   }
 }

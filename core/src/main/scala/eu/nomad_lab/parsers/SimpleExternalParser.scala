@@ -11,6 +11,7 @@ import java.io.File
 import org.json4s.jackson.JsonMethods
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.core.JsonToken
+import eu.{nomad_lab => lab}
 import eu.nomad_lab.meta
 import eu.nomad_lab.JsonSupport.formats
 import eu.nomad_lab.JsonUtils
@@ -20,6 +21,7 @@ import scala.util.control.NonFatal
 import scala.util.matching.Regex
 import scala.collection.mutable
 import scala.collection.breakOut
+import java.util.concurrent.LinkedBlockingQueue
 
 object SimpleExternalParserGenerator extends StrictLogging {
   /** Exception unpacking things from the resources and setting up environment
@@ -59,55 +61,6 @@ object SimpleExternalParserGenerator extends StrictLogging {
       logger.trace(s"resCopy: $inFilePath -> $outPath")
     }
   }
-
-  val varToReplaceRe = """\$\{([a-zA-Z][a-zA-Z0-9]*)\}""".r
-  /** replaces ${var} expressions that have a var -> value pair in the replacements with value
-    *
-    * Repeats replacements up to 3 times to allow the replacements themselves to use variables
-    * that need expansion.
-    */
-  def makeReplacements(repl: Map[String, String], string: String): String = {
-    var str: String = string
-    for (irecursive <- 1.to(3)) {
-      var i: Int = 0
-      val s = new mutable.StringBuilder()
-      for (m <- varToReplaceRe.findAllMatchIn(str)) {
-        val varNow = m.group(1)
-        repl.get(varNow) match {
-          case Some(value) =>
-            s ++= str.substring(i, m.start) // would subSequence be more efficient?
-            s ++= value
-            i = m.end
-          case None =>
-            ()
-        }
-      }
-      if (i == 0) {
-        return str
-      } else {
-        s ++= str.substring(i)
-        str = s.toString()
-      }
-    }
-    str
-  }
-
-  /** recursive deletion of files
-    */
-  def recursiveDelete(directory: java.io.File): Boolean = {
-    if (directory.isDirectory()) {
-      val files = directory.listFiles()
-      if(files != null){
-        for (f <- files) {
-          if(f.isDirectory())
-            recursiveDelete(f)
-          else
-            f.delete()
-        }
-      }
-    }
-    directory.delete()
-  }
 }
 
 class SimpleExternalParserGenerator(
@@ -121,8 +74,6 @@ class SimpleExternalParserGenerator(
   val resList: Seq[String] = Seq(),
   val dirMap: Map[String, String] = Map(),
   val extraCmdVars: Map[String, String] = Map(),
-  val baseEnvDir: String = "/tmp",
-  val baseTempDir: String = "/tmp",
   val mainFileMatchPriority: Int = 0,
   val mainFileMatchWeak: Boolean = false,
   val metaInfoEnv: Option[meta.MetaInfoEnv] = None,
@@ -130,7 +81,9 @@ class SimpleExternalParserGenerator(
 ) extends ParserGenerator with StrictLogging {
 
   def setupEnv(): Path = {
-    val tDir = Files.createTempDirectory(Paths.get(baseTempDir), "parserEnv")
+    val envDir = lab.LocalEnv.defaultSettings.procTmpDir.resolve("parserEnvs")
+    envDir.toFile().mkdirs()
+    val tDir = Files.createTempDirectory(envDir, name)
     try {
       SimpleExternalParserGenerator.copyAndRenameFromResources(resList, tDir, dirMap)
       logger.info(s"Did setup of environment for parser $name in $tDir")
@@ -163,7 +116,7 @@ class SimpleExternalParserGenerator(
           case Some(m) =>
             val extraInfo: List[(String, JString)] = m.groupNames.map{ (name: String) =>
               name -> JString(m.group(name)) }(breakOut)
-            logger.debug(s"$filePath matches parser $name (extraInfo:${JsonUtils.normalizedStr(JObject(extraInfo))}")
+            logger.debug(s"$filePath matches parser $name (extraInfo:${lab.JsonUtils.normalizedStr(JObject(extraInfo))}")
             Some(ParserMatch(mainFileMatchPriority, mainFileMatchWeak, JObject(extraInfo)))
           case None =>
             logger.debug(s"$filePath does *NOT* match parser $name")
@@ -175,14 +128,15 @@ class SimpleExternalParserGenerator(
     }
   }
 
-  def optimizedParser(optimizations: Seq[MetaInfoOps]): OptimizedParser = {
-    val tmpDir = Files.createTempDirectory(Paths.get(baseTempDir), "parserTmp")
+  override def optimizedParser(optimizations: Seq[MetaInfoOps]): OptimizedParser = {
+    lab.LocalEnv.defaultSettings.procTmpDir.toFile().mkdirs()
+    val tmpDir = Files.createTempDirectory(lab.LocalEnv.defaultSettings.procTmpDir, "parserTmp")
     logger.info(s"parser $name created tmpDir for optimized parser at $tmpDir")
     val allReplacements = extraCmdVars +
         ("envDir" -> envDir.toString()) +
         ("tmpDir" -> tmpDir.toString())
     val command = cmd.map{
-      SimpleExternalParserGenerator.makeReplacements(allReplacements, _)
+      lab.LocalEnv.makeReplacements(allReplacements, _)
     }
     new SimpleExternalParser(
       parserGenerator = this,
@@ -201,7 +155,7 @@ class SimpleExternalParserGenerator(
   override def cleanup(): Unit = {
     this.synchronized {
       if (_envDir != null) {
-        SimpleExternalParserGenerator.recursiveDelete(_envDir.toFile())
+        lab.LocalEnv.deleteRecursively(_envDir)
         logger.info(s"parser $name deleting envDir ${_envDir}")
         // avoid? risks reallocation...
         _envDir = null
@@ -220,9 +174,25 @@ object ExternalParserWrapper {
     msg: String, what: Throwable = null
   ) extends Exception(msg, what)
 
+  /** Exception sending request to the external parser
+    */
+  class RequestStreamException(
+    msg: String, what: Throwable = null
+  ) extends Exception(msg, what)
+
   object JsonScanState extends Enumeration {
     type JsonScanState = Value
     val MetaOrEvents, MetaDict, BetweenObjects, EventDict, EventDictPostEvents, Events, Finished = Value
+  }
+
+  object SendStatus extends Enumeration {
+    type SendStatus = Value
+    val Start, InList, Finished = Value
+  }
+
+  object RunStatus extends Enumeration {
+    type RunStatus = Value
+    val ShouldStart, SentRequest, ReadParse, Finished = Value
   }
 }
 
@@ -233,21 +203,26 @@ object ExternalParserWrapper {
   * file parsing by a single run
   */
 class ExternalParserWrapper(
-  val backend: ParserBackendExternal,
+  var backend: ParserBackendExternal,
   val envDir: Path,
   val tmpDir: Path,
   val cmd: Seq[String],
   val cmdCwd: String,
-  val cmdEnv: Map[String, String],
+  var cmdEnv: Map[String, String],
   val parserName: String,
   val fixedParserInfo: JValue = JNothing,
   val extraCmdVars: Map[String, String],
   val stdInHandler: Option[java.io.OutputStream => Unit] = None,
   val stdErrHandler: Option[java.io.InputStream => Unit] = None,
+  val stream: Boolean = false,
   mainFileUri0: Option[String] = None,
   mainFilePath0: Option[String] = None,
-  var hadErrors: Boolean = false
+  var hadErrors: Boolean = false,
+  var sendStatus: ExternalParserWrapper.SendStatus.Value = ExternalParserWrapper.SendStatus.Start,
+  var runStatus: ExternalParserWrapper.RunStatus.Value = ExternalParserWrapper.RunStatus.ShouldStart
 ) extends StrictLogging {
+  import ExternalParserWrapper.SendStatus
+  import ExternalParserWrapper.RunStatus
 
   var _mainFileUri: Option[String] = mainFileUri0
   def mainFileUri: Option[String] = {
@@ -268,6 +243,10 @@ class ExternalParserWrapper(
   var parserInfo: JValue = JNothing
   var parserStatus: Option[ParseResult.Value] = None
   var parserErrors: JValue = JNothing
+  var process: Option[Process] = None
+
+  val requestQueue = new LinkedBlockingQueue[Option[JValue]](1)
+  val resultQueue = new LinkedBlockingQueue[ParseResult.Value]
 
   /** clears the values used in startedParsingSession/finishedParsingSession
     */
@@ -276,7 +255,6 @@ class ExternalParserWrapper(
     parserInfo = JNothing
     parserStatus = None
     parserErrors = JNothing
-    parserInfo = fixedParserInfo
   }
 
   /** returns a map with all variable replacements
@@ -299,7 +277,7 @@ class ExternalParserWrapper(
     parserInfo match {
       case JNothing => ()
       case _ =>
-        res += ("parserInfo" -> JsonUtils.normalizedStr(parserInfo))
+        res += ("parserInfo" -> lab.JsonUtils.normalizedStr(parserInfo))
     }
     parserStatus match {
       case Some(parseResult) =>
@@ -308,7 +286,7 @@ class ExternalParserWrapper(
     }
     parserErrors match {
       case JNothing => ()
-      case _ => ("parserErrors" -> JsonUtils.normalizedStr(parserErrors))
+      case _ => ("parserErrors" -> lab.JsonUtils.normalizedStr(parserErrors))
     }
     res
   }
@@ -316,7 +294,7 @@ class ExternalParserWrapper(
   /** Performs the replacements in allReplacements on the given string
     */
   def makeReplacements(s: String): String = {
-    SimpleExternalParserGenerator.makeReplacements(allReplacements, s)
+    lab.LocalEnv.makeReplacements(allReplacements, s)
   }
 
   /** Decodes a json parse event and emits it to the backend
@@ -463,9 +441,10 @@ class ExternalParserWrapper(
                 }
                 token = parser.nextToken()
                 val value = parser.readValueAs(classOf[JValue])
+
                 parserInfo = parserInfo match {
-                  case JNothing => value
-                  case _ => parserInfo
+                  case JNothing => value.merge(fixedParserInfo)
+                  case _        => parserInfo
                 }
               case "parserErrors" =>
                 state match {
@@ -502,8 +481,18 @@ class ExternalParserWrapper(
                 throw new ParseStreamException("Missing events field in nomad_parse_events_1_0")
               case EventDictPostEvents =>
                 backend.finishedParsingSession(parserStatus, parserErrors, mainFileUri, parserInfo)
+                val parserResult = parserStatus
                 clearStartStop()
                 state = BetweenObjects
+                this.synchronized {
+                  runStatus match {
+                    case RunStatus.SentRequest =>
+                      runStatus = RunStatus.ReadParse
+                      resultQueue.put(parserResult.getOrElse(ParseResult.ParseFailure))
+                    case RunStatus.ReadParse | RunStatus.ShouldStart | RunStatus.Finished =>
+                      throw new ParseStreamException(s"Unexpected runStatus $runStatus at end of event stream")
+                  }
+                }
               case _ =>
                 throw new ParseStreamException(s"Unexpected end of object in state $state")
             }
@@ -511,6 +500,15 @@ class ExternalParserWrapper(
             state match {
               case BetweenObjects =>
                 state = Finished
+                this.synchronized {
+                  runStatus match {
+                    case RunStatus.ReadParse =>
+                      runStatus = RunStatus.Finished
+                      resultQueue.put(ParseResult.ParseFailure)
+                    case RunStatus.SentRequest | RunStatus.ShouldStart | RunStatus.Finished =>
+                      throw new ParseStreamException(s"Unexpected runStatus $runStatus at end of array")
+                  }
+                }
               case Events =>
                 state = EventDictPostEvents
               case _ =>
@@ -530,6 +528,15 @@ class ExternalParserWrapper(
             state match {
               case BetweenObjects =>
                 state = Finished
+                this.synchronized {
+                  runStatus match {
+                    case RunStatus.ReadParse =>
+                      runStatus = RunStatus.Finished
+                      resultQueue.put(ParseResult.ParseFailure)
+                    case RunStatus.SentRequest | RunStatus.ShouldStart | RunStatus.Finished =>
+                      throw new ParseStreamException(s"Unexpected runStatus $runStatus at end of json")
+                  }
+                }
               case _ =>
                 throw new ParseStreamException(s"Unexpected end in state $state")
             }
@@ -539,33 +546,72 @@ class ExternalParserWrapper(
       }
       parser.close()
     } catch {
-      case e: Exception =>
+      case NonFatal(e) =>
         hadErrors = true
         inF.close()
-        val msg = s"Error parsing output of parser $parserName (${JsonUtils.prettyStr(parserInfo, 2)}) when parsing ${mainFileUri.getOrElse("<no uri>")} at ${mainFilePath.getOrElse("<no path>")}"
+        val msg = s"Error parsing output of parser $parserName (${lab.JsonUtils.prettyStr(parserInfo, 2)}) when parsing ${mainFileUri.getOrElse("<no uri>")} at ${mainFilePath.getOrElse("<no path>")}"
         // log instad of throwing?
         // val s = new java.io.StringWriter()
         // e.printStackTrace(new java.io.PrintWriter(s))
         // logger.error(msg + e.getMessage() + s.toString())
         throw new ParseStreamException(msg, e)
+    } finally {
+      inF.close()
+      this.synchronized {
+        runStatus match {
+          case RunStatus.Finished => ()
+          case RunStatus.ReadParse =>
+            runStatus = RunStatus.Finished
+          case RunStatus.SentRequest =>
+            resultQueue.put(ParseResult.ParseFailure)
+            runStatus = RunStatus.Finished
+          case RunStatus.ShouldStart =>
+            resultQueue.put(ParseResult.ParseFailure)
+            runStatus = RunStatus.Finished
+            throw new ExternalParserWrapper.RequestStreamException(s"Unexpected end without request")
+        }
+      }
     }
   }
 
-  /** sends the file to parse on stdIn
-    *
-    *  (embrio support for reusing, and fork avoidance)
+  /** sends the file to parse on stdIn if streaming, and no errors so far
     */
   def sendInput(pIn: java.io.OutputStream): Unit = {
     val out: java.io.Writer = new java.io.BufferedWriter(new java.io.OutputStreamWriter(pIn));
-    out.write(s"""{
- "mainFileUri": """)
-    JsonUtils.dumpString(mainFileUri.getOrElse(""), out)
-    out.write(s""",
- "mainFile": """)
-    JsonUtils.dumpString(mainFilePath.getOrElse(""), out)
-    out.write("\n}\n")
-    out.close()
-    pIn.close()
+    requestQueue.take() match {
+      case Some(req) =>
+        req match {
+          case JNothing => ()
+          case value =>
+            sendStatus match {
+              case SendStatus.Start =>
+                out.write("[")
+                sendStatus = SendStatus.InList
+              case SendStatus.InList =>
+                out.write(", ")
+              case SendStatus.Finished =>
+                throw new ExternalParserWrapper.RequestStreamException(s"Got request ${lab.JsonUtils.normalizedStr(req)} to send when status is Finished")
+            }
+            lab.JsonUtils.prettyWriter(value, out)
+            out.flush()
+        }
+      case None =>
+        sendStatus match {
+          case SendStatus.Start =>
+            out.close()
+            pIn.close()
+          case SendStatus.InList =>
+            try {
+              out.write("]\n")
+              out.flush()
+            } finally {
+              out.close()
+              pIn.close()
+            }
+          case SendStatus.Finished => ()
+        }
+        sendStatus = SendStatus.Finished
+    }
   }
 
   /** logs stderr output as warning
@@ -581,16 +627,53 @@ class ExternalParserWrapper(
     pErr.close()
   }
 
+  /** Performs the parsing of one file, and returns the parse result
+    */
+  def parseRequest(mainFileUri: String, mainFilePath: String, newBackend: ParserBackendExternal, parserName: String): ParseResult.ParseResult = {
+    _mainFileUri = Some(mainFileUri)
+    _mainFilePath = Some(mainFilePath)
+    val rStatus = this.synchronized{
+      runStatus match {
+        case RunStatus.ShouldStart =>
+          backend = newBackend
+          runStatus = RunStatus.SentRequest
+          if (!run()) {
+            runStatus = RunStatus.Finished
+            return ParseResult.ParseFailure
+          }
+          if (stream) {
+            requestQueue.put(Some(JObject(
+              ("mainFileUri" -> JString(mainFileUri)) ::
+                ("mainFilePath" -> JString(mainFilePath)) :: Nil)))
+          } else {
+            requestQueue.put(None)
+          }
+        case RunStatus.ReadParse =>
+          backend = newBackend
+          requestQueue.put(Some(JObject(
+            ("mainFileUri" -> JString(mainFileUri)) ::
+              ("mainFilePath" -> JString(mainFilePath)) :: Nil)))
+        case RunStatus.SentRequest =>
+          throw new ExternalParserWrapper.RequestStreamException(s"runStatus was SentRequest in parseRequest (should not send multiple requests before one is evaluated)")
+        case RunStatus.Finished =>
+          throw new ExternalParserWrapper.RequestStreamException(s"Run was finished and cannot be restarted in parseRequest")
+      }
+    }
+    resultQueue.take()
+  }
+
+
   /** starts the parser process and forwards output to the backend
     *
     * Returns true if there were no internal errors
     */
   def run(): Boolean = {
     try {
-      val command = cmd.map{ makeReplacements _ }
+      val allReplNow = allReplacements
+      val command = cmd.map{ lab.LocalEnv.makeReplacements(allReplNow, _) }
       val cwd = Paths.get(makeReplacements(cmdCwd)).normalize().toFile()
       val env =  cmdEnv.map{ case (key, value) =>
-        key -> SimpleExternalParserGenerator.makeReplacements(allReplacements, value)
+        key -> lab.LocalEnv.makeReplacements(allReplacements, value)
       }
       val currentStdInHandler: java.io.OutputStream => Unit = stdInHandler match {
         case Some(handler) => handler(_)
@@ -601,9 +684,7 @@ class ExternalParserWrapper(
         case None => logErrors(_)
       }
       logger.info(s"parser $parserName will run '${command.map(_.replace(" ", "\\ ")).mkString(" ")}' in $cwd with environment $env")
-      val proc = Process(command, cwd, env.toSeq: _*).run(new ProcessIO(currentStdInHandler, jsonDecode _, currentStdErrHandler))
-      // should switch to finite state machine and allow async interaction, for now we just block...
-      hadErrors = (proc.exitValue != 0)
+      process = Some(Process(command, cwd, env.toSeq: _*).run(new ProcessIO(currentStdInHandler, jsonDecode _, currentStdErrHandler)))
     } catch {
       case e: Exception =>
         logger.error(s"Parser $parserName had an exception when parsing ${mainFileUri.getOrElse("<unknowUri>")}")
@@ -616,6 +697,7 @@ class ExternalParserWrapper(
 class SimpleExternalParser(
   val parserGenerator: SimpleExternalParserGenerator,
   val tmpDir: Path,
+  val stream: Boolean = false,
   var hadErrors: Boolean = false,
   var stdInHandler: Option[java.io.OutputStream => Unit] = None,
   var stdErrHandler: Option[java.io.InputStream => Unit] = None
@@ -630,10 +712,17 @@ class SimpleExternalParser(
     res
   }
 
+    var wrapper: ExternalParserWrapper = null
+//reproducibiliy
+
+//error bars
+//converters
+//format definition
+
   /** Performs the replacements in allReplacements on the given string
     */
   def makeReplacements(s: String): String = {
-    SimpleExternalParserGenerator.makeReplacements(allReplacements, s)
+    lab.LocalEnv.makeReplacements(allReplacements, s)
   }
 
   def ancillaryFilesPrefilter: AncillaryFilesPrefilter.Value = {
@@ -660,28 +749,34 @@ class SimpleExternalParser(
     * parserName is used to identify the parser, mainly for logging/debugging
     */
   def parseExternal(mainFileUri: String, mainFilePath: String, backend: ParserBackendExternal, parserName: String): ParseResult.ParseResult = {
-    val process = new ExternalParserWrapper(
-      mainFileUri0 = Some(mainFileUri),
-      mainFilePath0 = Some(mainFilePath),
-      backend = backend,
-      envDir = parserGenerator.envDir,
-      tmpDir = tmpDir,
-      cmd = parserGenerator.cmd,
-      cmdCwd = parserGenerator.cmdCwd,
-      cmdEnv = parserGenerator.cmdEnv,
-      parserName = parserName,
-      fixedParserInfo = JNothing,
-      extraCmdVars = parserGenerator.extraCmdVars,
-      stdInHandler = stdInHandler,
-      stdErrHandler = stdErrHandler)
-    if (process.run())
-      ParseResult.ParseSuccess
-    else
-      ParseResult.ParseFailure
+    if (wrapper == null) {
+      wrapper = new ExternalParserWrapper(
+        mainFileUri0 = Some(mainFileUri),
+        mainFilePath0 = Some(mainFilePath),
+        backend = backend,
+        envDir = parserGenerator.envDir,
+        tmpDir = tmpDir,
+        cmd = parserGenerator.cmd,
+        cmdCwd = parserGenerator.cmdCwd,
+        cmdEnv = parserGenerator.cmdEnv,
+        parserName = parserName,
+        fixedParserInfo = parserGenerator.parserInfo,
+        stream = stream,
+        extraCmdVars = parserGenerator.extraCmdVars,
+        stdInHandler = stdInHandler,
+        stdErrHandler = stdErrHandler)
+    }
+    wrapper.parseRequest(mainFileUri, mainFilePath, backend, parserName)
+  }
+
+  override def canBeReused: Boolean = {
+    this.synchronized {
+      wrapper == null || stream && wrapper.runStatus != ExternalParserWrapper.RunStatus.Finished && wrapper.sendStatus != ExternalParserWrapper.SendStatus.Finished
+    }
   }
 
   def cleanup(): Unit = {
     logger.info(s"optimized parser of ${parserGenerator.name} deleting temporary directory $tmpDir")
-    SimpleExternalParserGenerator.recursiveDelete(tmpDir.toFile())
+    lab.LocalEnv.deleteRecursively(tmpDir)
   }
 }
