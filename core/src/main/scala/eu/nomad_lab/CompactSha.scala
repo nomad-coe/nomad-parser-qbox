@@ -302,7 +302,7 @@ class CompactSha(val mDigest: MessageDigest) {
     * The suffix added consists of the first 168 bits of the digest using base64 encoding.
     */
   def gidAscii(prefix: String): Array[Byte] =
-    (prefix.getBytes(StandardCharsets.ISO_8859_1) ++ b64AsciiDigest).slice(0,28)
+    (prefix.getBytes(StandardCharsets.ISO_8859_1) ++ b64AsciiDigest.slice(0,28))
 
   /** returns a gid with the given prefix as string
     *
