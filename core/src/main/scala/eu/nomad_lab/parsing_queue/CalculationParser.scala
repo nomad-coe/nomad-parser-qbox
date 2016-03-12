@@ -72,7 +72,7 @@ class CalculationParser (
               //Only check non directory and symlink for now; TODO: Add support to read symlink
               if (zipEntry.getName.startsWith(prefix)) {
                 val destination = uncompressRoot.resolve(zipEntry.getName).toFile
-                if(!destination.exists()) {
+                if(destination.exists()) {
                   logger.debug("uncompress: File  already exists! Skipping the uncompression step!!")
                 } else {
                   destination.getParentFile.mkdirs()
