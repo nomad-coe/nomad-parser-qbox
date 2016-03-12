@@ -49,7 +49,7 @@ object TreeParserInitilaizer extends StrictLogging {
     for(filePath <- args) {
       val path = Paths.get(filePath)
       val filename = path.getFileName.toString
-      val archiveRe = "(R[-_a-zA-Z0-9]{28}).zip".r
+      val archiveRe = "^(R[-_a-zA-Z0-9]{28})\\.zip$".r
       val (uri, pathInArchive) = filename match {
         case archiveRe(gid) =>
           (s"nmd://$gid/data", Some(s"$gid/data"))
