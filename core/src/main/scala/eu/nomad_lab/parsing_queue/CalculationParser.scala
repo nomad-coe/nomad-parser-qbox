@@ -104,7 +104,7 @@ class CalculationParser (
         errorMessage = Some(s"Could not find parser named ${inMsg.parserName}")
       case Some(parser) =>
         parserInfo = parser.parserInfo
-        val parserId = (parser.parserInfo \ "versionInfo" \ "parserId") match {
+        val parserId = (parser.parserInfo \ "parserId") match {
           case JString(v) => v
           case _ => inMsg.parserName + "_undefined"
         }
