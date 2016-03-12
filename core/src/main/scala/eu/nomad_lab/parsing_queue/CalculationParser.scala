@@ -65,25 +65,29 @@ class CalculationParser (
         if (!alreadyUncompressed.contains(prefix)) {
           alreadyUncompressed += prefix
           val zipFile = new ZipFile(inMsg.treeFilePath)
-          val entries = zipFile.getEntries()
-          while (entries.hasMoreElements()) {
-            val zipEntry: ZipArchiveEntry = entries.nextElement()
-            if (!zipEntry.isDirectory && !zipEntry.isUnixSymlink) {
-              //Only check non directory and symlink for now; TODO: Add support to read symlink
-              if (zipEntry.getName.startsWith(prefix)) {
-                val destination = uncompressRoot.resolve(zipEntry.getName).toFile
-                if(destination.exists()) {
-                  logger.debug("uncompress: File  already exists! Skipping the uncompression step!!")
-                } else {
-                  destination.getParentFile.mkdirs()
-                  val zIn: InputStream = zipFile.getInputStream(zipEntry)
-                  val out: OutputStream = new FileOutputStream(destination)
-                  IOUtils.copy(zIn, out)
-                  IOUtils.closeQuietly(zIn)
-                  out.close()
+          try {
+            val entries = zipFile.getEntries()
+            while (entries.hasMoreElements()) {
+              val zipEntry: ZipArchiveEntry = entries.nextElement()
+              if (!zipEntry.isDirectory && !zipEntry.isUnixSymlink) {
+                //Only check non directory and symlink for now; TODO: Add support to read symlink
+                if (zipEntry.getName.startsWith(prefix)) {
+                  val destination = uncompressRoot.resolve(zipEntry.getName).toFile
+                  if(destination.exists()) {
+                    logger.debug("uncompress: File  already exists! Skipping the uncompression step!!")
+                  } else {
+                    destination.getParentFile.mkdirs()
+                    val zIn: InputStream = zipFile.getInputStream(zipEntry)
+                    val out: OutputStream = new FileOutputStream(destination)
+                    IOUtils.copy(zIn, out)
+                    IOUtils.closeQuietly(zIn)
+                    out.close()
+                  }
                 }
               }
             }
+          } finally {
+            zipFile.close()
           }
         }
         Some(uncompressRoot.resolve(inMsg.relativeFilePath).toAbsolutePath)
