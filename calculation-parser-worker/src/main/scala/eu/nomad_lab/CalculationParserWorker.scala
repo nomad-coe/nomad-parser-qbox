@@ -24,7 +24,8 @@ object CalculationParserWorker extends  StrictLogging {
 
     val varToReplaceRe = """\$\{([a-zA-Z][a-zA-Z0-9]*)\}""".r
     val readQueue = config.getString("nomad_lab.parser_worker_rabbitmq.singleParserQueue")
-    val writeQueue = config.getString("nomad_lab.parser_worker_rabbitmq.toBeNormalizedQueue")
+//    val writeQueue = config.getString("nomad_lab.parser_worker_rabbitmq.toBeNormalizedQueue")
+    val writeToExchange = config.getString("nomad_lab.parser_worker_rabbitmq.toBeNormalizedExchange")
     val uncompressRoot = config.getString("nomad_lab.parser_worker_rabbitmq.uncompressRoot")
     val parsedJsonPath = config.getString("nomad_lab.parser_worker_rabbitmq.parsedJsonPath")
     val rabbitMQHost = config.getString("nomad_lab.parser_worker_rabbitmq.rabbitMQHost")
@@ -33,7 +34,8 @@ object CalculationParserWorker extends  StrictLogging {
       import org.json4s.JsonDSL._
       ( ("rabbitMQHost" -> rabbitMQHost) ~
         ("readQueue" -> readQueue) ~
-        ("writeQueue" -> writeQueue) ~
+        ("writeToExchange" -> writeToExchange)~
+//        ("writeQueue" -> writeQueue) ~
         ("uncompressRoot"  -> uncompressRoot)~
         ("parsedJsonPath"  -> parsedJsonPath))
     }
@@ -46,10 +48,12 @@ object CalculationParserWorker extends  StrictLogging {
     prodFactory.setHost(settings.rabbitMQHost)
     val prodConnection: Connection = prodFactory.newConnection
     val prodchannel: Channel = prodConnection.createChannel
-    prodchannel.queueDeclare(settings.writeQueue, true, false, false, null)
+    prodchannel.exchangeDeclare(settings.writeToExchange, "fanout");
+//    prodchannel.queueDeclare(settings.writeQueue, true, false, false, null)
     val msgBytes = JsonSupport.writeUtf8(message)
-    prodchannel.basicPublish("", settings.writeQueue, MessageProperties.PERSISTENT_TEXT_PLAIN,msgBytes )
-    logger.info(s"Wrote to Queue: ${settings.writeQueue} $msgBytes")
+    prodchannel.basicPublish(settings.writeToExchange, "", null,msgBytes )
+//    prodchannel.basicPublish("", settings.writeQueue, MessageProperties.PERSISTENT_TEXT_PLAIN,msgBytes )
+    logger.info(s"Wrote to Exchange: ${settings.writeToExchange} $msgBytes")
     prodchannel.close
     prodConnection.close
   }
@@ -83,6 +87,7 @@ object CalculationParserWorker extends  StrictLogging {
 
     //channel.queueDeclare(String queue, boolean durable, boolean exclusive, boolean autoDelete, Map<String, Object> arguments)
     channel.queueDeclare(settings.readQueue, true, false, false, null)
+    channel.queueBind(settings.readQueue, settings.writeToExchange, "");
     logger.info(s"Reading from Queue: ${settings.readQueue}")
 
     // Fair dispatch: don't dispatch a new message to a worker until it has processed and acknowledged the previous one

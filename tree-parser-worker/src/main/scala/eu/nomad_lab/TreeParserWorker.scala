@@ -21,11 +21,12 @@ object TreeParserWorker extends StrictLogging {
     val readQueue = config.getString("nomad_lab.parser_worker_rabbitmq.treeParserQueue")
     val writeQueue = config.getString("nomad_lab.parser_worker_rabbitmq.singleParserQueue")
     val rabbitMQHost = config.getString("nomad_lab.parser_worker_rabbitmq.rabbitMQHost")
-
+    val writeToExchange = config.getString("nomad_lab.parser_worker_rabbitmq.singleParserExchange")
     def toJValue: JValue = {
       import org.json4s.JsonDSL._;
       ( ("rabbitMQHost" -> rabbitMQHost) ~
         ("readQueue" -> readQueue) ~
+        ("writeToExchange" -> writeToExchange)~
         ("writeQueue" -> writeQueue))
     }
   }
@@ -59,11 +60,12 @@ object TreeParserWorker extends StrictLogging {
 
     //channel.queueDeclare(String queue, boolean durable, boolean exclusive, boolean autoDelete, Map<String, Object> arguments)
     channel.queueDeclare(settings.readQueue, true, false, false, null)
+    channel.queueBind(settings.readQueue, settings.writeToExchange, "");
     logger.info(s"Reading from Queue: ${settings.readQueue}")
 
     // Fair dispatch: don't dispatch a new message to a worker until it has processed and acknowledged the previous one
     val prefetchCount = 1
-    channel.basicQos(prefetchCount)
+    channel.basicQos(prefetchCount) //Sets prefetch for each consumer. For channel based prefetch use  channel.basicQos(prefetchCount, global = true)
 
     val consumer: Consumer = new DefaultConsumer((channel)) {
       @throws(classOf[IOException])
@@ -97,13 +99,13 @@ object TreeParserWorker extends StrictLogging {
       prodFactory.setHost(settings.rabbitMQHost)
       val prodConnection: Connection = prodFactory.newConnection
       val prodchannel: Channel = prodConnection.createChannel
-      prodchannel.queueDeclare(settings.writeQueue, true, false, false, null)
+      prodchannel.exchangeDeclare(settings.writeToExchange, "fanout");
       for(message <- msgList){
         val msgBytes = JsonSupport.writeUtf8(message)
         logger.info(s"Message: $message, bytes Array size: ${msgBytes.length}")
-        prodchannel.basicPublish("", settings.writeQueue, MessageProperties.PERSISTENT_TEXT_PLAIN,msgBytes )
+        prodchannel.basicPublish(settings.writeToExchange, "", null,msgBytes )
       }
-      logger.info(s"Wrote to Queue: ${settings.writeQueue}")
+      logger.info(s"Wrote to Exchange: ${settings.writeToExchange}")
       prodchannel.close
       prodConnection.close
     }

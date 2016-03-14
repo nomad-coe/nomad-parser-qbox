@@ -18,12 +18,12 @@ object TreeParserInitilaizer extends StrictLogging {
     // validate vs. reference.conf
     config.checkValid(ConfigFactory.defaultReference(), "simple-lib")
     val rabbitMQHost = config.getString("nomad_lab.parser_worker_rabbitmq.rabbitMQHost")
-    val writeQueue = config.getString("nomad_lab.parser_worker_rabbitmq.treeParserQueue")
-
+    val writeToExchange = config.getString("nomad_lab.parser_worker_rabbitmq.treeParserExchange")
     def toJValue: JValue = {
       import org.json4s.JsonDSL._;
       ( ("rabbitMQHost" -> rabbitMQHost) ~
-        ("writeQueue" -> writeQueue))
+        ("writeToExchange" -> writeToExchange)
+       )
     }
   }
 
@@ -44,8 +44,7 @@ object TreeParserInitilaizer extends StrictLogging {
     prodFactory.setHost(settings.rabbitMQHost)
     val prodConnection: Connection = prodFactory.newConnection
     val prodchannel: Channel = prodConnection.createChannel
-    prodchannel.queueDeclare(settings.writeQueue, true, false, false, null)
-
+    prodchannel.exchangeDeclare(settings.writeToExchange, "fanout");
     for(filePath <- args) {
       val path = Paths.get(filePath)
       val filename = path.getFileName.toString
@@ -64,9 +63,9 @@ object TreeParserInitilaizer extends StrictLogging {
       )
       val msgBytes = JsonSupport.writeUtf8(message)
       logger.info(s"Message: $message, bytes Array size: ${msgBytes.length}")
-      prodchannel.basicPublish("", settings.writeQueue, MessageProperties.PERSISTENT_TEXT_PLAIN, msgBytes)
+      prodchannel.basicPublish(settings.writeToExchange, "", null,msgBytes )
     }
-    logger.info(s"Wrote to Queue: ${settings.writeQueue}")
+    logger.info(s"Wrote to Exchange: ${settings.writeToExchange}")
     prodchannel.close
     prodConnection.close
   }
