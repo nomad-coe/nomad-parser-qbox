@@ -16,7 +16,16 @@ import eu.{nomad_lab => lab}
 import scala.collection.mutable
 import scala.util.control.NonFatal
 
+
 object CalculationParser extends StrictLogging {
+
+  /** An exception that indicates failure during parsing.
+    *
+    * @param message Incoming message to parse
+    * @param calculationParser
+    * @param msg
+    * @param what
+    */
   class CalculationParserException(
                                     message: CalculationParserRequest,
                                     calculationParser: CalculationParser,
@@ -27,6 +36,9 @@ object CalculationParser extends StrictLogging {
     what
   )
 }
+/** This class implements methods to run the uncompress the archive (if required) and to run parser.
+  *
+  */
 
 class CalculationParser (
                         val ucRoot: String,
@@ -39,7 +51,8 @@ class CalculationParser (
   var lastUncompressRoot: Option[Path] = None
   val cachedParsers = mutable.Map[String, OptimizedParser]()
 
-  /** Extract all the files from the current level on
+  /** Hierarchically extract all the files from the current level on.
+    *
     */
   def uncompress(inMsg: CalculationParserRequest, uncompressRoot:Path):Option[Path] = {
     if ((!lastArchivePath.isEmpty || lastUncompressRoot.isDefined || !alreadyUncompressed.isEmpty) && (inMsg.treeFilePath != lastArchivePath || lastUncompressRoot != Some(uncompressRoot))) {
@@ -95,6 +108,10 @@ class CalculationParser (
     }
   }
 
+  /** Main function that handles the incoming request to parse a file. Check if the parser, file to parse exists and whether to overwrite if parsedFileOutputPath exists.
+    * Finally uncompress and call the parser and check the parser result.
+    *
+    */
   def handleParseRequest(inMsg: CalculationParserRequest): CalculationParserResult = {
     var didExist = false
     var created = true
@@ -193,7 +210,7 @@ class CalculationParser (
     )
   }
 
-  /** Cleans up the calculation parser
+  /** Cleans up the after successful completion of calculation parser
     */
   def cleanup(): Unit = {
     for ((_, optParser) <- cachedParsers)

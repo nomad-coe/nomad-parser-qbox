@@ -8,9 +8,11 @@ import com.typesafe.scalalogging.StrictLogging
 
 object ParserRun extends StrictLogging {
 
-  /* Parse the given file path with the given parser and options
-  *
-  * */
+  /** Parse the given file path with the given parser and options
+  * @param parserGen: Parser generator to create the optimized parser to use.
+  * @param pPath: Path of the file to Parse
+  * @param opt: Backend type of the parsed file
+  */
   def parse(parserGen: SimpleExternalParserGenerator,pPath:String,opt:String): ParseResult.Value =
   {
     object BackendType extends Enumeration {

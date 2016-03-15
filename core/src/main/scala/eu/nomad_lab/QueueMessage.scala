@@ -4,6 +4,8 @@ import eu.nomad_lab.parsers.ParseResult.ParseResult
 import org.json4s.JsonAST.{JArray, JString, JField, JObject}
 import org.json4s._
 
+/** Enum of possible tree/archive type
+  */
 object TreeType extends Enumeration {
   type TreeType = Value
   val File, Directory, Zip, Tar, Unknown = Value
@@ -13,7 +15,7 @@ class InvalidTreeTypeException(
                                 msg: String, what: Throwable = null
                               ) extends Exception(msg, what)
 
-/** Json serialization to and deserialization support for MetaInfoRecord
+/** Json serialization and deserialization support for MetaInfoRecord
   */
 class TreeTypeSerializer extends CustomSerializer[TreeType.Value](format => (
   {
@@ -31,6 +33,8 @@ class TreeTypeSerializer extends CustomSerializer[TreeType.Value](format => (
 
 object QueueMessage {
 
+  /** Request sent to the tree parser to find the appropriate parser for the given tree/archive
+    */
   case class TreeParserRequest(
                                      treeUri: String, // URI inside the given treeFilePath; eg. nmd://R9h5Wp_FGZdsBiSo5Id6pnie_xeIH/data
                                      treeFilePath: String, //Path to the archive or the root directory eg. /nomad/nomadlab/raw_data/data/R9h/R9h5Wp_FGZdsBiSo5Id6pnie_xeIH.zip
@@ -40,6 +44,8 @@ object QueueMessage {
                                      followSymlinks: Boolean = true // In case of directory
                                    )
 
+  /** Request send to the calculation parser to uncompress the tree/archive and initialize the parser
+    */
   case class CalculationParserRequest(
                                        parserName: String, //Name of the parser to use for the file; CastepParser
                                        mainFileUri: String, //Uri of the main file; Example:  nmd://R9h5Wp_FGZdsBiSo5Id6pnie_xeIH/data/examples/foo/Si2.castep
@@ -49,6 +55,8 @@ object QueueMessage {
                                        overwrite: Boolean = false // Overwrite an existing file; eg. In case of failure of previous run
                                      )
 
+  /** Result of the calculation parser.
+    */
   case class CalculationParserResult(
                                          parseResult:ParseResult,
                                          parserInfo: JValue, // info on the parser used i.e. {"name":"CastepParser","version":"1.0"}
@@ -60,6 +68,8 @@ object QueueMessage {
                                          parseRequest: CalculationParserRequest//Uri of the main file; Example:  nmd://R9h5Wp_FGZdsBiSo5Id6pnie_xeIH/data/examples/foo/Si2.castep
                                          )
 
+  /** Result of the calculation parser to be normalized.
+    */
   case class ToBeNormalizedQueueMessage(
                                      parserInfo: JValue, // info on the parser used i.e. {"name":"CastepParser","version":"1.0"}
                                      mainFileUri: String, //Uri of the main file; Example:  nmd://R9h5Wp_FGZdsBiSo5Id6pnie_xeIH/data/examples/foo/Si2.castep
@@ -67,7 +77,9 @@ object QueueMessage {
                                      parsedFilePath: String // Complete file path, to the parsed file /nomad/nomadlab/work/parsed/<parserId>/Put/PutioKaDl4tgPd4FnrdxPscSGKAgK.nc
                                    )
 
-  case class NormalizedQueueMessage(
+  /** The final normalized result.
+    */
+  case class NormalizedResult(
                                      normalizedFileUri: String, // This is build as sha of archive, changing R into N, i.e. nmd://N9h5Wp_FGZdsBiSo5Id6pnie_xeIH
                                      normalizedFilePath: String // Complete file path, to the normalized file /nomad/nomadlab/normalized/<parserId>/N9h/N9h5Wp_FGZdsBiSo5Id6pnie_xeIH.nc
                                    )

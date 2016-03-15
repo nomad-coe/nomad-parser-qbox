@@ -17,6 +17,13 @@ import scala.collection.mutable
 
 
 object TreeParser{
+
+  /** An exception that indicates failure during finding a suitable parser.
+    *
+    * @param message
+    * @param msg
+    * @param what
+    */
   class TreeParserException(
                             message: TreeParserRequest,
                             msg: String,
@@ -33,9 +40,12 @@ class TreeParser(
                   val parserCollection: ParserCollection
                 ) extends StrictLogging {
 
-  /** Find the parsable files and parsers. Return the list of messages
+  /** Find the parsable files and parsers.
     *
-    * */
+    * @param incomingMessage
+    * @return list of messages containing the parsable files and the corresponding parsers.
+    */
+
   def findParser(incomingMessage : TreeParserRequest ) ={
     //Read file and get the corresponding parsers
     var msgList: scala.collection.mutable.MutableList[CalculationParserRequest] = mutable.MutableList()
@@ -134,6 +144,12 @@ class TreeParser(
     }
   }
 
+  /** Scan a tar archive and if possible, find the most appropriate parser for each file in the tar archive
+    *
+    * @param filesToUncompress
+    * @param ais
+    * @return
+    */
   @tailrec final def scanArchivedInputStream(filesToUncompress:Map[String, String], ais:ArchiveInputStream):Map[String, String] = {
     var filesToUC =  filesToUncompress
     Option(ais.getNextEntry) match {
