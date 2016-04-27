@@ -262,9 +262,9 @@ def build_QboxMainFileSimpleMatcher():
     # (3.3) submatcher for OUPUT totalenergy
     ####################################################################
     totalenergySubMatcher = SM(name = 'Totalenergy',
-        startReStr = r"\s*Optimization Cycle",
+        startReStr = r"\s*total_electronic_charge",
         subMatchers = [
-            SM(r"\s*opt==\s+[0-9]+\s+(?P<energy_total__hartree>[-+0-9.eEdD]+)\s+[-+0-9.eEdD]+\s+[-+0-9.eEdD]+\s+[-+0-9.eEdD]+", repeats = True)
+            SM(r"\s*<etotal>\s+(?P<energy_total__hartree>[-+0-9.eEdD]+)\s+</etotal>",repeats = True ) 
         ]) 
     
 
@@ -321,16 +321,34 @@ def build_QboxMainFileSimpleMatcher():
             subMatchers = [
 
              #-----------(1) header--------------------- 
-             headerSubMatcher
+             headerSubMatcher,
 
 
-             #----------(2.1) INPUT : geometry----------
+             #----------(2.1) INPUT : geometry in *.r----------
              #geometrySubMatcher,  
-             #----------(2.2) INPUT : control-----------
+             #----------(2.2) INPUT : method in *.i-----------
              #calculationMethodSubMatcher,  
 
+            SM(name = "single configuration matcher",
+                startReStr = r"\s*<iteration count*",
+                #endReStr = r"\s*~~~~~~~~*\s*End Computing SCF Energy/Gradient\s*~~~~~~~~~~*",
+                repeats = True,
+                 sections = ['section_single_configuration_calculation'],
+                 subMatchers = [
+                    #----------(3.1) OUTPUT : SCF----------------------
+                    #scfSubMatcher,
+                    #----------(3.2) OUTPUT : eigenvalues--------------
+                    #eigenvalueSubMatcher,
+                    #----------(3.4) OUTPUT : relaxation_geometry----------------------
+                    #geometryrelaxationSubMatcher,
+                    ###---???shanghui find this will mismacth the frequencies geometry.
+                    #----------(3.3) OUTPUT : totalenergy--------------
+                    totalenergySubMatcher
+                    ]
+                ),
 
-                    #----------(3.6) OUTPUT : frequencies----------------------
+
+
 
            ]) # CLOSING SM NewRun  
 
