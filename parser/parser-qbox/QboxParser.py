@@ -272,34 +272,20 @@ def build_QboxMainFileSimpleMatcher():
     # (3.4) submatcher for OUTPUT relaxation_geometry(section_system_description)
     #####################################################################
     geometryrelaxationSubMatcher = SM(name = 'GeometryRelaxation',
-        startReStr = r"\s*df\s*ATOMIC\s*COORDINATES\s*\(au\)\s*DERIVATIVES\s*\(au\)",
-        #endReStr = r"\s*\+\+\+\s+Entering Vibrations Section\s+\+\+\+ ",
+        startReStr = r"\s*<atomset>",
         sections = ['section_system_description'],
         subMatchers = [
-        SM (startReStr = r"\s*df\s+x\s+y\s+z\s+x\s+y\s+z",
+        SM (startReStr = r"\s*<unit_cell\s*",
             subMatchers = [
-            SM (r"\s*df\s+(?P<dmol3_geometry_atom_label>[a-zA-Z]+)\s+(?P<dmol3_geometry_atom_position_x__angstrom>[-+0-9.]+)\s+(?P<dmol3_geometry_atom_position_y__angstrom>[-+0-9.]+)\s+(?P<dmol3_geometry_atom_position_z__angstrom>[-+0-9.]+)\s+[-+0-9.]+\s+[-+0-9.]+\s+[-+0-9.]+", repeats = True)
-            ])
-        ])
-
-
-    #####################################################################
-    # (3.5) submatcher for OUTPUT population analysis (section_system_description)
-    #####################################################################
-    populationSubMatcher = SM(name = 'PopulationAnalysis',
-        startReStr = r"\s*\+\+\+\s+Entering Properties Section\s+\+\+\+",
-        subMatchers = [
-        SM (startReStr = r"\s*Charge partitioning by Hirshfeld method:",
-            sections = [ "dmol3_section_hirshfeld_population"],
-            subMatchers = [
-            SM (r"\s*[a-zA-Z]+\s+[0-9]+\s+charge\s+(?P<dmol3_hirshfeld_population>[-+0-9.]+)", repeats = True)
+            SM (r"\s*[a-z]=\"\s*(?P<qbox_geometry_lattice_vector_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_z__bohr>[-+0-9.]+)\s*\"", repeats = True)
             ]),
-        SM (startReStr = r"\s*Mulliken atomic charges:",
-            sections = [ "dmol3_section_mulliken_population"],
+        SM (startReStr = r"\s*<atom\s+name=\"(?P<qbox_geometry_atom_label>[a-zA-Z0-9]+)\"",
             subMatchers = [
-            SM (r"\s*[a-zA-Z(]+\s+[0-9)]+\s+(?P<dmol3_mulliken_population>[-+0-9.]+)", repeats = True)
+            SM (r"\s*<position>\s+(?P<qbox_geometry_atom_position_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_atom_position_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_atom_position_z__bohr>[-+0-9.]+)\s+</position>", repeats = True)
             ])
         ])
+
+
 
 
     ########################################
@@ -339,11 +325,11 @@ def build_QboxMainFileSimpleMatcher():
                     #scfSubMatcher,
                     #----------(3.2) OUTPUT : eigenvalues--------------
                     #eigenvalueSubMatcher,
-                    #----------(3.4) OUTPUT : relaxation_geometry----------------------
-                    #geometryrelaxationSubMatcher,
-                    ###---???shanghui find this will mismacth the frequencies geometry.
                     #----------(3.3) OUTPUT : totalenergy--------------
-                    totalenergySubMatcher
+                    totalenergySubMatcher,
+                    #----------(3.4) OUTPUT : relaxation_geometry----------------------
+                    geometryrelaxationSubMatcher
+                    ###---???shanghui find this will mismacth the frequencies geometry.
                     ]
                 ),
 
