@@ -153,39 +153,9 @@ def build_QboxMainFileSimpleMatcher():
     """
 
 
-    #####################################################################
-    # (1.1) submatcher for INPUT geometry(section_system_description)
-    #####################################################################
-    geometrySubMatcher = SM(name = 'Geometry',
-        startReStr = r"",
-        forwardMatch = True,
-        required = True,
-        sections = ['section_system_description'],
-        subMatchers = [
-        #SM (r"\s*set\s+cell(?P<qbox_geometry_lattice_vector_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_z__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_z__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_z__bohr>[-+0-9.]+)", repeats = True),
-         SM (r"\s*atom\s+(?P<qbox_geometry_atom_label>[a-zA-Z1-9]+)\s+[a-z]+\s+(?P<qbox_geometry_atom_position_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_atom_position_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_atom_position_z__bohr>[-+0-9.]+)", repeats = True)
-        ])
-
-
-
-
-    ####################################################################
-    # (1.2) submatcher for INPUT control (section_method)
-    ####################################################################
-    calculationMethodSubMatcher = SM(name = 'calculationMethods',
-        startReStr = r"",
-        #endReStr = r"\s*",
-        forwardMatch = False,
-        required = True,
-        sections = ["section_method"],
-        subMatchers = [
-            SM(r"\s*set\s+ecut\s+(?P<qbox_ecut__rydberg>[0-9.]+)"),
-            SM(r"\s*set\s+wf_dyn\s+(?P<qbox_wf_dyn>[A-Za-z0-9]+)")
-
-        ]) 
 
     #####################################################################
-    # (2.1) submatcher for header
+    # (1) submatcher for header
     #####################################################################
     headerSubMatcher = SM(name = 'ProgramHeader',
                   startReStr = r"\s*I qbox\s+(?P<program_version>[0-9.]+)",
@@ -194,7 +164,24 @@ def build_QboxMainFileSimpleMatcher():
                                   ])
 
     ####################################################################
-    # (2.2.1) submatcher for OUPUT SCF
+    # (2) submatcher for control method that echo INPUT file (section_method)
+    ####################################################################
+    calculationMethodSubMatcher = SM(name = 'calculationMethods',
+        startReStr = r"\s*\[qbox\]",
+        #endReStr = r"\s*",
+        #forwardMatch = False,
+        required = True,
+        sections = ["section_method"],
+        subMatchers = [
+            SM(r"\s*\[qbox\]\s+\[qbox\]\s+<cmd>\s*set\s+ecut\s+(?P<qbox_ecut__rydberg>[0-9.]+)\s*</cmd>"),
+            SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+wf_dyn\s+(?P<qbox_wf_dyn>[A-Za-z0-9]+)\s*</cmd>"),
+            SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+atoms_dyn\s+(?P<qbox_atoms_dyn>[A-Za-z0-9]+)\s*</cmd>"),
+            SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+cell_dyn\s+(?P<qbox_cell_dyn>[A-Za-z0-9]+)\s*</cmd>")
+
+        ])
+ 
+    ####################################################################
+    # (3.1) submatcher for OUPUT SCF
     ####################################################################
     scfSubMatcher = SM(name = 'ScfIterations',
         startReStr = r"\s*Message: Start SCF iterations\s*",
@@ -207,7 +194,7 @@ def build_QboxMainFileSimpleMatcher():
         ]) 
       
     ####################################################################
-    # (2.2.2) submatcher for OUPUT eigenvalues
+    # (3.2) submatcher for OUPUT eigenvalues
     ####################################################################
     eigenvalueSubMatcher = SM(name = 'Eigenvalues',
         startReStr = r"\s*state\s+eigenvalue\s+occupation\s*",
@@ -218,7 +205,7 @@ def build_QboxMainFileSimpleMatcher():
 
 
     ####################################################################
-    # (2.2.3) submatcher for OUPUT totalenergy
+    # (3.3) submatcher for OUPUT totalenergy
     ####################################################################
     totalenergySubMatcher = SM(name = 'Totalenergy',
         startReStr = r"\s*total_electronic_charge",
@@ -228,7 +215,7 @@ def build_QboxMainFileSimpleMatcher():
     
 
     #####################################################################
-    # (2.2.4) submatcher for OUTPUT relaxation_geometry(section_system_description)
+    # (3.4) submatcher for OUTPUT relaxation_geometry(section_system_description)
     #####################################################################
     geometryrelaxationSubMatcher = SM(name = 'GeometryRelaxation',
         startReStr = r"\s*<atomset>",
@@ -257,14 +244,10 @@ def build_QboxMainFileSimpleMatcher():
         weak = True,
         subMatchers = [
 
-        #=================(1) read INPUT file *.i=======================
-        #----------(1.1) geometry ----------
-        #geometrySubMatcher, ???shanghui, why I would not use this when I use method together. 
-        #----------(1.2)  method -----------
-        calculationMethodSubMatcher,  
-
-
-        #=================(2) read OUPUT file *.r=======================
+        #=============================================================================
+        #  read OUPUT file *.r, the method part comes from INPUT file *.i,  so we 
+        #  do not need to parser INPUT file, the OUTPUT file contains all information
+        #=============================================================================
         SM (name = 'NewRun',
             startReStr = r"\s*============================",
             endReStr = r"\s*<end_time",
@@ -273,28 +256,31 @@ def build_QboxMainFileSimpleMatcher():
             forwardMatch = True,
             sections = ['section_run'],
             subMatchers = [
-             #-----------(2.1)output: header--------------------- 
+             #-----------(1)output: header--------------------- 
              headerSubMatcher,
 
-             #-----------(2.2)output: single configuration------- 
+             #-----------(2)output: method---------------------
+             calculationMethodSubMatcher,
+
+             #-----------(3)output: single configuration------- 
              SM(name = "single configuration matcher",
                 startReStr = r"\s*<iteration count*",
                 #endReStr = r"\s*~~~~~~~~*\s*End Computing SCF Energy/Gradient\s*~~~~~~~~~~*",
                 repeats = True,
                 sections = ['section_single_configuration_calculation'],
                 subMatchers = [
-                    #----------(2.2.1) OUTPUT : SCF----------------------
+                    #----------(3.1) OUTPUT : SCF----------------------
                     #scfSubMatcher,
-                    #----------(2.2.2) OUTPUT : eigenvalues--------------
+                    #----------(3.2) OUTPUT : eigenvalues--------------
                     #eigenvalueSubMatcher,
-                    #----------(2.2.3) OUTPUT : totalenergy--------------
+                    #----------(3.3) OUTPUT : totalenergy--------------
                     totalenergySubMatcher,
-                    #----------(2.2.4) OUTPUT : relaxation_geometry----------------------
+                    #----------(3.4) OUTPUT : relaxation_geometry----------------------
                     geometryrelaxationSubMatcher
                     ]
                 ),
 
-             #-----------(2.3)output: properties------- 
+             #-----------(4)output: properties------- 
 
 
            ]) # CLOSING SM NewRun  
