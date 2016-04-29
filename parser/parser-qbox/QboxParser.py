@@ -8,7 +8,7 @@ from QboxCommon import get_metaInfo
 import logging, os, re, sys
 
 ############################################################
-# This is the parser for the main file of dmol3.
+# This is the parser for the main file of qbox.
 ############################################################
 
 
@@ -59,14 +59,14 @@ class QboxParserContext(object):
 
         atom_pos = []
         for i in ['x', 'y', 'z']:
-            api = section['dmol3_geometry_atom_position_' + i]
+            api = section['qbox_geometry_atom_position_' + i]
             if api is not None:
                atom_pos.append(api)
         if atom_pos:
             # need to transpose array since its shape is [number_of_atoms,3] in the metadata
            backend.addArrayValues('atom_position', np.transpose(np.asarray(atom_pos)))
             # write atom labels
-        atom_labels = section['dmol3_geometry_atom_label']
+        atom_labels = section['qbox_geometry_atom_label']
         if atom_labels is not None:
            backend.addArrayValues('atom_label', np.asarray(atom_labels))
  
@@ -78,20 +78,20 @@ class QboxParserContext(object):
     #################################################################
     # (2.2) onClose for INPUT control (section_method)
     #################################################################
-    def onClose_section_method(self, backend, gIndex, section):
-        functional = section["dmol3_functional_name"]
-        if functional:
-            functionalMap = {
-                "gga": ["GGA_X_PW91","GGA_C_PW91"]
-            }
-            # Push the functional string into the backend
-            nomadNames = functionalMap.get(functional[0])
-            if not nomadNames:
-                raise Exception("Unhandled xc functional %s found" % functional)
-            for name in nomadNames:
-                s = backend.openSection("section_XC_functionals")
-                backend.addValue('XC_functional_name', name)
-                backend.closeSection("section_XC_functionals", s)
+    #def onClose_section_method(self, backend, gIndex, section):
+    #    functional = section["dmol3_functional_name"]
+    #    if functional:
+    #        functionalMap = {
+    #            "gga": ["GGA_X_PW91","GGA_C_PW91"]
+    #        }
+    #        # Push the functional string into the backend
+    #        nomadNames = functionalMap.get(functional[0])
+    #        if not nomadNames:
+    #            raise Exception("Unhandled xc functional %s found" % functional)
+    #        for name in nomadNames:
+    #            s = backend.openSection("section_XC_functionals")
+    #            backend.addValue('XC_functional_name', name)
+    #            backend.closeSection("section_XC_functionals", s)
 
 
     # #################################################################
@@ -141,7 +141,7 @@ class QboxParserContext(object):
 #############################################################
 
 def build_QboxMainFileSimpleMatcher():
-    """Builds the SimpleMatcher to parse the main file of dmol3.
+    """Builds the SimpleMatcher to parse the main file of qbox.
 
     First, several subMatchers are defined, which are then used to piece together
     the final SimpleMatcher.
@@ -149,93 +149,52 @@ def build_QboxMainFileSimpleMatcher():
     which allows nice formating of nested SimpleMatchers in python.
 
     Returns:
-       SimpleMatcher that parses main file of dmol3. 
+       SimpleMatcher that parses main file of qbox. 
     """
 
 
     #####################################################################
-    # (1) submatcher for header
-    #####################################################################
-    headerSubMatcher = SM(name = 'ProgramHeader',
-                  startReStr = r"\s*I qbox\s+(?P<program_version>[0-9.]+)",
-                  subMatchers = [
-                     SM(r"\s*<nodename>\s+(?P<qbox_nodename>[a-zA-Z0-9]+)\s+</nodename>")
-                                  ])
-
-    #####################################################################
-    # (2.1) submatcher for INPUT geometry(section_system_description)
+    # (1.1) submatcher for INPUT geometry(section_system_description)
     #####################################################################
     geometrySubMatcher = SM(name = 'Geometry',
-        startReStr = r"\s*INCOOR, atomic coordinates in au \(for archive\):",
+        startReStr = r"",
+        forwardMatch = True,
+        required = True,
         sections = ['section_system_description'],
         subMatchers = [
-       # SM (startReStr = r"\s*\|\s*Unit cell:",
-       #     subMatchers = [
-       #     SM (r"\s*\|\s*(?P<dmol3_geometry_lattice_vector_x__bohr>[-+0-9.]+)\s+(?P<dmol3_geometry_lattice_vector_y__bohr>[-+0-9.]+)\s+(?P<dmol3_geometry_lattice_vector_z__bohr>[-+0-9.]+)", repeats = True)
-       #     ]),
-        SM (startReStr = r"\s*\$coordinates",
-            subMatchers = [
-            SM (r"\s*(?P<dmol3_geometry_atom_label>[a-zA-Z]+)\s+(?P<dmol3_geometry_atom_position_x__bohr>[-+0-9.]+)\s+(?P<dmol3_geometry_atom_position_y__bohr>[-+0-9.]+)\s+(?P<dmol3_geometry_atom_position_z__bohr>[-+0-9.]+)", repeats = True)
-            ])
+        #SM (r"\s*set\s+cell(?P<qbox_geometry_lattice_vector_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_z__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_z__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_z__bohr>[-+0-9.]+)", repeats = True),
+         SM (r"\s*atom\s+(?P<qbox_geometry_atom_label>[a-zA-Z1-9]+)\s+[a-z]+\s+(?P<qbox_geometry_atom_position_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_atom_position_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_atom_position_z__bohr>[-+0-9.]+)", repeats = True)
         ])
 
 
 
 
     ####################################################################
-    # (2.2) submatcher for INPUT control (section_method)
+    # (1.2) submatcher for INPUT control (section_method)
     ####################################################################
     calculationMethodSubMatcher = SM(name = 'calculationMethods',
-        startReStr = r"\s*INPUT_DMOL keywords \(for archive\):",
-        endReStr = r"\s*\>8",
+        startReStr = r"",
+        #endReStr = r"\s*",
+        forwardMatch = False,
+        required = True,
         sections = ["section_method"],
         subMatchers = [
-            SM(r"\s*Calculate\s+(?P<dmol3_calculation_type>[A-Za-z_]+)"),
-            SM(r"\s*Functional\s+(?P<dmol3_functional_name>[A-Za-z0-9]+)"),
-            SM(r"\s*Pseudopotential\s+(?P<dmol3_pseudopotential_name>[A-Za-z]+)"),
-            SM(r"\s*Basis\s+(?P<dmol3_basis_name>[A-Za-z]+)"),
-            SM(r"\s*Spin_Polarization\s+(?P<dmol3_spin_polarization>[A-Za-z]+)"),
-            SM(r"\s*Spin\s+(?P<dmol3_spin>[0-9]+)"),
-            SM(r"\s*Atom_Rcut\s+(?P<dmol3_rcut>[-+0-9.eEdD]+)"),
-            SM(r"\s*Integration_Grid\s+(?P<dmol3_integration_grid>[A-Za-z]+)"),
-            SM(r"\s*Aux_Partition\s+(?P<dmol3_aux_partition>[0-9]+)"),
-            SM(r"\s*Aux_Density\s+(?P<dmol3_aux_density>[A-Za-z]+)"),
-
-            SM(r"\s*Charge\s+(?P<dmol3_charge>[-+0-9.eEdD]+)"),
-            SM(r"\s*Symmetry\s+(?P<dmol3_symmetry>[A-Za-z0-9]+)"),
-            SM(r"\s*Mulliken_Analysis\s+(?P<dmol3_mulliken_analysis>[A-Za-z]+)"),
-            SM(r"\s*Hirshfeld_Analysis\s+(?P<dmol3_hirshfeld_analysis>[A-Za-z]+)"),
-            SM(r"\s*Partial_Dos\s+(?P<dmol3_partial_dos>[A-Za-z]+)"),
-            SM(r"\s*Electrostatic_Moments\s+(?P<dmol3_electrostatic_moments>[A-Za-z]+)"),
-            SM(r"\s*Nuclear_EFG\s+(?P<dmol3_nuclear_efg>[A-Za-z]+)"),
-            SM(r"\s*Optical_Absorption\s+(?P<dmol3_optical_absorption>[A-Za-z]+)"),
-            SM(r"\s*Kpoints\s+(?P<dmol3_kpoints>[A-Za-z]+)"),
-
-            SM(r"\s*SCF_Density_Convergence\s+(?P<dmol3_scf_density_convergence>[-+0-9.eEdD]+)"),
-            SM(r"\s*SCF_Spin_Mixing\s+(?P<dmol3_scf_spin_mixing>[-+0-9.eEdD]+)"),
-            SM(r"\s*SCF_Charge_Mixing\s+(?P<dmol3_scf_charge_mixing>[-+0-9.eEdD]+)"),
-            SM(r"\s*SCF_DIIS\s+(?P<dmol3_scf_diis_number>[-+0-9.eEdD]+)\s+(?P<dmol3_scf_diis_name>[A-Za-z]+)"),
-            SM(r"\s*SCF_Iterations\s+(?P<dmol3_scf_iterations>[0-9]+)"),
-            SM(r"\s*SCF_Number_Bad_Steps\s+(?P<dmol3_scf_number_bad_steps>[0-9]+)"),
-            SM(r"\s*SCF_Direct\s+(?P<dmol3_scf_direct>[A-Za-z]+)"),
-            SM(r"\s*SCF_Restart\s+(?P<dmol3_scf_restart>[A-Za-z]+)"),
-            SM(r"\s*Occupation\s+(?P<dmol3_occupation_name>[A-Za-z_]+)\s+(?P<dmol3_occupation_width>[0-9.eEdD]+)"),
-
-            SM(r"\s*OPT_Energy_Convergence\s+(?P<dmol3_opt_energy_convergence>[-+0-9.eEdD]+)"),
-            SM(r"\s*OPT_Gradient_Convergence\s+(?P<dmol3_opt_gradient_convergence>[-+0-9.eEdD]+)"),
-            SM(r"\s*OPT_Displacement_Convergence\s+(?P<dmol3_opt_displacement_convergence>[-+0-9.eEdD]+)"),
-            SM(r"\s*OPT_Iterations\s+(?P<dmol3_opt_iterations>[0-9]+)"),
-            SM(r"\s*OPT_Coordinate_System\s+(?P<dmol3_opt_coordinate_system>[A-Za-z_]+)"),
-            SM(r"\s*OPT_Gdiis\s+(?P<dmol3_opt_gdiis>[A-Za-z]+)"),
-            SM(r"\s*OPT_Max_Displacement\s+(?P<dmol3_opt_max_displacement>[-+0-9.eEdD]+)"),
-            SM(r"\s*OPT_Steep_Tol\s+(?P<dmol3_opt_steep_tol>[-+0-9.eEdD]+)"),
-            SM(r"\s*OPT_Hessian_Project\s+(?P<dmol3_opt_hessian_project>[A-Za-z]+)")
-
+            SM(r"\s*set\s+ecut\s+(?P<qbox_ecut__rydberg>[0-9.]+)"),
+            SM(r"\s*set\s+wf_dyn\s+(?P<qbox_wf_dyn>[A-Za-z0-9]+)")
 
         ]) 
 
+    #####################################################################
+    # (2.1) submatcher for header
+    #####################################################################
+    headerSubMatcher = SM(name = 'ProgramHeader',
+                  startReStr = r"\s*I qbox\s+(?P<program_version>[0-9.]+)",
+                  subMatchers = [
+                     SM(r"\s*<nodename>\s+(?P<qbox_nodename>[a-zA-Z0-9.-]+)\s+</nodename>")
+                                  ])
+
     ####################################################################
-    # (3.1) submatcher for OUPUT SCF
+    # (2.2.1) submatcher for OUPUT SCF
     ####################################################################
     scfSubMatcher = SM(name = 'ScfIterations',
         startReStr = r"\s*Message: Start SCF iterations\s*",
@@ -248,7 +207,7 @@ def build_QboxMainFileSimpleMatcher():
         ]) 
       
     ####################################################################
-    # (3.2) submatcher for OUPUT eigenvalues
+    # (2.2.2) submatcher for OUPUT eigenvalues
     ####################################################################
     eigenvalueSubMatcher = SM(name = 'Eigenvalues',
         startReStr = r"\s*state\s+eigenvalue\s+occupation\s*",
@@ -259,7 +218,7 @@ def build_QboxMainFileSimpleMatcher():
 
 
     ####################################################################
-    # (3.3) submatcher for OUPUT totalenergy
+    # (2.2.3) submatcher for OUPUT totalenergy
     ####################################################################
     totalenergySubMatcher = SM(name = 'Totalenergy',
         startReStr = r"\s*total_electronic_charge",
@@ -269,7 +228,7 @@ def build_QboxMainFileSimpleMatcher():
     
 
     #####################################################################
-    # (3.4) submatcher for OUTPUT relaxation_geometry(section_system_description)
+    # (2.2.4) submatcher for OUTPUT relaxation_geometry(section_system_description)
     #####################################################################
     geometryrelaxationSubMatcher = SM(name = 'GeometryRelaxation',
         startReStr = r"\s*<atomset>",
@@ -297,6 +256,15 @@ def build_QboxMainFileSimpleMatcher():
         forwardMatch = True,
         weak = True,
         subMatchers = [
+
+        #=================(1) read INPUT file *.i=======================
+        #----------(1.1) geometry ----------
+        #geometrySubMatcher, ???shanghui, why I would not use this when I use method together. 
+        #----------(1.2)  method -----------
+        calculationMethodSubMatcher,  
+
+
+        #=================(2) read OUPUT file *.r=======================
         SM (name = 'NewRun',
             startReStr = r"\s*============================",
             endReStr = r"\s*<end_time",
@@ -305,38 +273,32 @@ def build_QboxMainFileSimpleMatcher():
             forwardMatch = True,
             sections = ['section_run'],
             subMatchers = [
-
-             #-----------(1) header--------------------- 
+             #-----------(2.1)output: header--------------------- 
              headerSubMatcher,
 
-
-             #----------(2.1) INPUT : geometry in *.r----------
-             #geometrySubMatcher,  
-             #----------(2.2) INPUT : method in *.i-----------
-             #calculationMethodSubMatcher,  
-
-            SM(name = "single configuration matcher",
+             #-----------(2.2)output: single configuration------- 
+             SM(name = "single configuration matcher",
                 startReStr = r"\s*<iteration count*",
                 #endReStr = r"\s*~~~~~~~~*\s*End Computing SCF Energy/Gradient\s*~~~~~~~~~~*",
                 repeats = True,
-                 sections = ['section_single_configuration_calculation'],
-                 subMatchers = [
-                    #----------(3.1) OUTPUT : SCF----------------------
+                sections = ['section_single_configuration_calculation'],
+                subMatchers = [
+                    #----------(2.2.1) OUTPUT : SCF----------------------
                     #scfSubMatcher,
-                    #----------(3.2) OUTPUT : eigenvalues--------------
+                    #----------(2.2.2) OUTPUT : eigenvalues--------------
                     #eigenvalueSubMatcher,
-                    #----------(3.3) OUTPUT : totalenergy--------------
+                    #----------(2.2.3) OUTPUT : totalenergy--------------
                     totalenergySubMatcher,
-                    #----------(3.4) OUTPUT : relaxation_geometry----------------------
+                    #----------(2.2.4) OUTPUT : relaxation_geometry----------------------
                     geometryrelaxationSubMatcher
-                    ###---???shanghui find this will mismacth the frequencies geometry.
                     ]
                 ),
 
-
+             #-----------(2.3)output: properties------- 
 
 
            ]) # CLOSING SM NewRun  
+
 
         ]) # END Root
 
