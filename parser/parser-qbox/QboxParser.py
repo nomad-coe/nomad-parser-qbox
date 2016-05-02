@@ -45,38 +45,8 @@ class QboxParserContext(object):
         # allows to reset values if the same superContext is used to parse different files
         self.initialize_values()
 
-
-
-    ###################################################################
-    # (2.1) onClose for INPUT geometry (section_system_description)
-    ###################################################################
-    def onClose_section_system_description(self, backend, gIndex, section):
-        """Trigger called when section_system_description is closed.
-        Writes atomic positions, atom labels and lattice vectors.
-        """
-        # keep track of the latest system description section
-        self.secSystemDescriptionIndex = gIndex
-
-        atom_pos = []
-        for i in ['x', 'y', 'z']:
-            api = section['qbox_geometry_atom_position_' + i]
-            if api is not None:
-               atom_pos.append(api)
-        if atom_pos:
-            # need to transpose array since its shape is [number_of_atoms,3] in the metadata
-           backend.addArrayValues('atom_position', np.transpose(np.asarray(atom_pos)))
-            # write atom labels
-        atom_labels = section['qbox_geometry_atom_label']
-        if atom_labels is not None:
-           backend.addArrayValues('atom_label', np.asarray(atom_labels))
- 
-        #atom_hirshfeld_population_analysis = section['dmol3_hirshfeld_population']        
-        #if atom_hirshfeld_population_analysis is not None:
-        #   backend.addArrayValues('atom_hirshfeld_population',np.asarray(atom_hirshfeld_population_analysis))
-        ###---???shanghui want to know how to add 
-
     #################################################################
-    # (2.2) onClose for INPUT control (section_method)
+    # (2) onClose for INPUT control (section_method)
     #################################################################
     #def onClose_section_method(self, backend, gIndex, section):
     #    functional = section["dmol3_functional_name"]
@@ -92,7 +62,6 @@ class QboxParserContext(object):
     #            s = backend.openSection("section_XC_functionals")
     #            backend.addValue('XC_functional_name', name)
     #            backend.closeSection("section_XC_functionals", s)
-
 
     # #################################################################
     # # (3.1) onClose for OUTPUT SCF (section_scf_iteration) 
@@ -113,25 +82,91 @@ class QboxParserContext(object):
     #################################################################
     # (3.2) onClose for OUTPUT eigenvalues (section_eigenvalues) 
     #################################################################
-    def onClose_section_eigenvalues(self, backend, gIndex, section):
-        """Trigger called when _section_eigenvalues is closed.
-        Eigenvalues are extracted.
+    #def onClose_section_eigenvalues(self, backend, gIndex, section):
+    #    """Trigger called when _section_eigenvalues is closed.
+    #    Eigenvalues are extracted.
+    #    """
+    #    occs = []
+    #    evs =  []
+
+    #    ev = section['qbox_eigenvalue_eigenvalue']
+    #    if ev is not None: 
+    #       occ = section['qbox_eigenvalue_occupation']
+    #       occs.append(occ) 
+    #       evs.append(ev)
+
+    #    self.eigenvalues_occupation = []
+    #    self.eigenvalues_eigenvalues = []
+
+    #    #self.eigenvalues_kpoints = [] 
+    #    self.eigenvalues_occupation.append(occs)
+    #    self.eigenvalues_eigenvalues.append(evs)
+
+
+    ###################################################################
+    # (3.4) onClose for geometry and force (section_system_description)
+    # todo: maybe we can move the force to onClose_section_single_configuration_calculation in the future. 
+    ###################################################################
+    def onClose_section_system_description(self, backend, gIndex, section):
+        """Trigger called when section_system_description is closed.
+        Writes atomic positions, atom labels and lattice vectors.
         """
-        occs = []
-        evs =  []
+        # keep track of the latest system description section
+        self.secSystemDescriptionIndex = gIndex
 
-        ev = section['dmol3_eigenvalue_eigenvalue']
-        if ev is not None: 
-           occ = section['dmol3_eigenvalue_occupation']
-           occs.append(occ) 
-           evs.append(ev)
+       #------1.atom_position
+        atom_pos = []
+        for i in ['x', 'y', 'z']:
+            api = section['qbox_geometry_atom_position_' + i]
+            if api is not None:
+               atom_pos.append(api)
+        if atom_pos:
+            # need to transpose array since its shape is [number_of_atoms,3] in the metadata
+           backend.addArrayValues('atom_position', np.transpose(np.asarray(atom_pos)))
 
-        self.eigenvalues_occupation = []
-        self.eigenvalues_eigenvalues = []
+        #------2.atom labels
+        atom_labels = section['qbox_geometry_atom_label']
+        if atom_labels is not None:
+           backend.addArrayValues('atom_label', np.asarray(atom_labels))
 
-        #self.eigenvalues_kpoints = [] 
-        self.eigenvalues_occupation.append(occs)
-        self.eigenvalues_eigenvalues.append(evs)
+        #------3.atom force
+        atom_force = []
+        for i in ['x', 'y', 'z']:
+            api = section['qbox_atom_force_' + i]
+            if api is not None:
+               atom_force.append(api)
+        if atom_force:
+            # need to transpose array since its shape is [number_of_atoms,3] in the metadata
+           backend.addArrayValues('atom_forces', np.transpose(np.asarray(atom_force)))
+
+
+    def onClose_qbox_section_stress_tensor(self, backend, gIndex, section):
+        qbox_stress_tensor = []
+        for i in ['xx', 'yy', 'zz', 'xy', 'yz', 'xz']:
+            api = section['qbox_stress_tensor_' + i]
+            if api is not None:
+               qbox_stress_tensor.append(api)
+        if qbox_stress_tensor:
+            # need to transpose array since its shape is [number_of_atoms,3] in the metadata
+           backend.addArrayValues('stress_tensor', np.transpose(np.asarray(qbox_stress_tensor)))
+
+   #----------here is the code from castep--------
+   #    #get cached values for stress tensor
+   #    stress_tens =[]
+   #    stress_tens = section['qbox_store_stress_tensor']
+
+   #    for i in range(len(stress_tens)):
+   #        stress_tens[i] = stress_tens[i].split()
+   #        stress_tens[i] = [float(j) for j in stress_tens[i]]
+   #        stress_tens_int = stress_tens[i]
+   #        stress_tens_int = [x / 10e9 for x in stress_tens_int] #converting GPa in Pa.
+   #        self.stress_tensor_value.append(stress_tens_int)
+   #    self.stress_tensor_value = self.stress_tensor_value[-3:]
+ 
+   #  if self.stress_tensor_value:
+   #        backend.addArrayValues('stress_tensor',np.asarray(self.stress_tensor_value))
+
+
 
 
                 
@@ -164,20 +199,34 @@ def build_QboxMainFileSimpleMatcher():
                                   ])
 
     ####################################################################
+    # (2.2) submatcher for properties : efield  (qbox_section_efield)
+    ####################################################################
+    #efieldSubMatcher = SM(name = 'Efield',
+    #    startReStr = r"\s*\[qbox\]\s*\[qbox\]\s*<cmd>set\s*e_field",
+    #    sections = ["qbox_section_efield"],
+    #    subMatchers = [
+    #      SM (r"\s*<e_field>\s+(?P<qbox_efield_x>[-+0-9.]+)\s+(?P<qbox_efield_y>[-+0-9.]+)\s+(?P<qbox_efield_z>[-+0-9.]+)\s*</e_field>",repeats = True)
+    #    ])
+
+    ####################################################################
     # (2) submatcher for control method that echo INPUT file (section_method)
     ####################################################################
     calculationMethodSubMatcher = SM(name = 'calculationMethods',
         startReStr = r"\s*\[qbox\]",
         #endReStr = r"\s*",
-        #forwardMatch = False,
-        required = True,
+        repeats = True,
         sections = ["section_method"],
         subMatchers = [
-            SM(r"\s*\[qbox\]\s+\[qbox\]\s+<cmd>\s*set\s+ecut\s+(?P<qbox_ecut__rydberg>[0-9.]+)\s*</cmd>"),
+        #--------k_point-------------
+            SM(r"\s*\[qbox\]\s+<cmd>\s*kpoint add\s+(?P<qbox_k_point_x>[-+0-9.eEdD]+)\s+(?P<qbox_k_point_y>[-+0-9.eEdD]+)\s+(?P<qbox_k_point_z>[-+0-9.eEdD]+)\s+(?P<qbox_k_point_weight>[-+0-9.eEdD]+)\s*</cmd>",repeats = True),
+        #--------set method---------
+            SM(r"\s*\[qbox\]\s*\[qbox\]\s*<cmd>\s*set\s+ecut\s+(?P<qbox_ecut__rydberg>[0-9.]+)\s*</cmd>"),
             SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+wf_dyn\s+(?P<qbox_wf_dyn>[A-Za-z0-9]+)\s*</cmd>"),
             SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+atoms_dyn\s+(?P<qbox_atoms_dyn>[A-Za-z0-9]+)\s*</cmd>"),
-            SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+cell_dyn\s+(?P<qbox_cell_dyn>[A-Za-z0-9]+)\s*</cmd>")
-
+            SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+cell_dyn\s+(?P<qbox_cell_dyn>[A-Za-z0-9]+)\s*</cmd>"),
+        #-------set efield---------
+            SM (r"\s*\[qbox\]\s*\[qbox\]\s*<cmd>\s*set\s+e_field\s*(?P<qbox_efield_x>[-+0-9.]+)\s+(?P<qbox_efield_y>[-+0-9.]+)\s+(?P<qbox_efield_z>[-+0-9.]+)\s*</cmd>",repeats = True)
+          #???both this version adn qbox_section_efield version could not give mather for efield, need to check.
         ])
  
     ####################################################################
@@ -208,7 +257,7 @@ def build_QboxMainFileSimpleMatcher():
     # (3.3) submatcher for OUPUT totalenergy
     ####################################################################
     totalenergySubMatcher = SM(name = 'Totalenergy',
-        startReStr = r"\s*total_electronic_charge",
+        startReStr = r"\s*<ekin>",
         subMatchers = [
             SM(r"\s*<etotal>\s+(?P<energy_total__hartree>[-+0-9.eEdD]+)\s+</etotal>",repeats = True ) 
         ]) 
@@ -227,12 +276,48 @@ def build_QboxMainFileSimpleMatcher():
             ]),
         SM (startReStr = r"\s*<atom\s+name=\"(?P<qbox_geometry_atom_label>[a-zA-Z0-9]+)\"",
             subMatchers = [
-            SM (r"\s*<position>\s+(?P<qbox_geometry_atom_position_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_atom_position_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_atom_position_z__bohr>[-+0-9.]+)\s+</position>", repeats = True)
-            ])
+            SM (r"\s*<position>\s+(?P<qbox_geometry_atom_position_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_atom_position_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_atom_position_z__bohr>[-+0-9.]+)\s*</position>", repeats = True),
+            SM (r"\s*<force>\s+(?P<qbox_atom_force_x__hartree_bohr_1>[-+0-9.]+)\s+(?P<qbox_atom_force_y__hartree_bohr_1>[-+0-9.]+)\s+(?P<qbox_atom_force_z__hartree_bohr_1>[-+0-9.]+)\s*</force>", repeats = True)
+            ], repeats = True)
         ])
 
 
+    #####################################################################
+    # (3.5) submatcher for OUTPUT stress_tensor(qbox_section_stress_tensor)
+    #####################################################################
+    stresstensorSubMatcher = SM(name = 'StressTensor',
+        startReStr = r"\s*<stress_tensor\s*unit=\"GPa\">",
+        sections = ['qbox_section_stress_tensor'],
+        subMatchers = [
+          SM (r"\s*<sigma_xx>\s+(?P<qbox_stress_tensor_xx__GPa>[-+0-9.]+)\s*</sigma_xx>"),
+          SM (r"\s*<sigma_yy>\s+(?P<qbox_stress_tensor_yy__GPa>[-+0-9.]+)\s*</sigma_yy>"),
+          SM (r"\s*<sigma_zz>\s+(?P<qbox_stress_tensor_zz__GPa>[-+0-9.]+)\s*</sigma_zz>"),
+          SM (r"\s*<sigma_xy>\s+(?P<qbox_stress_tensor_xy__GPa>[-+0-9.]+)\s*</sigma_xy>"),
+          SM (r"\s*<sigma_yz>\s+(?P<qbox_stress_tensor_yz__GPa>[-+0-9.]+)\s*</sigma_yz>"),
+          SM (r"\s*<sigma_xz>\s+(?P<qbox_stress_tensor_xz__GPa>[-+0-9.]+)\s*</sigma_xz>")
+        ])
 
+    ####################################################################
+    # (4.1) submatcher for properties : MLWF  (qbox_section_MLWF)
+    ####################################################################
+    MLWFSubMatcher = SM(name = 'MLWF',
+        startReStr = r"\s*<mlwfs>",
+        sections = ["qbox_section_MLWF"],
+        subMatchers = [
+          SM (r"\s*<mlwf center=\"\s*(?P<qbox_geometry_MLWF_atom_position_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_MLWF_atom_position_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_MLWF_atom_position_z__bohr>[-+0-9.]+)\s*\"\s+spread=\"\s*(?P<qbox_geometry_MLWF_atom_spread__bohr>[-+0-9.]+)\s*\"", repeats = True)
+
+        ])
+
+
+    ####################################################################
+    # (4.2) submatcher for properties : dipole  (qbox_section_dipole)
+    ####################################################################
+    dipoleSubMatcher = SM(name = 'Dipole',
+        startReStr = r"\s*<dipole>",
+        sections = ["qbox_section_dipole"],
+        subMatchers = [
+          SM (r"\s*<dipole_total>\s+(?P<qbox_dipole_x>[-+0-9.]+)\s+(?P<qbox_dipole_y>[-+0-9.]+)\s+(?P<qbox_dipole_z>[-+0-9.]+)\s*</dipole_total>", repeats = True)
+        ])
 
     ########################################
     # return main Parser
@@ -261,11 +346,13 @@ def build_QboxMainFileSimpleMatcher():
 
              #-----------(2)output: method---------------------
              calculationMethodSubMatcher,
+             #-----------(2.2) efield----------------------
+            # efieldSubMatcher,
 
              #-----------(3)output: single configuration------- 
              SM(name = "single configuration matcher",
                 startReStr = r"\s*<iteration count*",
-                #endReStr = r"\s*~~~~~~~~*\s*End Computing SCF Energy/Gradient\s*~~~~~~~~~~*",
+                #endReStr = r"\s*</iteration>",
                 repeats = True,
                 sections = ['section_single_configuration_calculation'],
                 subMatchers = [
@@ -276,12 +363,17 @@ def build_QboxMainFileSimpleMatcher():
                     #----------(3.3) OUTPUT : totalenergy--------------
                     totalenergySubMatcher,
                     #----------(3.4) OUTPUT : relaxation_geometry----------------------
-                    geometryrelaxationSubMatcher
+                    geometryrelaxationSubMatcher,
+                    #----------(3.5) OUTPUT : stress----------------------
+                    stresstensorSubMatcher
                     ]
                 ),
 
              #-----------(4)output: properties------- 
-
+             #-----------(4.1) MLWF----------------------
+              MLWFSubMatcher,
+             #-----------(4.3) dipole----------------------
+              dipoleSubMatcher
 
            ]) # CLOSING SM NewRun  
 
