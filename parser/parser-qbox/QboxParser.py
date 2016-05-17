@@ -104,11 +104,11 @@ class QboxParserContext(object):
 
 
     ###################################################################
-    # (3.4) onClose for geometry and force (section_system_description)
+    # (3.4) onClose for geometry and force (section_system)
     # todo: maybe we can move the force to onClose_section_single_configuration_calculation in the future. 
     ###################################################################
-    def onClose_section_system_description(self, backend, gIndex, section):
-        """Trigger called when section_system_description is closed.
+    def onClose_section_system(self, backend, gIndex, section):
+        """Trigger called when section_system is closed.
         Writes atomic positions, atom labels and lattice vectors.
         """
         # keep track of the latest system description section
@@ -264,11 +264,11 @@ def build_QboxMainFileSimpleMatcher():
     
 
     #####################################################################
-    # (3.4) submatcher for OUTPUT relaxation_geometry(section_system_description)
+    # (3.4) submatcher for OUTPUT relaxation_geometry(section_system)
     #####################################################################
     geometryrelaxationSubMatcher = SM(name = 'GeometryRelaxation',
         startReStr = r"\s*<atomset>",
-        sections = ['section_system_description'],
+        sections = ['section_system'],
         subMatchers = [
         SM (startReStr = r"\s*<unit_cell\s*",
             subMatchers = [
