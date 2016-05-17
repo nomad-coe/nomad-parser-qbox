@@ -75,7 +75,7 @@ class QboxParserContext(object):
     # 
     #     #self.energy_total_scf_iteration_list.append(ev)
     #     #backend.addArrayValues('energy_total_scf_iteration_list', np.asarray(ev))
-    #     #backend.addValue('scf_dft_number_of_iterations', self.scfIterNr)
+    #     #backend.addValue('number_of_scf_iterations', self.scfIterNr)
     #     #-----???shanghui want to know why can not add them.
  
 
@@ -96,11 +96,11 @@ class QboxParserContext(object):
     #       evs.append(ev)
 
     #    self.eigenvalues_occupation = []
-    #    self.eigenvalues_eigenvalues = []
+    #    self.eigenvalues_values = []
 
     #    #self.eigenvalues_kpoints = [] 
     #    self.eigenvalues_occupation.append(occs)
-    #    self.eigenvalues_eigenvalues.append(evs)
+    #    self.eigenvalues_values.append(evs)
 
 
     ###################################################################
@@ -114,20 +114,20 @@ class QboxParserContext(object):
         # keep track of the latest system description section
         self.secSystemDescriptionIndex = gIndex
 
-       #------1.atom_position
+       #------1.atom_positions
         atom_pos = []
         for i in ['x', 'y', 'z']:
-            api = section['qbox_geometry_atom_position_' + i]
+            api = section['qbox_geometry_atom_positions_' + i]
             if api is not None:
                atom_pos.append(api)
         if atom_pos:
             # need to transpose array since its shape is [number_of_atoms,3] in the metadata
-           backend.addArrayValues('atom_position', np.transpose(np.asarray(atom_pos)))
+           backend.addArrayValues('atom_positions', np.transpose(np.asarray(atom_pos)))
 
         #------2.atom labels
-        atom_labels = section['qbox_geometry_atom_label']
+        atom_labels = section['qbox_geometry_atom_labels']
         if atom_labels is not None:
-           backend.addArrayValues('atom_label', np.asarray(atom_labels))
+           backend.addArrayValues('atom_labels', np.asarray(atom_labels))
 
         #------3.atom force
         atom_force = []
@@ -274,9 +274,9 @@ def build_QboxMainFileSimpleMatcher():
             subMatchers = [
             SM (r"\s*[a-z]=\"\s*(?P<qbox_geometry_lattice_vector_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_z__bohr>[-+0-9.]+)\s*\"", repeats = True)
             ]),
-        SM (startReStr = r"\s*<atom\s+name=\"(?P<qbox_geometry_atom_label>[a-zA-Z0-9]+)\"",
+        SM (startReStr = r"\s*<atom\s+name=\"(?P<qbox_geometry_atom_labels>[a-zA-Z0-9]+)\"",
             subMatchers = [
-            SM (r"\s*<position>\s+(?P<qbox_geometry_atom_position_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_atom_position_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_atom_position_z__bohr>[-+0-9.]+)\s*</position>", repeats = True),
+            SM (r"\s*<position>\s+(?P<qbox_geometry_atom_positions_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_atom_positions_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_atom_positions_z__bohr>[-+0-9.]+)\s*</position>", repeats = True),
             SM (r"\s*<force>\s+(?P<qbox_atom_force_x__hartree_bohr_1>[-+0-9.]+)\s+(?P<qbox_atom_force_y__hartree_bohr_1>[-+0-9.]+)\s+(?P<qbox_atom_force_z__hartree_bohr_1>[-+0-9.]+)\s*</force>", repeats = True)
             ], repeats = True)
         ])
@@ -304,7 +304,7 @@ def build_QboxMainFileSimpleMatcher():
         startReStr = r"\s*<mlwfs>",
         sections = ["qbox_section_MLWF"],
         subMatchers = [
-          SM (r"\s*<mlwf center=\"\s*(?P<qbox_geometry_MLWF_atom_position_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_MLWF_atom_position_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_MLWF_atom_position_z__bohr>[-+0-9.]+)\s*\"\s+spread=\"\s*(?P<qbox_geometry_MLWF_atom_spread__bohr>[-+0-9.]+)\s*\"", repeats = True)
+          SM (r"\s*<mlwf center=\"\s*(?P<qbox_geometry_MLWF_atom_positions_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_MLWF_atom_positions_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_MLWF_atom_positions_z__bohr>[-+0-9.]+)\s*\"\s+spread=\"\s*(?P<qbox_geometry_MLWF_atom_spread__bohr>[-+0-9.]+)\s*\"", repeats = True)
 
         ])
 
@@ -391,7 +391,7 @@ def get_cachingLevelForMetaName(metaInfoEnv):
     """
     # manually adjust caching of metadata
     cachingLevelForMetaName = {
-                                'eigenvalues_eigenvalues': CachingLevel.Cache,
+                                'eigenvalues_values': CachingLevel.Cache,
                                 'eigenvalues_kpoints':CachingLevel.Cache
                                 }
 
