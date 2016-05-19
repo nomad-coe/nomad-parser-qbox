@@ -20,8 +20,17 @@ object QboxParser extends SimpleExternalParserGenerator(
           }(breakOut): List[(String, jn.JString)])
       )) :: Nil
   ),
-  mainFileTypes = Seq("text/.*"),
-  mainFileRe = """\s\|\s*CCC\s*AA\s*SSS\s*TTTTT\s*EEEEE\s*PPPP\s*\|\s*""".r,
+  mainFileTypes = Seq("application/xml"),
+  mainFileRe = """<\?xml version="1.0" encoding="UTF-8"\?>\s*
+\s*<fpmd:simulation xmlns:fpmd="http://www.quantum-simulation.org/ns/fpmd/fpmd-1.0">\s*
+\s*
+\s*=+\s*
+\s*I\s*qbox\s*(?<version>[-_.0-9A-Za-z]+).*I
+(?:\s*I.+I
+)*\s*I\s+http://qboxcode.org\s*I
+(?:\s*I.+I
+)*\s*=+\s*
+""".r,
   cmd = Seq(DefaultPythonInterpreter.python2Exe(), "${envDir}/parsers/qbox/parser/parser-qbox/QboxParser.py",
     "--uri", "${mainFileUri}", "${mainFilePath}"),
   resList = Seq(
