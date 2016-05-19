@@ -26,8 +26,6 @@ object QboxParser extends SimpleExternalParserGenerator(
     "--uri", "${mainFileUri}", "${mainFilePath}"),
   resList = Seq(
     "parser-qbox/QboxParser.py",
-    "parser-qbox/QboxBandParser.py",
-    "parser-qbox/QboxCellParser.py",
     "parser-qbox/QboxCommon.py",
     "parser-qbox/setup_paths.py",
     "nomad_meta_info/public.nomadmetainfo.json",
