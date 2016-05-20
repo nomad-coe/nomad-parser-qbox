@@ -48,20 +48,30 @@ class QboxParserContext(object):
     #################################################################
     # (2) onClose for INPUT control (section_method)
     #################################################################
-    #def onClose_section_method(self, backend, gIndex, section):
-    #    functional = section["dmol3_functional_name"]
-    #    if functional:
-    #        functionalMap = {
-    #            "gga": ["GGA_X_PW91","GGA_C_PW91"]
-    #        }
-    #        # Push the functional string into the backend
-    #        nomadNames = functionalMap.get(functional[0])
-    #        if not nomadNames:
-    #            raise Exception("Unhandled xc functional %s found" % functional)
-    #        for name in nomadNames:
-    #            s = backend.openSection("section_XC_functionals")
-    #            backend.addValue('XC_functional_name', name)
-    #            backend.closeSection("section_XC_functionals", s)
+    def onClose_qbox_section_functionals(self, backend, gIndex, section):
+
+        functional = section["qbox_functional_name"]
+
+        if not functional: # default is LDA in qbox 
+           functional = "LDA"
+ 
+        if functional:
+            functionalMap = {
+                "LDA": ["LDA_X", "LDA_C_PZ"], 
+                "VMN": ["LDA_X", "LDA_C_VWN"], 
+                "PBE": ["GGA_X_PBE","GGA_C_PBE"], 
+                "PBE0": ["GGA_X_PBE","GGA_C_PBE"], 
+                "B3LYP": ["HYB_GGA_XC_B3LYP5"]  
+     #need to be extended to add alpha_PBE0 :coefficient of Hartree-Fock exchange in the PBE0 xc functional 
+            }
+            # Push the functional string into the backend
+            nomadNames = functionalMap.get(functional)
+            if not nomadNames:
+                raise Exception("Unhandled xc functional %s found" % functional)
+            for name in nomadNames:
+                s = backend.openSection("section_XC_functionals")
+                backend.addValue('XC_functional_name', name)
+                backend.closeSection("section_XC_functionals", s)
 
     # #################################################################
     # # (3.1) onClose for OUTPUT SCF (section_scf_iteration) 
@@ -224,6 +234,14 @@ def build_QboxMainFileSimpleMatcher():
             SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+wf_dyn\s+(?P<qbox_wf_dyn>[A-Za-z0-9]+)\s*</cmd>"),
             SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+atoms_dyn\s+(?P<qbox_atoms_dyn>[A-Za-z0-9]+)\s*</cmd>"),
             SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+cell_dyn\s+(?P<qbox_cell_dyn>[A-Za-z0-9]+)\s*</cmd>"),
+ 
+            SM(name = "qboxXC",
+              startReStr = r"\s*\[qbox\]",
+              forwardMatch = True,
+              sections = ["qbox_section_functionals"],
+              subMatchers = [
+                 SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+xc\s+(?P<qbox_functional_name>[A-Za-z0-9]+)\s*</cmd>"),
+                             ]), # CLOSING castep_section_functionals
         #-------set efield---------
             SM (r"\s*\[qbox\]\s*\[qbox\]\s*<cmd>\s*set\s+e_field\s*(?P<qbox_efield_x>[-+0-9.]+)\s+(?P<qbox_efield_y>[-+0-9.]+)\s+(?P<qbox_efield_z>[-+0-9.]+)\s*</cmd>",repeats = True)
           #???both this version adn qbox_section_efield version could not give mather for efield, need to check.
@@ -339,11 +357,12 @@ def build_QboxMainFileSimpleMatcher():
             repeats = False,
             required = True,
             forwardMatch = True,
+            fixedStartValues={'program_name': 'qbox', 'program_basis_set_type': 'plane waves'},
             sections = ['section_run'],
             subMatchers = [
              #-----------(1)output: header--------------------- 
              headerSubMatcher,
-
+ 
              #-----------(2)output: method---------------------
              calculationMethodSubMatcher,
              #-----------(2.2) efield----------------------
