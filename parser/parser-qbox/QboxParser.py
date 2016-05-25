@@ -50,10 +50,13 @@ class QboxParserContext(object):
     #################################################################
     def onClose_qbox_section_functionals(self, backend, gIndex, section):
 
-        functional = section["qbox_functional_name"]
+        functional_list = section["qbox_functional_name"]
 
-        if not functional: # default is LDA in qbox 
+        if not functional_list: # default is LDA in qbox 
            functional = "LDA"
+        else :
+           functional = functional_list[-1] # use the xc appeared the last time 
+
  
         if functional:
             functionalMap = {
