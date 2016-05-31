@@ -21,7 +21,7 @@
 <release> 1.63.2 dell </release>
 <sysname> Linux </sysname>
 <nodename> theobook68 </nodename>
-<start_time> 2016-04-06T12:25:23Z </start_time>
+<start_time> 2016-05-31T13:04:28Z </start_time>
 <mpi_processes count="4">
 <process id="0"> theobook68 </process>
 <process id="1"> theobook68 </process>
@@ -29,18 +29,18 @@
 <process id="3"> theobook68 </process>
 </mpi_processes>
 [qbox] <cmd># Si4 MLWF</cmd>
-[qbox] <cmd>load ../si4gs/test.xml</cmd>
- LoadCmd: loading from ../si4gs/test.xml
- XMLGFPreprocessor: reading from ../si4gs/test.xml size: 357985
- XMLGFPreprocessor: read time: 0.000114
- XMLGFPreprocessor: local read rate: 748.9 MB/s  aggregate read rate: 2996 MB/s
- XMLGFPreprocessor: tag fixing time: 8.202e-05
- XMLGFPreprocessor: segment definition time: 0.00221
+[qbox] <cmd>load si4mlwf_input.xml</cmd>
+ LoadCmd: loading from si4mlwf_input.xml
+ XMLGFPreprocessor: reading from si4mlwf_input.xml size: 357985
+ XMLGFPreprocessor: read time: 0.0001011
+ XMLGFPreprocessor: local read rate: 844.3 MB/s  aggregate read rate: 3377 MB/s
+ XMLGFPreprocessor: tag fixing time: 7.319e-05
+ XMLGFPreprocessor: segment definition time: 0.001935
  XMLGFPreprocessor: boundary adjustment time: 4.053e-06
- XMLGFPreprocessor: transcoding time: 5.96e-06
- XMLGFPreprocessor: data redistribution time: 0.000716
- XMLGFPreprocessor: XML compacting time: 0.0001869
- XMLGFPreprocessor: total time: 0.004273
+ XMLGFPreprocessor: transcoding time: 3.815e-06
+ XMLGFPreprocessor: data redistribution time: 0.0007792
+ XMLGFPreprocessor: XML compacting time: 0.0001709
+ XMLGFPreprocessor: total time: 0.004405
  xmlcontent.size(): 120537
  Starting XML parsing
 
@@ -77,7 +77,7 @@ SLA PZ NOGX NOGC
  kpoint=0 0 0 weight=1 size=8
  WavefunctionHandler::endElement: slater_determinant
  XML parsing done
- SampleReader: read time: 0.03204 s
+ SampleReader: read time: 0.03504 s
 [qbox] <cmd>compute_mlwf</cmd>
 <mlwfs>
  <mlwfset spin="0" size="8">
@@ -96,6 +96,6 @@ SLA PZ NOGX NOGC
    <total_dipole_length> 0.000545 </total_dipole_length>
 </mlwfs>
 [qbox]  End of command stream 
-<real_time> 0.044795 </real_time>
-<end_time> 2016-04-06T12:25:23Z </end_time>
+<real_time> 0.058940 </real_time>
+<end_time> 2016-05-31T13:04:28Z </end_time>
 </fpmd:simulation>

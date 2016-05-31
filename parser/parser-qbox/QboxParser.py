@@ -5,6 +5,7 @@ from nomadcore.caching_backend import CachingLevel
 from nomadcore.simple_parser import AncillaryParser, mainFunction
 from nomadcore.simple_parser import SimpleMatcher as SM
 from QboxCommon import get_metaInfo
+import QboxXMLParser
 import logging, os, re, sys
 
 ############################################################
@@ -22,13 +23,13 @@ class QboxParserContext(object):
     def __init__(self):
         self.functionals                       = []
 
+
     def initialize_values(self):
         """Initializes the values of certain variables.
 
         This allows a consistent setting and resetting of the variables,
         when the parsing starts and when a section_run closes.
         """
-
     def startedParsing(self, fInName, parser):
         """Function is called when the parsing starts.
 
@@ -48,8 +49,32 @@ class QboxParserContext(object):
     #################################################################
     # (2) onClose for INPUT control (section_method)
     #################################################################
-    def onClose_qbox_section_functionals(self, backend, gIndex, section):
+    def onClose_qbox_section_xml_file(self, backend, gIndex, section):
 
+        qbox_loading_xml_file_list = section['qbox_loading_xml_file']
+
+        xml_file = qbox_loading_xml_file_list[-1]        
+ 
+        if xml_file is not None: 
+           logger.warning("This output showed this calculation need to load xml file, so we need this xml file ('%s') to read geometry information" % os.path.normpath(xml_file) )
+           fName = os.path.normpath(xml_file)
+
+           xmlSuperContext = QboxXMLParser.QboxXMLParserContext(False)
+           xmlParser = AncillaryParser(
+                fileDescription = QboxXMLParser.build_QboxXMLFileSimpleMatcher(),
+                parser = self.parser,
+                cachingLevelForMetaName = QboxXMLParser.get_cachingLevelForMetaName(self.metaInfoEnv, CachingLevel.Ignore),
+                superContext = xmlSuperContext)
+
+           try:
+                with open(fName) as fxml:
+                     xmlParser.parseFile(fxml)
+          
+           except IOError:
+                logger.warning("Could not find xml file in directory '%s'. " % os.path.dirname(os.path.abspath(self.fName)))
+
+
+    def onClose_qbox_section_functionals(self, backend, gIndex, section):
         functional_list = section["qbox_functional_name"]
 
         if not functional_list: # default is LDA in qbox 
@@ -75,6 +100,11 @@ class QboxParserContext(object):
                 s = backend.openSection("section_XC_functionals")
                 backend.addValue('XC_functional_name', name)
                 backend.closeSection("section_XC_functionals", s)
+
+
+
+
+
 
     # #################################################################
     # # (3.1) onClose for OUTPUT SCF (section_scf_iteration) 
@@ -153,6 +183,10 @@ class QboxParserContext(object):
            backend.addArrayValues('atom_forces', np.transpose(np.asarray(atom_force)))
 
 
+
+
+
+
     def onClose_qbox_section_stress_tensor(self, backend, gIndex, section):
         qbox_stress_tensor = []
         for i in ['xx', 'yy', 'zz', 'xy', 'yz', 'xz']:
@@ -204,9 +238,12 @@ def build_QboxMainFileSimpleMatcher():
 
     #####################################################################
     # (1) submatcher for header
+    #note: we add qbox_section_functionals here because we want to add 
+    #      a default LDA here even 'set xc' is not shown in *.i file. 
     #####################################################################
     headerSubMatcher = SM(name = 'ProgramHeader',
                   startReStr = r"\s*I qbox\s+(?P<program_version>[0-9.]+)",
+                  sections = ["qbox_section_functionals"],
                   subMatchers = [
                      SM(r"\s*<nodename>\s+(?P<qbox_nodename>[a-zA-Z0-9.-]+)\s+</nodename>")
                                   ])
@@ -221,6 +258,7 @@ def build_QboxMainFileSimpleMatcher():
     #      SM (r"\s*<e_field>\s+(?P<qbox_efield_x>[-+0-9.]+)\s+(?P<qbox_efield_y>[-+0-9.]+)\s+(?P<qbox_efield_z>[-+0-9.]+)\s*</e_field>",repeats = True)
     #    ])
 
+
     ####################################################################
     # (2) submatcher for control method that echo INPUT file (section_method)
     ####################################################################
@@ -230,21 +268,33 @@ def build_QboxMainFileSimpleMatcher():
         repeats = True,
         sections = ["section_method"],
         subMatchers = [
+
+           #-----load from xml file-----
+           # when using 'load *.xml' in *.i file, qbox will read geometry information from xml file, 
+           # here we call a QboxXMLParser to read the geometry information out. 
+           SM(name = "qboxXMLfile",
+             startReStr = r"\s*LoadCmd",
+             forwardMatch = True, #use this or not like qboxXC 
+             sections = ["qbox_section_xml_file"],
+             subMatchers = [
+             SM(r"\s*LoadCmd:\s*loading from\s+(?P<qbox_loading_xml_file>[A-Za-z0-9./-_]+)"),
+                ]), # CLOSING qbox_section_xml_file
+
         #--------k_point-------------
             SM(r"\s*\[qbox\]\s+<cmd>\s*kpoint add\s+(?P<qbox_k_point_x>[-+0-9.eEdD]+)\s+(?P<qbox_k_point_y>[-+0-9.eEdD]+)\s+(?P<qbox_k_point_z>[-+0-9.eEdD]+)\s+(?P<qbox_k_point_weight>[-+0-9.eEdD]+)\s*</cmd>",repeats = True),
+
         #--------set method---------
             SM(r"\s*\[qbox\]\s*\[qbox\]\s*<cmd>\s*set\s+ecut\s+(?P<qbox_ecut__rydberg>[0-9.]+)\s*</cmd>"),
             SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+wf_dyn\s+(?P<qbox_wf_dyn>[A-Za-z0-9]+)\s*</cmd>"),
             SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+atoms_dyn\s+(?P<qbox_atoms_dyn>[A-Za-z0-9]+)\s*</cmd>"),
             SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+cell_dyn\s+(?P<qbox_cell_dyn>[A-Za-z0-9]+)\s*</cmd>"),
- 
+
+        #--------set xc--------- 
             SM(name = "qboxXC",
-              startReStr = r"\s*\[qbox\]",
-              forwardMatch = True,
-              sections = ["qbox_section_functionals"],
-              subMatchers = [
-                 SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+xc\s+(?P<qbox_functional_name>[A-Za-z0-9]+)\s*</cmd>"),
-                             ]), # CLOSING castep_section_functionals
+              startReStr = r"\s*\[qbox\]\s+<cmd>\s*set\s+xc\s+(?P<qbox_functional_name>[A-Za-z0-9]+)\s*</cmd>",
+              sections = ["qbox_section_functionals"]
+               ), 
+
         #-------set efield---------
             SM (r"\s*\[qbox\]\s*\[qbox\]\s*<cmd>\s*set\s+e_field\s*(?P<qbox_efield_x>[-+0-9.]+)\s+(?P<qbox_efield_y>[-+0-9.]+)\s+(?P<qbox_efield_z>[-+0-9.]+)\s*</cmd>",repeats = True)
           #???both this version adn qbox_section_efield version could not give mather for efield, need to check.
@@ -369,7 +419,7 @@ def build_QboxMainFileSimpleMatcher():
              #-----------(2)output: method---------------------
              calculationMethodSubMatcher,
              #-----------(2.2) efield----------------------
-            # efieldSubMatcher,
+             # efieldSubMatcher,
 
              #-----------(3)output: single configuration------- 
              SM(name = "single configuration matcher",
