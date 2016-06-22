@@ -36,6 +36,7 @@ object QboxParser extends SimpleExternalParserGenerator(
   resList = Seq(
     "parser-qbox/QboxParser.py",
     "parser-qbox/QboxCommon.py",
+    "parser-qbox/QboxXMLParser.py",
     "parser-qbox/setup_paths.py",
     "nomad_meta_info/public.nomadmetainfo.json",
     "nomad_meta_info/common.nomadmetainfo.json",
