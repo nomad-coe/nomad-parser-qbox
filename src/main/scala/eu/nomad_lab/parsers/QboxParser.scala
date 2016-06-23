@@ -31,7 +31,7 @@ object QboxParser extends SimpleExternalParserGenerator(
 (?:\s*I.+I
 )*\s*=+\s*
 """.r,
-  cmd = Seq(DefaultPythonInterpreter.python2Exe(), "${envDir}/parsers/qbox/parser/parser-qbox/QboxParser.py",
+  cmd = Seq(DefaultPythonInterpreter.pythonExe(), "${envDir}/parsers/qbox/parser/parser-qbox/QboxParser.py",
     "--uri", "${mainFileUri}", "${mainFilePath}"),
   resList = Seq(
     "parser-qbox/QboxParser.py",
