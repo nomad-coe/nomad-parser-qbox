@@ -302,28 +302,28 @@ def build_QboxMainFileSimpleMatcher():
         ])
  
     ####################################################################
-    # (3.1) submatcher for OUPUT SCF
+    # (3.1) submatcher for OUPUT SCF, this Dmol parser, we need to change to qbox later
     ####################################################################
-    scfSubMatcher = SM(name = 'ScfIterations',
-        startReStr = r"\s*Message: Start SCF iterations\s*",
-        endReStr = r"\s*Message: SCF converged\s*",
-        subMatchers = [
-            SM(r"\s*Ef\s+(?P<energy_total_scf_iteration__hartree>[-+0-9.eEdD]+)\s+(?P<dmol3_binding_energy_scf_iteration__hartree>[-+0-9.eEdD]+)\s+(?P<dmol3_convergence_scf_iteration>[-+0-9.eEdD]+)\s+(?P<dmol3_time_scf_iteration>[0-9.eEdD]+)\s+(?P<dmol3_number_scf_iteration>[0-9]+)\s*",
-               sections = ['section_scf_iteration'],
-               repeats = True)
-
-        ]) 
+#    scfSubMatcher = SM(name = 'ScfIterations',
+#        startReStr = r"\s*Message: Start SCF iterations\s*",
+#        endReStr = r"\s*Message: SCF converged\s*",
+#        subMatchers = [
+#            SM(r"\s*Ef\s+(?P<energy_total_scf_iteration__hartree>[-+0-9.eEdD]+)\s+(?P<dmol3_binding_energy_scf_iteration__hartree>[-+0-9.eEdD]+)\s+(?P<dmol3_convergence_scf_iteration>[-+0-9.eEdD]+)\s+(?P<dmol3_time_scf_iteration>[0-9.eEdD]+)\s+(?P<dmol3_number_scf_iteration>[0-9]+)\s*",
+#               sections = ['section_scf_iteration'],
+#               repeats = True)
+# 
+#        ]) 
       
     ####################################################################
-    # (3.2) submatcher for OUPUT eigenvalues
-    ####################################################################
-    eigenvalueSubMatcher = SM(name = 'Eigenvalues',
-        startReStr = r"\s*state\s+eigenvalue\s+occupation\s*",
-        sections = ['section_eigenvalues'],
-        subMatchers = [
-            SM(r"\s*[0-9]+\s+[+-]\s+[0-9]+\s+[A-Za-z]+\s+[-+0-9.eEdD]+\s+(?P<dmol3_eigenvalue_eigenvalue__eV>[-+0-9.eEdD]+)\s+(?P<dmol3_eigenvalue_occupation>[0-9.eEdD]+)", repeats = True)
-        ]) 
-
+    # (3.2) submatcher for OUPUT eigenvalues,  this Dmol parser, we need to change to qbox later
+    ####################################################################                        
+#   eigenvalueSubMatcher = SM(name = 'Eigenvalues',                                             
+#       startReStr = r"\s*state\s+eigenvalue\s+occupation\s*",                                  
+#       sections = ['section_eigenvalues'],                                                     
+#       subMatchers = [                                                                         
+#           SM(r"\s*[0-9]+\s+[+-]\s+[0-9]+\s+[A-Za-z]+\s+[-+0-9.eEdD]+\s+(?P<dmol3_eigenvalue_e igenvalue__eV>[-+0-9.eEdD]+)\s+(?P<dmol3_eigenvalue_occupation>[0-9.eEdD]+)", repeats = True)
+#       ]) 
+#
 
     ####################################################################
     # (3.3) submatcher for OUPUT totalenergy
