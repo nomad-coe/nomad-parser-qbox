@@ -31,6 +31,12 @@ class QboxParserContext(object):
         This allows a consistent setting and resetting of the variables,
         when the parsing starts and when a section_run closes.
         """
+        self.secMethodIndex = None
+        self.secSystemDescriptionIndex = None
+       
+        self.singleConfCalcs = []
+
+
     def startedParsing(self, fInName, parser):
         """Function is called when the parsing starts.
 
@@ -46,6 +52,24 @@ class QboxParserContext(object):
         self.metaInfoEnv = self.parser.parserBuilder.metaInfoEnv
         # allows to reset values if the same superContext is used to parse different files
         self.initialize_values()
+
+
+    def onClose_section_run(self, backend, gIndex, section):
+        """Trigger called when section_run is closed.
+        """
+        # reset all variables
+        self.initialize_values()
+        # frame sequence
+        sampling_method = "geometry_optimization"
+
+        samplingGIndex = backend.openSection("section_sampling_method")
+        backend.addValue("sampling_method", sampling_method)
+        backend.closeSection("section_sampling_method", samplingGIndex)
+        frameSequenceGIndex = backend.openSection("section_frame_sequence")
+        backend.addValue("frame_sequence_to_sampling_ref", samplingGIndex)
+        backend.addArrayValues("frame_sequence_local_frames_ref", np.asarray(self.singleConfCalcs))
+        backend.closeSection("section_frame_sequence", frameSequenceGIndex)
+
 
     #################################################################
     # (2) onClose for INPUT control (section_method)
@@ -151,6 +175,16 @@ class QboxParserContext(object):
     # (3.4) onClose for geometry and force (section_system)
     # todo: maybe we can move the force to onClose_section_single_configuration_calculation in the future. 
     ###################################################################
+    def onOpen_section_method(self, backend, gIndex, section):
+        # keep track of the latest method section
+        self.secMethodIndex = gIndex
+
+
+    def onOpen_section_system(self, backend, gIndex, section):
+        # keep track of the latest system description section
+        self.secSystemDescriptionIndex = gIndex
+
+
     def onClose_section_system(self, backend, gIndex, section):
         """Trigger called when section_system is closed.
         Writes atomic positions, atom labels and lattice vectors.
@@ -184,8 +218,26 @@ class QboxParserContext(object):
            backend.addArrayValues('atom_forces', np.transpose(np.asarray(atom_force)))
 
 
+        #----4. unit_cell
+        unit_cell = []
+        for i in ['x', 'y', 'z']:
+            uci = section['qbox_geometry_lattice_vector_' + i]
+            if uci is not None:
+                unit_cell.append(uci)
+        if unit_cell:
+           backend.addArrayValues('simulation_cell', np.asarray(unit_cell))
+           backend.addArrayValues("configuration_periodic_dimensions", np.ones(3, dtype=bool))
+  
 
 
+
+    def onOpen_section_single_configuration_calculation(self, backend, gIndex, section):
+        self.singleConfCalcs.append(gIndex)
+
+    def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
+# write the references to section_method and section_system
+        backend.addValue('single_configuration_to_calculation_method_ref', self.secMethodIndex)
+        backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemDescriptionIndex)
 
 
     def onClose_qbox_section_stress_tensor(self, backend, gIndex, section):
@@ -198,23 +250,8 @@ class QboxParserContext(object):
             # need to transpose array since its shape is [number_of_atoms,3] in the metadata
            backend.addArrayValues('stress_tensor', np.transpose(np.asarray(qbox_stress_tensor)))
 
-   #----------here is the code from castep--------
-   #    #get cached values for stress tensor
-   #    stress_tens =[]
-   #    stress_tens = section['qbox_store_stress_tensor']
 
-   #    for i in range(len(stress_tens)):
-   #        stress_tens[i] = stress_tens[i].split()
-   #        stress_tens[i] = [float(j) for j in stress_tens[i]]
-   #        stress_tens_int = stress_tens[i]
-   #        stress_tens_int = [x / 10e9 for x in stress_tens_int] #converting GPa in Pa.
-   #        self.stress_tensor_value.append(stress_tens_int)
-   #    self.stress_tensor_value = self.stress_tensor_value[-3:]
- 
-   #  if self.stress_tensor_value:
-   #        backend.addArrayValues('stress_tensor',np.asarray(self.stress_tensor_value))
-
-
+   
 
 
                 
