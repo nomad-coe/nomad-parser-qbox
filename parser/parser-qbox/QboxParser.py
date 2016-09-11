@@ -10,7 +10,7 @@ import QboxXMLParser
 import logging, os, re, sys
 
 ############################################################
-# This is the parser for the main file of qbox.
+# This is the parser for the main file of qbox (for the output file *.r) .
 ############################################################
 
 
@@ -74,11 +74,11 @@ class QboxParserContext(object):
     #################################################################
     # (2) onClose for INPUT control (section_method)
     #################################################################
-    def onClose_qbox_section_xml_file(self, backend, gIndex, section):
+    def onClose_x_qbox_section_xml_file(self, backend, gIndex, section):
 
-        qbox_loading_xml_file_list = section['qbox_loading_xml_file']
+        x_qbox_loading_xml_file_list = section['x_qbox_loading_xml_file']
 
-        xml_file = qbox_loading_xml_file_list[-1]        
+        xml_file = x_qbox_loading_xml_file_list[-1]        
  
         if xml_file is not None: 
            logger.warning("This output showed this calculation need to load xml file, so we need this xml file ('%s') to read geometry information" % os.path.normpath(xml_file) )
@@ -99,8 +99,8 @@ class QboxParserContext(object):
                 logger.warning("Could not find xml file in directory '%s'. " % os.path.dirname(os.path.abspath(self.fName)))
 
 
-    def onClose_qbox_section_functionals(self, backend, gIndex, section):
-        functional_list = section["qbox_functional_name"]
+    def onClose_x_qbox_section_functionals(self, backend, gIndex, section):
+        functional_list = section["x_qbox_functional_name"]
 
         if not functional_list: # default is LDA in qbox 
            functional = "LDA"
@@ -195,7 +195,7 @@ class QboxParserContext(object):
        #------1.atom_positions
         atom_pos = []
         for i in ['x', 'y', 'z']:
-            api = section['qbox_geometry_atom_positions_' + i]
+            api = section['x_qbox_geometry_atom_positions_' + i]
             if api is not None:
                atom_pos.append(api)
         if atom_pos:
@@ -203,14 +203,14 @@ class QboxParserContext(object):
            backend.addArrayValues('atom_positions', np.transpose(np.asarray(atom_pos)))
 
         #------2.atom labels
-        atom_labels = section['qbox_geometry_atom_labels']
+        atom_labels = section['x_qbox_geometry_atom_labels']
         if atom_labels is not None:
            backend.addArrayValues('atom_labels', np.asarray(atom_labels))
 
         #------3.atom force
         atom_force = []
         for i in ['x', 'y', 'z']:
-            api = section['qbox_atom_force_' + i]
+            api = section['x_qbox_atom_force_' + i]
             if api is not None:
                atom_force.append(api)
         if atom_force:
@@ -221,7 +221,7 @@ class QboxParserContext(object):
         #----4. unit_cell
         unit_cell = []
         for i in ['x', 'y', 'z']:
-            uci = section['qbox_geometry_lattice_vector_' + i]
+            uci = section['x_qbox_geometry_lattice_vector_' + i]
             if uci is not None:
                 unit_cell.append(uci)
         if unit_cell:
@@ -240,15 +240,15 @@ class QboxParserContext(object):
         backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemDescriptionIndex)
 
 
-    def onClose_qbox_section_stress_tensor(self, backend, gIndex, section):
-        qbox_stress_tensor = []
+    def onClose_x_qbox_section_stress_tensor(self, backend, gIndex, section):
+        x_qbox_stress_tensor = []
         for i in ['xx', 'yy', 'zz', 'xy', 'yz', 'xz']:
-            api = section['qbox_stress_tensor_' + i]
+            api = section['x_qbox_stress_tensor_' + i]
             if api is not None:
-               qbox_stress_tensor.append(api)
-        if qbox_stress_tensor:
+               x_qbox_stress_tensor.append(api)
+        if x_qbox_stress_tensor:
             # need to transpose array since its shape is [number_of_atoms,3] in the metadata
-           backend.addArrayValues('stress_tensor', np.transpose(np.asarray(qbox_stress_tensor)))
+           backend.addArrayValues('stress_tensor', np.transpose(np.asarray(x_qbox_stress_tensor)))
 
 
    
@@ -276,14 +276,14 @@ def build_QboxMainFileSimpleMatcher():
 
     #####################################################################
     # (1) submatcher for header
-    #note: we add qbox_section_functionals here because we want to add 
+    #note: we add x_qbox_section_functionals here because we want to add 
     #      a default LDA here even 'set xc' is not shown in *.i file. 
     #####################################################################
     headerSubMatcher = SM(name = 'ProgramHeader',
                   startReStr = r"\s*I qbox\s+(?P<program_version>[0-9.]+)",
-                  sections = ["qbox_section_functionals"],
+                  sections = ["x_qbox_section_functionals"],
                   subMatchers = [
-                     SM(r"\s*<nodename>\s+(?P<qbox_nodename>[a-zA-Z0-9.-]+)\s+</nodename>")
+                     SM(r"\s*<nodename>\s+(?P<x_qbox_nodename>[a-zA-Z0-9.-]+)\s+</nodename>")
                                   ])
 
     ####################################################################
@@ -313,28 +313,28 @@ def build_QboxMainFileSimpleMatcher():
            SM(name = "qboxXMLfile",
              startReStr = r"\s*LoadCmd",
              forwardMatch = True, #use this or not like qboxXC 
-             sections = ["qbox_section_xml_file"],
+             sections = ["x_qbox_section_xml_file"],
              subMatchers = [
-             SM(r"\s*LoadCmd:\s*loading from\s+(?P<qbox_loading_xml_file>[A-Za-z0-9./-_]+)"),
+             SM(r"\s*LoadCmd:\s*loading from\s+(?P<x_qbox_loading_xml_file>[A-Za-z0-9./-_]+)"),
                 ]), # CLOSING qbox_section_xml_file
 
         #--------k_point-------------
-            SM(r"\s*\[qbox\]\s+<cmd>\s*kpoint add\s+(?P<qbox_k_point_x>[-+0-9.eEdD]+)\s+(?P<qbox_k_point_y>[-+0-9.eEdD]+)\s+(?P<qbox_k_point_z>[-+0-9.eEdD]+)\s+(?P<qbox_k_point_weight>[-+0-9.eEdD]+)\s*</cmd>",repeats = True),
+            SM(r"\s*\[qbox\]\s+<cmd>\s*kpoint add\s+(?P<x_qbox_k_point_x>[-+0-9.eEdD]+)\s+(?P<x_qbox_k_point_y>[-+0-9.eEdD]+)\s+(?P<x_qbox_k_point_z>[-+0-9.eEdD]+)\s+(?P<x_qbox_k_point_weight>[-+0-9.eEdD]+)\s*</cmd>",repeats = True),
 
         #--------set method---------
-            SM(r"\s*\[qbox\]\s*\[qbox\]\s*<cmd>\s*set\s+ecut\s+(?P<qbox_ecut__rydberg>[0-9.]+)\s*</cmd>"),
-            SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+wf_dyn\s+(?P<qbox_wf_dyn>[A-Za-z0-9]+)\s*</cmd>"),
-            SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+atoms_dyn\s+(?P<qbox_atoms_dyn>[A-Za-z0-9]+)\s*</cmd>"),
-            SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+cell_dyn\s+(?P<qbox_cell_dyn>[A-Za-z0-9]+)\s*</cmd>"),
+            SM(r"\s*\[qbox\]\s*\[qbox\]\s*<cmd>\s*set\s+ecut\s+(?P<x_qbox_ecut__rydberg>[0-9.]+)\s*</cmd>"),
+            SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+wf_dyn\s+(?P<x_qbox_wf_dyn>[A-Za-z0-9]+)\s*</cmd>"),
+            SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+atoms_dyn\s+(?P<x_qbox_atoms_dyn>[A-Za-z0-9]+)\s*</cmd>"),
+            SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+cell_dyn\s+(?P<x_qbox_cell_dyn>[A-Za-z0-9]+)\s*</cmd>"),
 
         #--------set xc--------- 
             SM(name = "qboxXC",
-              startReStr = r"\s*\[qbox\]\s+<cmd>\s*set\s+xc\s+(?P<qbox_functional_name>[A-Za-z0-9]+)\s*</cmd>",
-              sections = ["qbox_section_functionals"]
+              startReStr = r"\s*\[qbox\]\s+<cmd>\s*set\s+xc\s+(?P<x_qbox_functional_name>[A-Za-z0-9]+)\s*</cmd>",
+              sections = ["x_qbox_section_functionals"]
                ), 
 
         #-------set efield---------
-            SM (r"\s*\[qbox\]\s*\[qbox\]\s*<cmd>\s*set\s+e_field\s*(?P<qbox_efield_x>[-+0-9.]+)\s+(?P<qbox_efield_y>[-+0-9.]+)\s+(?P<qbox_efield_z>[-+0-9.]+)\s*</cmd>",repeats = True)
+            SM (r"\s*\[qbox\]\s*\[qbox\]\s*<cmd>\s*set\s+e_field\s*(?P<x_qbox_efield_x>[-+0-9.]+)\s+(?P<x_qbox_efield_y>[-+0-9.]+)\s+(?P<x_qbox_efield_z>[-+0-9.]+)\s*</cmd>",repeats = True)
           #???both this version adn qbox_section_efield version could not give mather for efield, need to check.
         ])
  
@@ -381,51 +381,51 @@ def build_QboxMainFileSimpleMatcher():
         subMatchers = [
         SM (startReStr = r"\s*<unit_cell\s*",
             subMatchers = [
-            SM (r"\s*[a-z]=\"\s*(?P<qbox_geometry_lattice_vector_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_z__bohr>[-+0-9.]+)\s*\"", repeats = True)
+            SM (r"\s*[a-z]=\"\s*(?P<x_qbox_geometry_lattice_vector_x__bohr>[-+0-9.]+)\s+(?P<x_qbox_geometry_lattice_vector_y__bohr>[-+0-9.]+)\s+(?P<x_qbox_geometry_lattice_vector_z__bohr>[-+0-9.]+)\s*\"", repeats = True)
             ]),
-        SM (startReStr = r"\s*<atom\s+name=\"(?P<qbox_geometry_atom_labels>[a-zA-Z0-9]+)\"",
+        SM (startReStr = r"\s*<atom\s+name=\"(?P<x_qbox_geometry_atom_labels>[a-zA-Z0-9]+)\"",
             subMatchers = [
-            SM (r"\s*<position>\s+(?P<qbox_geometry_atom_positions_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_atom_positions_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_atom_positions_z__bohr>[-+0-9.]+)\s*</position>", repeats = True),
-            SM (r"\s*<force>\s+(?P<qbox_atom_force_x__hartree_bohr_1>[-+0-9.]+)\s+(?P<qbox_atom_force_y__hartree_bohr_1>[-+0-9.]+)\s+(?P<qbox_atom_force_z__hartree_bohr_1>[-+0-9.]+)\s*</force>", repeats = True)
+            SM (r"\s*<position>\s+(?P<x_qbox_geometry_atom_positions_x__bohr>[-+0-9.]+)\s+(?P<x_qbox_geometry_atom_positions_y__bohr>[-+0-9.]+)\s+(?P<x_qbox_geometry_atom_positions_z__bohr>[-+0-9.]+)\s*</position>", repeats = True),
+            SM (r"\s*<force>\s+(?P<x_qbox_atom_force_x__hartree_bohr_1>[-+0-9.]+)\s+(?P<x_qbox_atom_force_y__hartree_bohr_1>[-+0-9.]+)\s+(?P<x_qbox_atom_force_z__hartree_bohr_1>[-+0-9.]+)\s*</force>", repeats = True)
             ], repeats = True)
         ])
 
 
     #####################################################################
-    # (3.5) submatcher for OUTPUT stress_tensor(qbox_section_stress_tensor)
+    # (3.5) submatcher for OUTPUT stress_tensor(x_qbox_section_stress_tensor)
     #####################################################################
     stresstensorSubMatcher = SM(name = 'StressTensor',
         startReStr = r"\s*<stress_tensor\s*unit=\"GPa\">",
-        sections = ['qbox_section_stress_tensor'],
+        sections = ['x_qbox_section_stress_tensor'],
         subMatchers = [
-          SM (r"\s*<sigma_xx>\s+(?P<qbox_stress_tensor_xx__GPa>[-+0-9.]+)\s*</sigma_xx>"),
-          SM (r"\s*<sigma_yy>\s+(?P<qbox_stress_tensor_yy__GPa>[-+0-9.]+)\s*</sigma_yy>"),
-          SM (r"\s*<sigma_zz>\s+(?P<qbox_stress_tensor_zz__GPa>[-+0-9.]+)\s*</sigma_zz>"),
-          SM (r"\s*<sigma_xy>\s+(?P<qbox_stress_tensor_xy__GPa>[-+0-9.]+)\s*</sigma_xy>"),
-          SM (r"\s*<sigma_yz>\s+(?P<qbox_stress_tensor_yz__GPa>[-+0-9.]+)\s*</sigma_yz>"),
-          SM (r"\s*<sigma_xz>\s+(?P<qbox_stress_tensor_xz__GPa>[-+0-9.]+)\s*</sigma_xz>")
+          SM (r"\s*<sigma_xx>\s+(?P<x_qbox_stress_tensor_xx__GPa>[-+0-9.]+)\s*</sigma_xx>"),
+          SM (r"\s*<sigma_yy>\s+(?P<x_qbox_stress_tensor_yy__GPa>[-+0-9.]+)\s*</sigma_yy>"),
+          SM (r"\s*<sigma_zz>\s+(?P<x_qbox_stress_tensor_zz__GPa>[-+0-9.]+)\s*</sigma_zz>"),
+          SM (r"\s*<sigma_xy>\s+(?P<x_qbox_stress_tensor_xy__GPa>[-+0-9.]+)\s*</sigma_xy>"),
+          SM (r"\s*<sigma_yz>\s+(?P<x_qbox_stress_tensor_yz__GPa>[-+0-9.]+)\s*</sigma_yz>"),
+          SM (r"\s*<sigma_xz>\s+(?P<x_qbox_stress_tensor_xz__GPa>[-+0-9.]+)\s*</sigma_xz>")
         ])
 
     ####################################################################
-    # (4.1) submatcher for properties : MLWF  (qbox_section_MLWF)
+    # (4.1) submatcher for properties : MLWF  (x_qbox_section_MLWF)
     ####################################################################
     MLWFSubMatcher = SM(name = 'MLWF',
         startReStr = r"\s*<mlwfs>",
-        sections = ["qbox_section_MLWF"],
+        sections = ["x_qbox_section_MLWF"],
         subMatchers = [
-          SM (r"\s*<mlwf center=\"\s*(?P<qbox_geometry_MLWF_atom_positions_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_MLWF_atom_positions_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_MLWF_atom_positions_z__bohr>[-+0-9.]+)\s*\"\s+spread=\"\s*(?P<qbox_geometry_MLWF_atom_spread__bohr>[-+0-9.]+)\s*\"", repeats = True)
+          SM (r"\s*<mlwf center=\"\s*(?P<x_qbox_geometry_MLWF_atom_positions_x__bohr>[-+0-9.]+)\s+(?P<x_qbox_geometry_MLWF_atom_positions_y__bohr>[-+0-9.]+)\s+(?P<x_qbox_geometry_MLWF_atom_positions_z__bohr>[-+0-9.]+)\s*\"\s+spread=\"\s*(?P<x_qbox_geometry_MLWF_atom_spread__bohr>[-+0-9.]+)\s*\"", repeats = True)
 
         ])
 
 
     ####################################################################
-    # (4.2) submatcher for properties : dipole  (qbox_section_dipole)
+    # (4.2) submatcher for properties : dipole  (x_qbox_section_dipole)
     ####################################################################
     dipoleSubMatcher = SM(name = 'Dipole',
         startReStr = r"\s*<dipole>",
-        sections = ["qbox_section_dipole"],
+        sections = ["x_qbox_section_dipole"],
         subMatchers = [
-          SM (r"\s*<dipole_total>\s+(?P<qbox_dipole_x>[-+0-9.]+)\s+(?P<qbox_dipole_y>[-+0-9.]+)\s+(?P<qbox_dipole_z>[-+0-9.]+)\s*</dipole_total>", repeats = True)
+          SM (r"\s*<dipole_total>\s+(?P<x_qbox_dipole_x>[-+0-9.]+)\s+(?P<x_qbox_dipole_y>[-+0-9.]+)\s+(?P<x_qbox_dipole_z>[-+0-9.]+)\s*</dipole_total>", repeats = True)
         ])
 
     ########################################
@@ -507,8 +507,8 @@ def get_cachingLevelForMetaName(metaInfoEnv):
 
     # Set caching for temparary storage variables
     for name in metaInfoEnv.infoKinds:
-        if (   name.startswith('qbox_store_')
-            or name.startswith('qbox_cell_')):
+        if (   name.startswith('x_qbox_store_')
+            or name.startswith('x_qbox_cell_')):
             cachingLevelForMetaName[name] = CachingLevel.Cache
     return cachingLevelForMetaName
 

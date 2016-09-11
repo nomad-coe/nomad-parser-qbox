@@ -46,7 +46,7 @@ class QboxXMLParserContext(object):
        #------1.atom_positions
         atom_pos = []
         for i in ['x', 'y', 'z']:
-            api = section['qbox_geometry_atom_positions_' + i]
+            api = section['x_qbox_geometry_atom_positions_' + i]
             if api is not None:
                atom_pos.append(api)
         if atom_pos:
@@ -54,7 +54,7 @@ class QboxXMLParserContext(object):
            backend.addArrayValues('atom_positions', np.transpose(np.asarray(atom_pos)))
 
         #------2.atom labels
-        atom_labels = section['qbox_geometry_atom_labels']
+        atom_labels = section['x_qbox_geometry_atom_labels']
         if atom_labels is not None:
            backend.addArrayValues('atom_labels', np.asarray(atom_labels))
 
@@ -82,11 +82,11 @@ def build_QboxXMLFileSimpleMatcher():
         subMatchers = [
         SM (startReStr = r"\s*<unit_cell\s*",
             subMatchers = [
-            SM (r"\s*[a-z]=\"\s*(?P<qbox_geometry_lattice_vector_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_lattice_vector_z__bohr>[-+0-9.]+)\s*\"", repeats = True)
+            SM (r"\s*[a-z]=\"\s*(?P<x_qbox_geometry_lattice_vector_x__bohr>[-+0-9.]+)\s+(?P<x_qbox_geometry_lattice_vector_y__bohr>[-+0-9.]+)\s+(?P<x_qbox_geometry_lattice_vector_z__bohr>[-+0-9.]+)\s*\"", repeats = True)
             ]),
-        SM (startReStr = r"\s*<atom\s+name=\"(?P<qbox_geometry_atom_labels>[a-zA-Z0-9]+)\"",
+        SM (startReStr = r"\s*<atom\s+name=\"(?P<x_qbox_geometry_atom_labels>[a-zA-Z0-9]+)\"",
             subMatchers = [
-            SM (r"\s*<position>\s+(?P<qbox_geometry_atom_positions_x__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_atom_positions_y__bohr>[-+0-9.]+)\s+(?P<qbox_geometry_atom_positions_z__bohr>[-+0-9.]+)\s*</position>", repeats = True),
+            SM (r"\s*<position>\s+(?P<x_qbox_geometry_atom_positions_x__bohr>[-+0-9.]+)\s+(?P<x_qbox_geometry_atom_positions_y__bohr>[-+0-9.]+)\s+(?P<x_qbox_geometry_atom_positions_z__bohr>[-+0-9.]+)\s*</position>", repeats = True),
             ], repeats = True)
         ])
 
@@ -130,7 +130,7 @@ def get_cachingLevelForMetaName(metaInfoEnv, CachingLvl):
                               }
     # Set all band metadata to Cache as they need post-processsing.
     for name in metaInfoEnv.infoKinds:
-        if name.startswith('qbox_'):
+        if name.startswith('x_qbox_'):
             cachingLevelForMetaName[name] = CachingLevel.Cache
     return cachingLevelForMetaName
 
