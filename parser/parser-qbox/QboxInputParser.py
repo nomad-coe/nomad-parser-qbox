@@ -79,8 +79,8 @@ class QboxInputParserContext(object):
         backend.addValue("sampling_method", sampling_method)
         backend.closeSection("section_sampling_method", samplingGIndex)
         frameSequenceGIndex = backend.openSection("section_frame_sequence")
-        backend.addValue("frame_sequence_to_sampling_ref", samplingGIndex)
-        backend.addArrayValues("frame_sequence_local_frames_ref", np.asarray(self.singleConfCalcs))
+        backend.addValue("frame_sequence_to_sampling_method_ref", samplingGIndex)
+        backend.addArrayValues("frame_sequence_to_frames_ref", np.asarray(self.singleConfCalcs))
         backend.closeSection("section_frame_sequence", frameSequenceGIndex)
 
 
@@ -108,9 +108,9 @@ class QboxInputParserContext(object):
             if not nomadNames:
                 raise Exception("Unhandled xc functional %s found" % functional)
             for name in nomadNames:
-                s = backend.openSection("section_XC_functionals")
-                backend.addValue('XC_functional_name', name)
-                backend.closeSection("section_XC_functionals", s)
+                s = backend.openSection("section_xc_functionals")
+                backend.addValue('xc_functional_name', name)
+                backend.closeSection("section_xc_functionals", s)
 
 
 
@@ -171,7 +171,7 @@ class QboxInputParserContext(object):
 
     def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
 # write the references to section_method and section_system
-        backend.addValue('single_configuration_to_calculation_method_ref', self.secMethodIndex)
+        backend.addValue('single_configuration_calculation_to_method_ref', self.secMethodIndex)
         backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemDescriptionIndex)
 
 

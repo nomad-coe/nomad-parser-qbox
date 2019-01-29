@@ -80,8 +80,8 @@ class QboxParserContext(object):
         backend.addValue("sampling_method", sampling_method)
         backend.closeSection("section_sampling_method", samplingGIndex)
         frameSequenceGIndex = backend.openSection("section_frame_sequence")
-        backend.addValue("frame_sequence_to_sampling_ref", samplingGIndex)
-        backend.addArrayValues("frame_sequence_local_frames_ref", np.asarray(self.singleConfCalcs))
+        backend.addValue("frame_sequence_to_sampling_method_ref", samplingGIndex)
+        backend.addArrayValues("frame_sequence_to_frames_ref", np.asarray(self.singleConfCalcs))
         backend.closeSection("section_frame_sequence", frameSequenceGIndex)
 
 
@@ -136,9 +136,9 @@ class QboxParserContext(object):
             if not nomadNames:
                 raise Exception("Unhandled xc functional %s found" % functional)
             for name in nomadNames:
-                s = backend.openSection("section_XC_functionals")
-                backend.addValue('XC_functional_name', name)
-                backend.closeSection("section_XC_functionals", s)
+                s = backend.openSection("section_xc_functionals")
+                backend.addValue('xc_functional_name', name)
+                backend.closeSection("section_xc_functionals", s)
 
 
 
@@ -229,7 +229,9 @@ class QboxParserContext(object):
                atom_force.append(api)
         if atom_force:
             # need to transpose array since its shape is [number_of_atoms,3] in the metadata
-           backend.addArrayValues('atom_forces', np.transpose(np.asarray(atom_force)))
+            fId = backend.openSection('section_atom_forces')
+            backend.addArrayValues('atom_forces', np.transpose(np.asarray(atom_force)))
+            backend.closeSection('section_atom_forces', fId)
 
 
         #----4. unit_cell
@@ -250,7 +252,7 @@ class QboxParserContext(object):
 
     def onClose_section_single_configuration_calculation(self, backend, gIndex, section):
 # write the references to section_method and section_system
-        backend.addValue('single_configuration_to_calculation_method_ref', self.secMethodIndex)
+        backend.addValue('single_configuration_calculation_to_method_ref', self.secMethodIndex)
         backend.addValue('single_configuration_calculation_to_system_ref', self.secSystemDescriptionIndex)
 
 
@@ -421,13 +423,13 @@ def build_QboxMainFileSimpleMatcher():
         ])
 
     ####################################################################
-    # (4.1) submatcher for properties : MLWF  (x_qbox_section_MLWF)
+    # (4.1) submatcher for properties : MLWF  (x_qbox_section_mlwf)
     ####################################################################
     MLWFSubMatcher = SM(name = 'MLWF',
         startReStr = r"\s*<mlwfs>",
-        sections = ["x_qbox_section_MLWF"],
+        sections = ["x_qbox_section_mlwf"],
         subMatchers = [
-          SM (r"\s*<mlwf center=\"\s*(?P<x_qbox_geometry_MLWF_atom_positions_x__bohr>[-+0-9.]+)\s+(?P<x_qbox_geometry_MLWF_atom_positions_y__bohr>[-+0-9.]+)\s+(?P<x_qbox_geometry_MLWF_atom_positions_z__bohr>[-+0-9.]+)\s*\"\s+spread=\"\s*(?P<x_qbox_geometry_MLWF_atom_spread__bohr>[-+0-9.]+)\s*\"", repeats = True)
+          SM (r"\s*<mlwf center=\"\s*(?P<x_qbox_geometry_mlwf_atom_positions_x__bohr>[-+0-9.]+)\s+(?P<x_qbox_geometry_mlwf_atom_positions_y__bohr>[-+0-9.]+)\s+(?P<x_qbox_geometry_mlwf_atom_positions_z__bohr>[-+0-9.]+)\s*\"\s+spread=\"\s*(?P<x_qbox_geometry_mlwf_atom_spread__bohr>[-+0-9.]+)\s*\"", repeats = True)
 
         ])
 
