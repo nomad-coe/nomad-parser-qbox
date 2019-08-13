@@ -1,18 +1,17 @@
 from builtins import object
-import setup_paths
 import numpy as np
 import nomadcore.ActivateLogging
 from nomadcore.caching_backend import CachingLevel
 from nomadcore.simple_parser import mainFunction
 from nomadcore.simple_parser import SimpleMatcher as SM
-from QboxCommon import get_metaInfo
+from .QboxCommon import get_metaInfo
 import logging, os, re, sys
 
 
 
 #################################################################################
 # This is the parser for the *.xml file of qbox to read the geometry information.
-# Only needed when 'load *.xml' is used in the *.r file. 
+# Only needed when 'load *.xml' is used in the *.r file.
 ###################################################################################
 
 logger = logging.getLogger("nomad.QboxXMLParser")

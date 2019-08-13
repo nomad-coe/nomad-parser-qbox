@@ -1,5 +1,4 @@
 from builtins import object
-import setup_paths
 import numpy as np
 import nomadcore.ActivateLogging
 from nomadcore.caching_backend import CachingLevel
@@ -16,7 +15,7 @@ import logging, os, re, sys
 ############################################################
 ###############[1] transfer PARSER CONTEXT #################
 ############################################################
-logger = logging.getLogger("nomad.qboxInputParser") 
+logger = logging.getLogger("nomad.qboxInputParser")
 
 class QboxInputParserContext(object):
 
@@ -32,7 +31,7 @@ class QboxInputParserContext(object):
         """
         self.secMethodIndex = None
         self.secSystemDescriptionIndex = None
-       
+
         self.singleConfCalcs = []
 
 
@@ -74,20 +73,20 @@ class QboxInputParserContext(object):
     def onClose_x_qbox_section_functionals(self, backend, gIndex, section):
         functional_list = section["x_qbox_functional_name"]
 
-        if not functional_list: # default is LDA in qbox 
+        if not functional_list: # default is LDA in qbox
            functional = "LDA"
         else :
-           functional = functional_list[-1] # use the xc appeared the last time 
+           functional = functional_list[-1] # use the xc appeared the last time
 
- 
+
         if functional:
             functionalMap = {
-                "LDA": ["LDA_X", "LDA_C_PZ"], 
-                "VMN": ["LDA_X", "LDA_C_VWN"], 
-                "PBE": ["GGA_X_PBE","GGA_C_PBE"], 
-                "PBE0": ["GGA_X_PBE","GGA_C_PBE"], 
-                "B3LYP": ["HYB_GGA_XC_B3LYP5"]  
-     #need to be extended to add alpha_PBE0 :coefficient of Hartree-Fock exchange in the PBE0 xc functional 
+                "LDA": ["LDA_X", "LDA_C_PZ"],
+                "VMN": ["LDA_X", "LDA_C_VWN"],
+                "PBE": ["GGA_X_PBE","GGA_C_PBE"],
+                "PBE0": ["GGA_X_PBE","GGA_C_PBE"],
+                "B3LYP": ["HYB_GGA_XC_B3LYP5"]
+     #need to be extended to add alpha_PBE0 :coefficient of Hartree-Fock exchange in the PBE0 xc functional
             }
             # Push the functional string into the backend
             nomadNames = functionalMap.get(functional)
@@ -103,7 +102,7 @@ class QboxInputParserContext(object):
 
     ###################################################################
     # (3.4) onClose for geometry and force (section_system)
-    # todo: maybe we can move the force to onClose_section_single_configuration_calculation in the future. 
+    # todo: maybe we can move the force to onClose_section_single_configuration_calculation in the future.
     ###################################################################
     def onOpen_section_method(self, backend, gIndex, section):
         # keep track of the latest method section
@@ -148,7 +147,7 @@ class QboxInputParserContext(object):
         if unit_cell:
            backend.addArrayValues('simulation_cell', np.asarray(unit_cell))
            backend.addArrayValues("configuration_periodic_dimensions", np.ones(3, dtype=bool))
-  
+
 
 
 
@@ -163,7 +162,7 @@ class QboxInputParserContext(object):
 
 
 
-                
+
 
 #############################################################
 #################[2] MAIN PARSER STARTS HERE  ###############
@@ -178,7 +177,7 @@ def build_QboxInputFileSimpleMatcher():
     which allows nice formating of nested SimpleMatchers in python.
 
     Returns:
-       SimpleMatcher that parses input file of qbox. 
+       SimpleMatcher that parses input file of qbox.
     """
 
 
@@ -204,18 +203,18 @@ def build_QboxInputFileSimpleMatcher():
             SM(r"\s*set\s+atoms_dyn\s+(?P<x_qbox_atoms_dyn>[A-Za-z0-9]+)\s*"),
             SM(r"\s*set\s+cell_dyn\s+(?P<x_qbox_cell_dyn>[A-Za-z0-9]+)\s*"),
 
-        #--------set xc--------- 
+        #--------set xc---------
             SM(name = "qboxXC",
               startReStr = r"\s*set\s+xc\s+(?P<x_qbox_functional_name>[A-Za-z0-9]+)\s*",
               sections = ["x_qbox_section_functionals"]
-               ), 
+               ),
 
         #-------set efield---------
             SM (r"\s*set\s+e_field\s*(?P<x_qbox_efield_x>[-+0-9.]+)\s+(?P<x_qbox_efield_y>[-+0-9.]+)\s+(?P<x_qbox_efield_z>[-+0-9.]+)\s*",repeats = True)
           #???both this version adn qbox_section_efield version could not give mather for efield, need to check.
         ])
- 
-      
+
+
 
 
 
@@ -231,7 +230,7 @@ def build_QboxInputFileSimpleMatcher():
         subMatchers = [
 
         #=============================================================================
-        #  read OUPUT file *.r, the method part comes from INPUT file *.i,  so we 
+        #  read OUPUT file *.r, the method part comes from INPUT file *.i,  so we
         #  do not need to parser INPUT file, the OUTPUT file contains all information
         #=============================================================================
         SM (name = 'NewRun',
@@ -243,11 +242,11 @@ def build_QboxInputFileSimpleMatcher():
             fixedStartValues={'program_name': 'qbox', 'program_basis_set_type': 'plane waves'},
             sections = ['section_run'],
             subMatchers = [
- 
+
              #-----------input  method---------------------
              calculationMethodSubMatcher
 
-           ]) # CLOSING SM NewRun  
+           ]) # CLOSING SM NewRun
 
 
         ]) # END Root
@@ -259,7 +258,7 @@ def get_cachingLevelForMetaName(metaInfoEnv):
         metaInfoEnv: metadata which is an object of the class InfoKindEnv in nomadcore.local_meta_info.py.
 
     Returns:
-        Dictionary with metaname as key and caching level as value. 
+        Dictionary with metaname as key and caching level as value.
     """
     # manually adjust caching of metadata
     cachingLevelForMetaName = {

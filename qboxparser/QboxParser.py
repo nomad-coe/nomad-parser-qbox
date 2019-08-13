@@ -1,13 +1,14 @@
 from builtins import object
-import setup_paths
 import numpy as np
 import nomadcore.ActivateLogging
 from nomadcore.caching_backend import CachingLevel
 from nomadcore.simple_parser import AncillaryParser, mainFunction
 from nomadcore.simple_parser import SimpleMatcher as SM
-from QboxCommon import get_metaInfo
-import QboxXMLParser
+from .QboxCommon import get_metaInfo
+from . import QboxXMLParser
 import logging, os, re, sys
+
+import nomad_meta_info
 
 ############################################################
 # This is the parser for the main file of qbox (for the output file *.r) .
@@ -17,7 +18,7 @@ import logging, os, re, sys
 ############################################################
 ###############[1] transfer PARSER CONTEXT #################
 ############################################################
-logger = logging.getLogger("nomad.qboxParser") 
+logger = logging.getLogger("nomad.qboxParser")
 
 class QboxParserContext(object):
 
@@ -33,7 +34,7 @@ class QboxParserContext(object):
         """
         self.secMethodIndex = None
         self.secSystemDescriptionIndex = None
-       
+
         self.singleConfCalcs = []
 
 
@@ -78,9 +79,9 @@ class QboxParserContext(object):
 
         x_qbox_loading_xml_file_list = section['x_qbox_loading_xml_file']
 
-        xml_file = x_qbox_loading_xml_file_list[-1]        
- 
-        if xml_file is not None: 
+        xml_file = x_qbox_loading_xml_file_list[-1]
+
+        if xml_file is not None:
            logger.warning("This output showed this calculation need to load xml file, so we need this xml file ('%s') to read geometry information" % os.path.normpath(xml_file) )
            fName = os.path.normpath(xml_file)
 
@@ -94,7 +95,7 @@ class QboxParserContext(object):
            try:
                 with open(fName) as fxml:
                      xmlParser.parseFile(fxml)
-          
+
            except IOError:
                 logger.warning("Could not find xml file in directory '%s'. " % os.path.dirname(os.path.abspath(self.fName)))
 
@@ -102,20 +103,20 @@ class QboxParserContext(object):
     def onClose_x_qbox_section_functionals(self, backend, gIndex, section):
         functional_list = section["x_qbox_functional_name"]
 
-        if not functional_list: # default is LDA in qbox 
+        if not functional_list: # default is LDA in qbox
            functional = "LDA"
         else :
-           functional = functional_list[-1] # use the xc appeared the last time 
+           functional = functional_list[-1] # use the xc appeared the last time
 
- 
+
         if functional:
             functionalMap = {
-                "LDA": ["LDA_X", "LDA_C_PZ"], 
-                "VMN": ["LDA_X", "LDA_C_VWN"], 
-                "PBE": ["GGA_X_PBE","GGA_C_PBE"], 
-                "PBE0": ["GGA_X_PBE","GGA_C_PBE"], 
-                "B3LYP": ["HYB_GGA_XC_B3LYP5"]  
-     #need to be extended to add alpha_PBE0 :coefficient of Hartree-Fock exchange in the PBE0 xc functional 
+                "LDA": ["LDA_X", "LDA_C_PZ"],
+                "VMN": ["LDA_X", "LDA_C_VWN"],
+                "PBE": ["GGA_X_PBE","GGA_C_PBE"],
+                "PBE0": ["GGA_X_PBE","GGA_C_PBE"],
+                "B3LYP": ["HYB_GGA_XC_B3LYP5"]
+     #need to be extended to add alpha_PBE0 :coefficient of Hartree-Fock exchange in the PBE0 xc functional
             }
             # Push the functional string into the backend
             nomadNames = functionalMap.get(functional)
@@ -132,7 +133,7 @@ class QboxParserContext(object):
 
 
     # #################################################################
-    # # (3.1) onClose for OUTPUT SCF (section_scf_iteration) 
+    # # (3.1) onClose for OUTPUT SCF (section_scf_iteration)
     # #################################################################
     # # Storing the total energy of each SCF iteration in an array
     # def onClose_section_scf_iteration(self, backend, gIndex, section):
@@ -140,15 +141,15 @@ class QboxParserContext(object):
     #     # get cached values for energy_total_scf_iteration
     #     ev = section['energy_total_scf_iteration']
     #     self.scfIterNr = len(ev)
-    # 
+    #
     #     #self.energy_total_scf_iteration_list.append(ev)
     #     #backend.addArrayValues('energy_total_scf_iteration_list', np.asarray(ev))
     #     #backend.addValue('number_of_scf_iterations', self.scfIterNr)
     #     #-----???shanghui want to know why can not add them.
- 
+
 
     #################################################################
-    # (3.2) onClose for OUTPUT eigenvalues (section_eigenvalues) 
+    # (3.2) onClose for OUTPUT eigenvalues (section_eigenvalues)
     #################################################################
     #def onClose_section_eigenvalues(self, backend, gIndex, section):
     #    """Trigger called when _section_eigenvalues is closed.
@@ -158,22 +159,22 @@ class QboxParserContext(object):
     #    evs =  []
 
     #    ev = section['qbox_eigenvalue_eigenvalue']
-    #    if ev is not None: 
+    #    if ev is not None:
     #       occ = section['qbox_eigenvalue_occupation']
-    #       occs.append(occ) 
+    #       occs.append(occ)
     #       evs.append(ev)
 
     #    self.eigenvalues_occupation = []
     #    self.eigenvalues_values = []
 
-    #    #self.eigenvalues_kpoints = [] 
+    #    #self.eigenvalues_kpoints = []
     #    self.eigenvalues_occupation.append(occs)
     #    self.eigenvalues_values.append(evs)
 
 
     ###################################################################
     # (3.4) onClose for geometry and force (section_system)
-    # todo: maybe we can move the force to onClose_section_single_configuration_calculation in the future. 
+    # todo: maybe we can move the force to onClose_section_single_configuration_calculation in the future.
     ###################################################################
     def onOpen_section_method(self, backend, gIndex, section):
         # keep track of the latest method section
@@ -227,7 +228,7 @@ class QboxParserContext(object):
         if unit_cell:
            backend.addArrayValues('simulation_cell', np.asarray(unit_cell))
            backend.addArrayValues("configuration_periodic_dimensions", np.ones(3, dtype=bool))
-  
+
 
 
 
@@ -251,10 +252,10 @@ class QboxParserContext(object):
            backend.addArrayValues('stress_tensor', np.transpose(np.asarray(x_qbox_stress_tensor)))
 
 
-   
 
 
-                
+
+
 
 #############################################################
 #################[2] MAIN PARSER STARTS HERE  ###############
@@ -269,19 +270,19 @@ def build_QboxMainFileSimpleMatcher():
     which allows nice formating of nested SimpleMatchers in python.
 
     Returns:
-       SimpleMatcher that parses main file of qbox. 
+       SimpleMatcher that parses main file of qbox.
     """
 
 
 
     #####################################################################
     # (1) submatcher for header
-    #note: we add x_qbox_section_functionals here because we want to add 
-    #      a default LDA here even 'set xc' is not shown in *.i file. 
+    #note: we add x_qbox_section_functionals here because we want to add
+    #      a default LDA here even 'set xc' is not shown in *.i file.
     #####################################################################
     headerSubMatcher = SM(name = 'ProgramHeader',
                   startReStr = r"\s*I qbox\s+(?P<program_version>[0-9.]+)",
-                  sections = ["x_qbox_section_functionals"],
+                #   sections = ["x_qbox_section_functionals"],
                   subMatchers = [
                      SM(r"\s*<nodename>\s+(?P<x_qbox_nodename>[a-zA-Z0-9.-]+)\s+</nodename>")
                                   ])
@@ -308,11 +309,11 @@ def build_QboxMainFileSimpleMatcher():
         subMatchers = [
 
            #-----load from xml file-----
-           # when using 'load *.xml' in *.i file, qbox will read geometry information from xml file, 
-           # here we call a QboxXMLParser to read the geometry information out. 
+           # when using 'load *.xml' in *.i file, qbox will read geometry information from xml file,
+           # here we call a QboxXMLParser to read the geometry information out.
            SM(name = "qboxXMLfile",
              startReStr = r"\s*LoadCmd",
-             forwardMatch = True, #use this or not like qboxXC 
+             forwardMatch = True, #use this or not like qboxXC
              sections = ["x_qbox_section_xml_file"],
              subMatchers = [
              SM(r"\s*LoadCmd:\s*loading from\s+(?P<x_qbox_loading_xml_file>[A-Za-z0-9./-_]+)"),
@@ -327,17 +328,17 @@ def build_QboxMainFileSimpleMatcher():
             SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+atoms_dyn\s+(?P<x_qbox_atoms_dyn>[A-Za-z0-9]+)\s*</cmd>"),
             SM(r"\s*\[qbox\]\s+<cmd>\s*set\s+cell_dyn\s+(?P<x_qbox_cell_dyn>[A-Za-z0-9]+)\s*</cmd>"),
 
-        #--------set xc--------- 
+        #--------set xc---------
             SM(name = "qboxXC",
               startReStr = r"\s*\[qbox\]\s+<cmd>\s*set\s+xc\s+(?P<x_qbox_functional_name>[A-Za-z0-9]+)\s*</cmd>",
               sections = ["x_qbox_section_functionals"]
-               ), 
+               ),
 
         #-------set efield---------
             SM (r"\s*\[qbox\]\s*\[qbox\]\s*<cmd>\s*set\s+e_field\s*(?P<x_qbox_efield_x>[-+0-9.]+)\s+(?P<x_qbox_efield_y>[-+0-9.]+)\s+(?P<x_qbox_efield_z>[-+0-9.]+)\s*</cmd>",repeats = True)
           #???both this version adn qbox_section_efield version could not give mather for efield, need to check.
         ])
- 
+
     ####################################################################
     # (3.1) submatcher for OUPUT SCF, this Dmol parser, we need to change to qbox later
     ####################################################################
@@ -348,18 +349,18 @@ def build_QboxMainFileSimpleMatcher():
 #            SM(r"\s*Ef\s+(?P<energy_total_scf_iteration__hartree>[-+0-9.eEdD]+)\s+(?P<dmol3_binding_energy_scf_iteration__hartree>[-+0-9.eEdD]+)\s+(?P<dmol3_convergence_scf_iteration>[-+0-9.eEdD]+)\s+(?P<dmol3_time_scf_iteration>[0-9.eEdD]+)\s+(?P<dmol3_number_scf_iteration>[0-9]+)\s*",
 #               sections = ['section_scf_iteration'],
 #               repeats = True)
-# 
-#        ]) 
-      
+#
+#        ])
+
     ####################################################################
     # (3.2) submatcher for OUPUT eigenvalues,  this Dmol parser, we need to change to qbox later
-    ####################################################################                        
-#   eigenvalueSubMatcher = SM(name = 'Eigenvalues',                                             
-#       startReStr = r"\s*state\s+eigenvalue\s+occupation\s*",                                  
-#       sections = ['section_eigenvalues'],                                                     
-#       subMatchers = [                                                                         
+    ####################################################################
+#   eigenvalueSubMatcher = SM(name = 'Eigenvalues',
+#       startReStr = r"\s*state\s+eigenvalue\s+occupation\s*",
+#       sections = ['section_eigenvalues'],
+#       subMatchers = [
 #           SM(r"\s*[0-9]+\s+[+-]\s+[0-9]+\s+[A-Za-z]+\s+[-+0-9.eEdD]+\s+(?P<dmol3_eigenvalue_e igenvalue__eV>[-+0-9.eEdD]+)\s+(?P<dmol3_eigenvalue_occupation>[0-9.eEdD]+)", repeats = True)
-#       ]) 
+#       ])
 #
 
     ####################################################################
@@ -368,9 +369,9 @@ def build_QboxMainFileSimpleMatcher():
     totalenergySubMatcher = SM(name = 'Totalenergy',
         startReStr = r"\s*<ekin>",
         subMatchers = [
-            SM(r"\s*<etotal>\s+(?P<energy_total__hartree>[-+0-9.eEdD]+)\s+</etotal>",repeats = True ) 
-        ]) 
-    
+            SM(r"\s*<etotal>\s+(?P<energy_total__hartree>[-+0-9.eEdD]+)\s+</etotal>",repeats = True )
+        ])
+
 
     #####################################################################
     # (3.4) submatcher for OUTPUT relaxation_geometry(section_system)
@@ -439,7 +440,7 @@ def build_QboxMainFileSimpleMatcher():
         subMatchers = [
 
         #=============================================================================
-        #  read OUPUT file *.r, the method part comes from INPUT file *.i,  so we 
+        #  read OUPUT file *.r, the method part comes from INPUT file *.i,  so we
         #  do not need to parser INPUT file, the OUTPUT file contains all information
         #=============================================================================
         SM (name = 'NewRun',
@@ -451,15 +452,15 @@ def build_QboxMainFileSimpleMatcher():
             fixedStartValues={'program_name': 'qbox', 'program_basis_set_type': 'plane waves'},
             sections = ['section_run'],
             subMatchers = [
-             #-----------(1)output: header--------------------- 
+             #-----------(1)output: header---------------------
              headerSubMatcher,
- 
+
              #-----------(2)output: method---------------------
              calculationMethodSubMatcher,
              #-----------(2.2) efield----------------------
              # efieldSubMatcher,
 
-             #-----------(3)output: single configuration------- 
+             #-----------(3)output: single configuration-------
              SM(name = "single configuration matcher",
                 startReStr = r"\s*<iteration count*",
                 #endReStr = r"\s*</iteration>",
@@ -479,13 +480,13 @@ def build_QboxMainFileSimpleMatcher():
                     ]
                 ),
 
-             #-----------(4)output: properties------- 
+             #-----------(4)output: properties-------
              #-----------(4.1) MLWF----------------------
               MLWFSubMatcher,
              #-----------(4.3) dipole----------------------
               dipoleSubMatcher
 
-           ]) # CLOSING SM NewRun  
+           ]) # CLOSING SM NewRun
 
 
         ]) # END Root
@@ -497,7 +498,7 @@ def get_cachingLevelForMetaName(metaInfoEnv):
         metaInfoEnv: metadata which is an object of the class InfoKindEnv in nomadcore.local_meta_info.py.
 
     Returns:
-        Dictionary with metaname as key and caching level as value. 
+        Dictionary with metaname as key and caching level as value.
     """
     # manually adjust caching of metadata
     cachingLevelForMetaName = {
@@ -513,29 +514,45 @@ def get_cachingLevelForMetaName(metaInfoEnv):
     return cachingLevelForMetaName
 
 
+# get main file description
+QboxMainFileSimpleMatcher = build_QboxMainFileSimpleMatcher()
+# loading metadata from nomad-meta-info/meta_info/nomad_meta_info/qbox.nomadmetainfo.json
+metaInfoPath = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(nomad_meta_info.__file__)), "qbox.nomadmetainfo.json"))
+metaInfoEnv = get_metaInfo(metaInfoPath)
+# set parser info
+parserInfo = {'name':'qbox-parser', 'version': '1.0'}
+# get caching level for metadata
+cachingLevelForMetaName = get_cachingLevelForMetaName(metaInfoEnv)
 
 
-def main():
-    """Main function.
 
-    Set up everything for the parsing of the qbox main file and run the parsing.
-    """
-    # get main file description
-    QboxMainFileSimpleMatcher = build_QboxMainFileSimpleMatcher()
-    # loading metadata from nomad-meta-info/meta_info/nomad_meta_info/qbox.nomadmetainfo.json
-    metaInfoPath = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../../nomad-meta-info/meta_info/nomad_meta_info/qbox.nomadmetainfo.json"))
-    metaInfoEnv = get_metaInfo(metaInfoPath)
-    # set parser info
-    parserInfo = {'name':'qbox-parser', 'version': '1.0'}
-    # get caching level for metadata
-    cachingLevelForMetaName = get_cachingLevelForMetaName(metaInfoEnv)
-    # start parsing
-    mainFunction(mainFileDescription = QboxMainFileSimpleMatcher,
-                 metaInfoEnv = metaInfoEnv,
-                 parserInfo = parserInfo,
-                 cachingLevelForMetaName = cachingLevelForMetaName,
-                 superContext = QboxParserContext())
+class QboxParser():
+    """ A proper class envolop for running this parser from within python. """
+    def __init__(self, backend, **kwargs):
+        self.backend_factory = backend
+
+    def parse(self, mainfile):
+        from unittest.mock import patch
+        logging.debug('qbox parser started')
+        logging.getLogger('nomadcore').setLevel(logging.WARNING)
+        backend = self.backend_factory(metaInfoEnv)
+        with patch.object(sys, 'argv', ['<exe>', '--uri', 'nmd://uri', mainfile]):
+            mainFunction(
+                mainFileDescription=QboxMainFileSimpleMatcher,
+                metaInfoEnv=metaInfoEnv,
+                parserInfo=parserInfo,
+                cachingLevelForMetaName=cachingLevelForMetaName,
+                superContext=QboxParserContext(),
+                superBackend=backend)
+
+        return backend
+
 
 if __name__ == "__main__":
-    main()
+    mainFunction(
+        mainFileDescription = QboxMainFileSimpleMatcher,
+        metaInfoEnv = metaInfoEnv,
+        parserInfo = parserInfo,
+        cachingLevelForMetaName = cachingLevelForMetaName,
+        superContext = QboxParserContext())
 

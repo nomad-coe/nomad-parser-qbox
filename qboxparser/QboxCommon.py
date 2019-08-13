@@ -1,4 +1,3 @@
-import setup_paths
 import numpy as np
 from nomadcore.local_meta_info import loadJsonFile, InfoKindEl
 from nomadcore.unit_conversion.unit_conversion import convert_unit
