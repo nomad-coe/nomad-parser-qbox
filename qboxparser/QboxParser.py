@@ -8,8 +8,6 @@ from .QboxCommon import get_metaInfo
 from . import QboxXMLParser
 import logging, os, re, sys
 
-import nomad_meta_info
-
 ############################################################
 # This is the parser for the main file of qbox (for the output file *.r) .
 ############################################################
@@ -516,14 +514,6 @@ def get_cachingLevelForMetaName(metaInfoEnv):
 
 # get main file description
 QboxMainFileSimpleMatcher = build_QboxMainFileSimpleMatcher()
-# loading metadata from nomad-meta-info/meta_info/nomad_meta_info/qbox.nomadmetainfo.json
-metaInfoPath = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(nomad_meta_info.__file__)), "qbox.nomadmetainfo.json"))
-metaInfoEnv = get_metaInfo(metaInfoPath)
-# set parser info
-parserInfo = {'name':'qbox-parser', 'version': '1.0'}
-# get caching level for metadata
-cachingLevelForMetaName = get_cachingLevelForMetaName(metaInfoEnv)
-
 
 
 class QboxParser():
@@ -535,24 +525,14 @@ class QboxParser():
         from unittest.mock import patch
         logging.debug('qbox parser started')
         logging.getLogger('nomadcore').setLevel(logging.WARNING)
-        backend = self.backend_factory(metaInfoEnv)
+        backend = self.backend_factory("qbox.nomadmetainfo.json")
         with patch.object(sys, 'argv', ['<exe>', '--uri', 'nmd://uri', mainfile]):
             mainFunction(
                 mainFileDescription=QboxMainFileSimpleMatcher,
-                metaInfoEnv=metaInfoEnv,
-                parserInfo=parserInfo,
-                cachingLevelForMetaName=cachingLevelForMetaName,
+                metaInfoEnv=None,
+                parserInfo={'name':'qbox-parser', 'version': '1.0'},
+                cachingLevelForMetaName=get_cachingLevelForMetaName(backend.metaInfoEnv()),
                 superContext=QboxParserContext(),
                 superBackend=backend)
 
         return backend
-
-
-if __name__ == "__main__":
-    mainFunction(
-        mainFileDescription = QboxMainFileSimpleMatcher,
-        metaInfoEnv = metaInfoEnv,
-        parserInfo = parserInfo,
-        cachingLevelForMetaName = cachingLevelForMetaName,
-        superContext = QboxParserContext())
-
