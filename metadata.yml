@@ -1,7 +1,0 @@
-code-label: Qbox
-code-label-style: 'Capitals: Q'
-code-url: http://qboxcode.org/
-parser-dir-name: dependencies/parsers/qbox/
-parser-git-url: https://gitlab.mpcdf.mpg.de/nomad-lab/parser-qbox
-parser-specific: ''
-table-of-files: ''
