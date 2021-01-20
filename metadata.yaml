@@ -1,7 +1,9 @@
 codeLabel: Qbox
 codeLabelStyle: 'Capitals: Q'
+codeName: qbox
 codeUrl: http://qboxcode.org/
 parserDirName: dependencies/parsers/qbox/
-parserGitUrl: https://gitlab.mpcdf.mpg.de/nomad-lab/parser-qbox
+parserGitUrl: https://github.com/nomad-coe/nomad-parser-qbox.git
 parserSpecific: ''
+preamble: ''
 tableOfFiles: ''
