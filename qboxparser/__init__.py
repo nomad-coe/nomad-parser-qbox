@@ -16,4 +16,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from qboxparser.QboxParser import QboxParser
+from .qbox_parser import QboxParser
