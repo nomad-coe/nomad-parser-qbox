@@ -17,7 +17,6 @@
 #
 
 import pytest
-import numpy as np
 
 from nomad.datamodel import EntryArchive
 from qboxparser import QboxParser
@@ -36,31 +35,31 @@ def test_scf(parser):
     archive = EntryArchive()
     parser.parse('tests/data/01_h2ogs.r', archive, None)
 
-    sec_run = archive.section_run[0]
-    assert sec_run.program_version == '1.63.2'
+    sec_run = archive.run[0]
+    assert sec_run.program.version == '1.63.2'
 
-    sec_system = sec_run.section_system[0]
-    assert sec_system.atom_labels == ['O', 'H', 'H']
-    assert sec_system.atom_positions[1][1].magnitude == approx(7.64131893e-11)
-    assert sec_system.lattice_vectors[2][2].magnitude == approx(8.46683537e-10)
+    sec_system = sec_run.system[0]
+    assert sec_system.atoms.labels == ['O', 'H', 'H']
+    assert sec_system.atoms.positions[1][1].magnitude == approx(7.64131893e-11)
+    assert sec_system.atoms.lattice_vectors[2][2].magnitude == approx(8.46683537e-10)
 
-    sec_scc = sec_run.section_single_configuration_calculation[0]
-    assert sec_scc.energy_total.magnitude == approx(-7.44295025e-17)
-    assert sec_scc.energy_XC.magnitude == approx(-1.78424213e-17)
+    sec_scc = sec_run.calculation[0]
+    assert sec_scc.energy.total.value.magnitude == approx(-7.44295025e-17)
+    assert sec_scc.energy.xc.value.magnitude == approx(-1.78424213e-17)
 
 
 def test_relax(parser):
     archive = EntryArchive()
     parser.parse('tests/data/02_h2ocg.r', archive, None)
 
-    sec_run = archive.section_run[0]
+    sec_run = archive.run[0]
 
-    sec_systems = sec_run.section_system
-    assert len(sec_systems) ==  20
-    assert sec_systems[4].atom_positions[0][2].magnitude == approx(-5.87915881e-16)
-    assert sec_systems[7].lattice_vectors[1][1].magnitude == approx(8.46683537e-10)
+    sec_systems = sec_run.system
+    assert len(sec_systems) == 20
+    assert sec_systems[4].atoms.positions[0][2].magnitude == approx(-5.87915881e-16)
+    assert sec_systems[7].atoms.lattice_vectors[1][1].magnitude == approx(8.46683537e-10)
 
-    sec_sccs = sec_run.section_single_configuration_calculation
+    sec_sccs = sec_run.calculation
     assert len(sec_sccs) == 20
-    assert sec_sccs[11].energy_total.magnitude == approx(-7.44306125e-17)
-    assert sec_sccs[18].electronic_kinetic_energy.magnitude == approx(5.37898452e-17)
+    assert sec_sccs[11].energy.total.value.magnitude == approx(-7.44306125e-17)
+    assert sec_sccs[18].energy.kinetic_electronic.value.magnitude == approx(5.37898452e-17)

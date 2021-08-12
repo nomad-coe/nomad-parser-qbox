@@ -49,6 +49,6 @@ class QboxParser(BasicParser):
             lattice_vectors=rf'\<unit\_cell\s+(a\=[\s\S]+?)\/\>',
             atom_labels_atom_positions_atom_forces=(
                 r'(\<atom name\=[\s\S]+?)\<\/atomset\>', get_positions),
-            electronic_kinetic_energy=rf'\<ekin\> *({re_f}) *\<\/ekin\>',
+            energy_kinetic_electronic=rf'\<ekin\> *({re_f}) *\<\/ekin\>',
             energy_total=rf'\<etotal\> *({re_f}) *\<\/etotal\>',
             energy_XC=rf'\<exc\> *({re_f}) *\<\/exc\>')
