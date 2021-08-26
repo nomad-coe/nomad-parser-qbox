@@ -16,4 +16,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import qboxparser.metainfo.qbox
+from nomad.metainfo import Environment
+
+from . import qbox
+
+m_env = Environment()
+m_env.m_add_sub_section(Environment.packages, qbox.m_package)
