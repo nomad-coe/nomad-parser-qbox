@@ -20,7 +20,7 @@ import numpy as np            # pylint: disable=unused-import
 import typing                 # pylint: disable=unused-import
 from nomad.metainfo import (  # pylint: disable=unused-import
     MSection, MCategory, Category, Package, Quantity, Section, SubSection, SectionProxy,
-    Reference
+    Reference, JSON
 )
 from nomad.datamodel.metainfo import simulation
 
@@ -97,6 +97,14 @@ class x_qbox_section_MLWF(MSection):
         unit='meter',
         description='''
         z component of atomic position in maximally localized Wannier functions(MLWF)
+        ''')
+
+    x_qbox_geometry_MLWF_atom_positions = Quantity(
+        type=np.dtype(np.float64),
+        shape=[3],
+        unit='meter',
+        description='''
+        atomic position in maximally localized Wannier functions(MLWF)
         ''')
 
     x_qbox_geometry_MLWF_atom_spread = Quantity(
@@ -364,6 +372,13 @@ class Method(simulation.method.Method):
         wave function dynamics control variable
         ''')
 
+    x_qbox_input_parameters = Quantity(
+        type=JSON,
+        shape=[],
+        description='''
+        Input parameters'''
+    )
+
     x_qbox_section_functionals = SubSection(
         sub_section=SectionProxy('x_qbox_section_functionals'),
         repeats=True)
@@ -392,10 +407,6 @@ class Run(simulation.run.Run):
         sub_section=SectionProxy('x_qbox_section_efield'),
         repeats=True)
 
-    x_qbox_section_MLWF = SubSection(
-        sub_section=SectionProxy('x_qbox_section_MLWF'),
-        repeats=True)
-
 
 class Calculation(simulation.calculation.Calculation):
 
@@ -404,3 +415,32 @@ class Calculation(simulation.calculation.Calculation):
     x_qbox_section_stress_tensor = SubSection(
         sub_section=SectionProxy('x_qbox_section_stress_tensor'),
         repeats=True)
+
+    x_qbox_section_MLWF = SubSection(
+        sub_section=SectionProxy('x_qbox_section_MLWF'),
+        repeats=True)
+
+
+class Energy(simulation.calculation.Energy):
+
+    m_def = Section(validate=False, extends_base_section=True)
+
+    x_qbox_conf = SubSection(sub_section=simulation.calculation.EnergyEntry.m_def)
+
+    x_qbox_ps = SubSection(sub_section=simulation.calculation.EnergyEntry.m_def)
+
+    x_qbox_nl = SubSection(sub_section=simulation.calculation.EnergyEntry.m_def)
+
+    x_qbox_sr = SubSection(sub_section=simulation.calculation.EnergyEntry.m_def)
+
+    x_qbox_self = SubSection(sub_section=simulation.calculation.EnergyEntry.m_def)
+
+    x_qbox_ts = SubSection(sub_section=simulation.calculation.EnergyEntry.m_def)
+
+    x_qbox_exf = SubSection(sub_section=simulation.calculation.EnergyEntry.m_def)
+
+    x_qbox_pv = SubSection(sub_section=simulation.calculation.EnergyEntry.m_def)
+
+    x_qbox_efield = SubSection(sub_section=simulation.calculation.EnergyEntry.m_def)
+
+    x_qbox_enthalpy = SubSection(sub_section=simulation.calculation.EnergyEntry.m_def)

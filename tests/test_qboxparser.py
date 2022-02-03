@@ -37,15 +37,30 @@ def test_scf(parser):
 
     sec_run = archive.run[0]
     assert sec_run.program.version == '1.63.2'
+    assert sec_run.time_run.date_start > 0
+    assert sec_run.time_run.date_end > 0
 
-    sec_system = sec_run.system[0]
-    assert sec_system.atoms.labels == ['O', 'H', 'H']
-    assert sec_system.atoms.positions[1][1].magnitude == approx(7.64131893e-11)
-    assert sec_system.atoms.lattice_vectors[2][2].magnitude == approx(8.46683537e-10)
+    sec_method = sec_run.method
+    assert sec_method[0].x_qbox_input_parameters['ecut'] == 70
 
-    sec_scc = sec_run.calculation[0]
-    assert sec_scc.energy.total.value.magnitude == approx(-7.44295025e-17)
-    assert sec_scc.energy.xc.value.magnitude == approx(-1.78424213e-17)
+    sec_system = sec_run.system
+    assert len(sec_system) == 1
+    assert sec_system[0].atoms.labels == ['O', 'H', 'H']
+    assert sec_system[0].atoms.positions[1][1].magnitude == approx(7.64131893e-11)
+    assert sec_system[0].atoms.lattice_vectors[2][2].magnitude == approx(8.46683537e-10)
+    assert sec_system[0].atoms.velocities[1][2].magnitude == approx(0.)
+
+    sec_scc = sec_run.calculation
+    assert len(sec_scc) == 1
+    assert sec_scc[0].energy.total.value.magnitude == approx(-7.44295025e-17)
+    assert sec_scc[0].energy.xc.value.magnitude == approx(-1.78424213e-17)
+    assert sec_scc[0].energy.x_qbox_sr.value.magnitude == approx(6.4166003e-18)
+    assert sec_scc[0].forces.total.value[1][2].magnitude == approx(-3.3968257e-12)
+    assert sec_scc[0].system_ref == sec_system[0]
+    sec_scf = sec_scc[0].scf_iteration
+    assert len(sec_scf) == 100
+    assert sec_scf[48].energy.total.value.magnitude == approx(-7.23408056e-17)
+    assert sec_scf[68].energy.sum_eigenvalues.value.magnitude == approx(-8.94829281e-18)
 
 
 def test_relax(parser):
@@ -54,12 +69,45 @@ def test_relax(parser):
 
     sec_run = archive.run[0]
 
-    sec_systems = sec_run.system
-    assert len(sec_systems) == 20
-    assert sec_systems[4].atoms.positions[0][2].magnitude == approx(-5.87915881e-16)
-    assert sec_systems[7].atoms.lattice_vectors[1][1].magnitude == approx(8.46683537e-10)
+    sec_system = sec_run.system
+    assert len(sec_system) == 20
+    assert sec_system[4].atoms.positions[0][2].magnitude == approx(-5.87915881e-16)
+    assert sec_system[7].atoms.lattice_vectors[1][1].magnitude == approx(8.46683537e-10)
 
-    sec_sccs = sec_run.calculation
-    assert len(sec_sccs) == 20
-    assert sec_sccs[11].energy.total.value.magnitude == approx(-7.44306125e-17)
-    assert sec_sccs[18].energy.kinetic_electronic.value.magnitude == approx(5.37898452e-17)
+    sec_scc = sec_run.calculation
+    assert len(sec_scc) == 20
+    assert sec_scc[11].energy.total.value.magnitude == approx(-7.44306125e-17)
+    assert sec_scc[18].energy.kinetic_electronic.value.magnitude == approx(5.37898452e-17)
+    assert len(sec_scc[6].scf_iteration) == 10
+
+
+def test_stress(parser):
+    archive = EntryArchive()
+    parser.parse('tests/data/03_si2gs.r', archive, None)
+
+    sec_scc = archive.run[0].calculation
+    assert len(sec_scc) == 30
+    assert sec_scc[24].stress.total.value[2][1].magnitude == approx(-20.)
+    assert len(sec_scc[11].stress.contributions) == 7
+    assert sec_scc[11].stress.contributions[1].kind == 'conf'
+    assert sec_scc[11].stress.contributions[5].value[2][2].magnitude == approx(-2680230.0)
+
+
+def test_multipoles(parser):
+    archive = EntryArchive()
+    parser.parse('tests/data/10_efield.r', archive, None)
+
+    sec_scc = archive.run[3].calculation
+    assert sec_scc[0].multipoles[0].dipole.total[2] == approx(0.0977781797)
+    assert sec_scc[0].multipoles[0].quadrupole.total[8] == approx(-32.83786426)
+    assert sec_scc[0].x_qbox_section_MLWF[3].x_qbox_geometry_MLWF_atom_positions[0].magnitude == approx(-9.20548723e-11)
+    assert sec_scc[0].x_qbox_section_MLWF[6].x_qbox_geometry_MLWF_atom_spread.magnitude == approx(1.34165266e-10)
+
+
+def test_dft(parser):
+    archive = EntryArchive()
+    parser.parse('tests/data/12_h2o_64_gs.r', archive, None)
+
+    sec_xc = archive.run[0].method[0].dft.xc_functional
+    assert sec_xc.exchange[0].name == 'GGA_X_PBE'
+    assert sec_xc.correlation[0].name == 'GGA_C_PBE'
